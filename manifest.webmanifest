@@ -1,0 +1,17 @@
+{
+  "name": "KCN Long Thành — Tra cứu Nhà xưởng",
+  "short_name": "KCN Long Thành",
+  "description": "Bản đồ và tra cứu nhà xưởng KCN Long Thành — Sonadezi Long Thành (SZL).",
+  "lang": "vi",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1220",
+  "theme_color": "#16a34a",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
