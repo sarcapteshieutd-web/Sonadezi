@@ -39,6 +39,9 @@
     lblSrc: $('lblSrc'), lblTgt: $('lblTgt'), toast: $('toast'),
     hist: $('history'), histWrap: $('histWrap'), btnClearHist: $('btnClearHist'),
     btnInstall: $('btnInstall'), iosHint: $('iosHint'), iosHintClose: $('iosHintClose'),
+    btnExport: $('btnExport'), btnDonate: $('btnDonate'), sheetExport: $('sheetExport'), sheetDonate: $('sheetDonate'),
+    expInfo: $('expInfo'), expTxt: $('expTxt'), expCsv: $('expCsv'), expShare: $('expShare'),
+    donateBody: $('donateBody'), donateTitle: $('donateTitle'),
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
     selEngine: $('selEngine'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
     inRate: $('inRate'), inPitch: $('inPitch'), lblRate: $('lblRate'), lblPitch: $('lblPitch'), btnTest: $('btnTest'), inEmail: $('inEmail'), inKey: $('inKey'),
@@ -62,6 +65,7 @@
     translated: '',
     rate: parseFloat(store.get('rate', '0.95')) || 0.95,
     pitch: parseFloat(store.get('pitch', '1')) || 1,
+    log: [], // toàn bộ lượt hội thoại, lưu trên thiết bị
     mine: null, // ngôn ngữ của người dùng: lời của bên này hiện bên phải
     reqId: 0
   };
@@ -69,6 +73,8 @@
   if (!LANGS[state.tgt] || state.tgt === state.src) state.tgt = state.src === 'vi' ? 'en' : 'vi';
 
   state.mine = state.src;
+  try { state.log = JSON.parse(store.get('chat', '[]')).filter(i => LANGS[i.from] && LANGS[i.to]); } catch (_) { state.log = []; }
+  const saveLog = () => store.set('chat', JSON.stringify(state.log.slice(-300)));
 
   // ---------- Tiện ích ----------
   let toastTimer;
@@ -148,7 +154,12 @@
     return b;
   }
 
-  function addHistory(item) {
+  function addHistory(item, restoring = false) {
+    if (!restoring) {
+      item.ts = Date.now();
+      state.log.push(item);
+      saveLog();
+    }
     const mine = item.from === state.mine;
     el.emptyHint.classList.add('hidden');
     const row = document.createElement('div');
@@ -159,7 +170,7 @@
 
     const meta = document.createElement('div');
     meta.className = 'mb-0.5 text-[11px] font-medium ' + (mine ? 'text-brand-100' : 'text-slate-500');
-    const time = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    const time = new Date(item.ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     meta.textContent = `${LANGS[item.from].name} · ${time}`;
 
     const orig = document.createElement('div');
@@ -461,6 +472,8 @@
   };
   el.btnClearHist.onclick = () => {
     el.hist.innerHTML = '';
+    state.log = [];
+    saveLog();
     updateCounter();
     el.emptyHint.classList.remove('hidden');
   };
@@ -565,11 +578,125 @@
     window.addEventListener('load', () => navigator.serviceWorker.register('service-worker.js').catch(() => {}));
   }
 
+  // ---------- Lưu đoạn chat ra tệp ----------
+  const pad = n => String(n).padStart(2, '0');
+  const fmtDate = d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const fileStamp = () => { const d = new Date(); return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`; };
+
+  function buildTxt() {
+    const lines = ['SONADEZI LONG THÀNH - PHIÊN DỊCH TRỰC TUYẾN', 'Xuất lúc: ' + fmtDate(new Date()), '='.repeat(48), ''];
+    state.log.forEach((i, n) => {
+      lines.push(`#${n + 1} [${fmtDate(new Date(i.ts))}] ${LANGS[i.from].name} → ${LANGS[i.to].name}`);
+      lines.push('Gốc : ' + i.src, 'Dịch : ' + i.out, '');
+    });
+    return lines.join('\r\n');
+  }
+  function buildCsv() {
+    const q = v => '"' + String(v).replace(/"/g, '""') + '"';
+    const rows = [['STT', 'Thời gian', 'Ngôn ngữ gốc', 'Văn bản gốc', 'Ngôn ngữ dịch', 'Bản dịch']];
+    state.log.forEach((i, n) => rows.push([n + 1, fmtDate(new Date(i.ts)), LANGS[i.from].name, i.src, LANGS[i.to].name, i.out]));
+    return '﻿' + rows.map(r => r.map(q).join(',')).join('\r\n'); // BOM để Excel đọc đúng tiếng Việt
+  }
+  function makeFile(kind) {
+    return kind === 'csv'
+      ? new File([buildCsv()], `Doan-chat-dich-${fileStamp()}.csv`, { type: 'text/csv;charset=utf-8' })
+      : new File(['﻿' + buildTxt()], `Doan-chat-dich-${fileStamp()}.txt`, { type: 'text/plain;charset=utf-8' });
+  }
+  function download(file) {
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url; a.download = file.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+  function openModal(m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+  function closeModal(m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+  [el.sheetExport, el.sheetDonate].forEach(m => { m.onclick = e => { if (e.target === m) closeModal(m); }; });
+  document.querySelectorAll('[data-close]').forEach(b => { b.onclick = () => closeModal(b.closest('[data-modal]')); });
+
+  el.btnExport.onclick = () => {
+    el.expInfo.textContent = state.log.length
+      ? `Có ${state.log.length} lượt hội thoại được lưu trên thiết bị này.`
+      : 'Chưa có đoạn hội thoại nào để lưu.';
+    const none = !state.log.length;
+    [el.expTxt, el.expCsv, el.expShare].forEach(b => { b.disabled = none; b.classList.toggle('opacity-50', none); });
+    el.expShare.classList.toggle('hidden', !(navigator.canShare && navigator.share));
+    openModal(el.sheetExport);
+  };
+  el.expTxt.onclick = () => { if (state.log.length) { download(makeFile('txt')); toast('Đã lưu tệp .txt'); } };
+  el.expCsv.onclick = () => { if (state.log.length) { download(makeFile('csv')); toast('Đã lưu tệp .csv'); } };
+  el.expShare.onclick = async () => {
+    const f = makeFile('txt');
+    try {
+      if (navigator.canShare({ files: [f] })) await navigator.share({ files: [f], title: 'Đoạn chat dịch' });
+      else await navigator.share({ title: 'Đoạn chat dịch', text: buildTxt() });
+    } catch (_) { /* người dùng hủy chia sẻ */ }
+  };
+
+  // ---------- Ủng hộ / gói sử dụng ----------
+  const CFG = window.APP_CONFIG || {};
+  const safeUrl = u => { try { const x = new URL(u); return x.protocol === 'https:' ? x.href : null; } catch (_) { return null; } };
+  function node(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text) n.textContent = text; return n; }
+  function linkBtn(label, url, primary) {
+    const a = node('a', 'block rounded-xl py-2.5 text-center font-medium ' +
+      (primary ? 'bg-brand-600 text-white' : 'border border-brand-600 text-brand-600'), label);
+    a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    return a;
+  }
+  function renderDonate() {
+    const d = CFG.donate || {};
+    const box = el.donateBody;
+    box.innerHTML = '';
+    el.donateTitle.textContent = d.title || 'Ủng hộ nhà phát hành';
+    let has = false;
+    if (d.message) box.appendChild(node('p', 'text-sm text-slate-600', d.message));
+
+    const plans = (CFG.plans || []).filter(p => p && p.name);
+    if (plans.length) {
+      has = true;
+      box.appendChild(node('h3', 'mt-4 text-sm font-semibold', 'Gói sử dụng'));
+      plans.forEach(p => {
+        const c = node('div', 'mt-2 rounded-xl border border-slate-200 p-3');
+        c.appendChild(node('div', 'font-semibold text-brand-700', p.name));
+        if (p.price) c.appendChild(node('div', 'text-sm font-medium', p.price));
+        if (p.description) c.appendChild(node('div', 'text-sm text-slate-500', p.description));
+        const u = p.url && safeUrl(p.url);
+        if (u) { const b = linkBtn('Chọn gói này', u, true); b.classList.add('mt-2'); c.appendChild(b); }
+        box.appendChild(c);
+      });
+    }
+    if (d.qrImage) {
+      has = true;
+      box.appendChild(node('h3', 'mt-4 text-sm font-semibold', 'Quét mã QR để chuyển khoản'));
+      const img = node('img', 'mx-auto mt-2 max-h-64 w-auto rounded-xl border border-slate-200');
+      img.src = d.qrImage; img.alt = 'Mã QR ủng hộ';
+      box.appendChild(img);
+    }
+    const b = d.bank || {};
+    if (b.accountNumber) {
+      has = true;
+      const c = node('div', 'mt-3 rounded-xl bg-slate-50 p-3 text-sm');
+      [['Ngân hàng', b.bankName], ['Số tài khoản', b.accountNumber], ['Chủ tài khoản', b.accountName], ['Nội dung', b.note]]
+        .filter(r => r[1]).forEach(r => { const row = node('div', 'flex justify-between gap-3'); row.append(node('span', 'text-slate-500', r[0]), node('span', 'font-medium text-right', r[1])); c.appendChild(row); });
+      const cp = node('button', 'mt-2 w-full rounded-lg border border-brand-600 py-1.5 font-medium text-brand-600', 'Sao chép số tài khoản');
+      cp.onclick = async () => { try { await navigator.clipboard.writeText(b.accountNumber); toast('Đã sao chép số tài khoản'); } catch (_) { toast('Không thể sao chép'); } };
+      c.appendChild(cp);
+      box.appendChild(c);
+    }
+    (d.links || []).forEach(l => {
+      const u = l && l.url && safeUrl(l.url);
+      if (u) { has = true; const a = linkBtn(l.label || 'Ủng hộ', u, true); a.classList.add('mt-3'); box.appendChild(a); }
+    });
+    if (!has) box.appendChild(node('p', 'mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-500', 'Tính năng ủng hộ và gói sử dụng đang được cập nhật. Vui lòng quay lại sau.'));
+  }
+  el.btnDonate.onclick = () => { renderDonate(); openModal(el.sheetDonate); };
+
   // ---------- Khởi tạo ----------
   fillSelect(el.selVoiceLang, state.tgt);
   fillSelect(el.selSrc, state.src);
   fillSelect(el.selTgt, state.tgt);
   syncLangUI();
+  state.log.forEach(i => addHistory(i, true));
   updateCounter();
   if (!SR) el.micHint.textContent = 'Trình duyệt chưa hỗ trợ nhận diện giọng nói - bạn vẫn có thể gõ văn bản';
 })();
