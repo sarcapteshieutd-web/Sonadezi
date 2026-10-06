@@ -126,3 +126,12 @@ Cách này chỉ sửa kết quả sau khi nhận diện, không cải thiện c
 - **`terms` trong `config.js`:** danh sách cụm từ (tên dự án, thuật ngữ thuê đất, giới thiệu dự án, bảo trì bảo dưỡng) theo ba ngôn ngữ `vi`, `en`, `zh`. Khi câu nói chứa cụm ở ngôn ngữ nguồn, bản dịch dùng đúng cụm ở ngôn ngữ đích để các cuộc họp nhất quán. Ô để trống thì bỏ qua cặp ngôn ngữ đó. Nếu dịch vụ dịch làm mất ký hiệu thay thế, app tự quay về dịch bình thường.
 - **Bản Anh và Trung chưa được chuyên gia xác nhận.** Phải do Pháp chế hoặc phiên dịch kiểm tra trước khi dùng cho thương thảo hợp đồng; tên tiếng Trung chính thức của các khu công nghiệp đang để trống.
 - **Màn hình lớn:** nút phóng to ở góc phải khung chat, phóng chữ 1,5 lần, ẩn ô nhập và thanh chọn ngôn ngữ, vào toàn màn hình nếu trình duyệt cho phép; bấm lại hoặc nhấn Esc để thoát. Dùng khi chiếu khung chat lên TV hoặc máy chiếu trong phòng họp.
+
+## 14. Họp luân phiên hai ngôn ngữ
+Trong **Chế độ họp**, thanh đỏ hiển thị rõ **ngôn ngữ đang nghe**. Có hai cách đổi người nói:
+- **Tự đổi sau mỗi lượt** (ô tích trên thanh đỏ, mặc định bật): sau mỗi câu đã chốt, app chuyển sang ngôn ngữ còn lại, giả định hai bên nói xen kẽ.
+- **Đổi tay:** bấm ⇄ hoặc nhấn phím **Space** (khi con trỏ không nằm trong ô nhập). Dùng khi một bên nói hai lượt liên tiếp hoặc app đổi sai.
+
+Bong bóng của bên đầu tiên nói nằm bên phải, bên còn lại nằm bên trái. Mỗi câu được dịch theo đúng chiều của lượt nói đó, kể cả khi ngôn ngữ đã đổi trước lúc dịch xong.
+
+Giới hạn: app không tự nhận biết ngôn ngữ người nói; nếu để sai ngôn ngữ, câu sẽ bị nghe sai. Mỗi lần đổi, bộ nghe khởi động lại nên có thể mất vài từ đầu của lượt kế tiếp. Muốn nhận diện ngôn ngữ tự động cần chuyển sang dịch vụ nhận diện giọng nói trả phí.

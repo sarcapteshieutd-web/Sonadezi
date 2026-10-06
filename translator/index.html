@@ -87,9 +87,16 @@
     </section>
 
     <!-- Thanh trạng thái chế độ họp -->
-    <div id="meetingBar" class="mt-2 hidden shrink-0 items-center justify-between rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
-      <span class="flex items-center gap-2"><span class="rec-blink inline-block h-2 w-2 rounded-full bg-red-600"></span>Đang ghi và dịch cuộc họp · <span id="meetingTime" class="tabular-nums">00:00</span></span>
-      <button id="btnMeetingStop" class="rounded-lg border border-red-300 px-2 py-0.5 text-xs font-medium">Dừng</button>
+    <div id="meetingBar" class="mt-2 hidden shrink-0 flex-col gap-1.5 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
+      <div class="flex items-center justify-between">
+        <span class="flex items-center gap-2"><span class="rec-blink inline-block h-2 w-2 rounded-full bg-red-600"></span>Đang ghi · <span id="meetingTime" class="tabular-nums">00:00</span></span>
+        <button id="btnMeetingStop" class="rounded-lg border border-red-300 px-2 py-0.5 text-xs font-medium">Dừng</button>
+      </div>
+      <div class="flex items-center justify-between gap-2">
+        <span>Đang nghe: <b id="meetingLang" class="text-base"></b></span>
+        <label class="flex items-center gap-1.5 text-xs"><input id="chkAutoTurn" type="checkbox" class="h-4 w-4 accent-red-600" />Tự đổi sau mỗi lượt</label>
+      </div>
+      <div class="text-[11px] text-red-600/80">Đổi người nói: bấm ⇄ hoặc phím Space.</div>
     </div>
 
     <!-- Khung chat -->

@@ -43,6 +43,7 @@
     expInfo: $('expInfo'), expTxt: $('expTxt'), expCsv: $('expCsv'), expShare: $('expShare'),
     donateBody: $('donateBody'), donateTitle: $('donateTitle'),
     btnMeeting: $('btnMeeting'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
+    chkAutoTurn: $('chkAutoTurn'), meetingLang: $('meetingLang'),
     app: $('app'), btnBig: $('btnBig'),
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
     selEngine: $('selEngine'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
@@ -69,6 +70,7 @@
     pitch: parseFloat(store.get('pitch', '1')) || 1,
     log: [], // toàn bộ lượt hội thoại, lưu trên thiết bị
     meeting: false,
+    autoTurn: store.get('autoTurn', '1') === '1',
     mine: null, // ngôn ngữ của người dùng: lời của bên này hiện bên phải
     reqId: 0
   };
@@ -113,6 +115,7 @@
     el.selTgt.value = state.tgt;
     el.lblSrc.textContent = LANGS[state.src].name;
     el.lblTgt.textContent = LANGS[state.tgt].name;
+    el.meetingLang.textContent = LANGS[state.src].name;
     store.set('src', state.src);
     store.set('tgt', state.tgt);
   }
@@ -165,7 +168,7 @@
       state.log.push(item);
       saveLog();
     }
-    const mine = item.from === state.mine && !item.meeting;
+    const mine = item.from === state.mine;
     el.emptyHint.classList.add('hidden');
     const row = document.createElement('div');
     row.className = 'flex ' + (mine ? 'justify-end' : 'justify-start');
@@ -232,20 +235,20 @@
     return chunks;
   }
 
-  async function requestTranslate(text, signal) {
+  async function requestTranslate(text, signal, from, to) {
     let result;
     if (state.engine === 'google' && state.gkey) {
       const url = 'https://translation.googleapis.com/language/translate/v2?key=' + encodeURIComponent(state.gkey);
       const res = await fetch(url, {
         method: 'POST', signal,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: text, source: LANGS[state.src].api, target: LANGS[state.tgt].api, format: 'text' })
+        body: JSON.stringify({ q: text, source: LANGS[from].api, target: LANGS[to].api, format: 'text' })
       });
       if (!res.ok) throw new Error('Google API lỗi ' + res.status);
       const j = await res.json();
       result = decodeEntities(j.data.translations[0].translatedText);
     } else {
-      const p = new URLSearchParams({ q: text, langpair: `${LANGS[state.src].api}|${LANGS[state.tgt].api}` });
+      const p = new URLSearchParams({ q: text, langpair: `${LANGS[from].api}|${LANGS[to].api}` });
       if (state.email) p.set('de', state.email);
       const res = await fetch('https://api.mymemory.translated.net/get?' + p, { signal });
       if (!res.ok) throw new Error('MyMemory lỗi ' + res.status);
@@ -258,14 +261,14 @@
 
   // Bảng thuật ngữ dịch (config.terms): giữ cách dịch nhất quán cho tên dự án và thuật ngữ chuyên ngành
   const TERMS = (window.APP_CONFIG && window.APP_CONFIG.terms) || [];
-  function protectTerms(text) {
+  function protectTerms(text, from, to) {
     const map = [];
     let out = text;
-    const sp = LANGS[state.src].sp;
-    const cand = TERMS.filter(t => t[state.src] && t[state.tgt]).sort((a, b) => b[state.src].length - a[state.src].length);
+    const sp = LANGS[from].sp;
+    const cand = TERMS.filter(t => t[from] && t[to]).sort((a, b) => b[from].length - a[from].length);
     for (const t of cand) {
-      const re = new RegExp((sp ? '(^|[^\\p{L}\\p{N}])' : '()') + escRe(t[state.src].trim()).replace(/\s+/g, '\\s+') + (sp ? '(?![\\p{L}\\p{N}])' : ''), 'giu');
-      out = out.replace(re, (m, pre) => { const tok = 'QXT' + map.length + 'Z'; map.push([tok, t[state.tgt]]); return pre + tok; });
+      const re = new RegExp((sp ? '(^|[^\\p{L}\\p{N}])' : '()') + escRe(t[from].trim()).replace(/\s+/g, '\\s+') + (sp ? '(?![\\p{L}\\p{N}])' : ''), 'giu');
+      out = out.replace(re, (m, pre) => { const tok = 'QXT' + map.length + 'Z'; map.push([tok, t[to]]); return pre + tok; });
     }
     return { text: out, map };
   }
@@ -279,19 +282,19 @@
     return /QXT\d+Z/i.test(out) ? null : out;
   }
 
-  async function translateChunk(text, signal) {
-    const key = `${state.engine}|${state.src}|${state.tgt}|${text}`;
+  async function translateChunk(text, signal, from = from, to = to) {
+    const key = `${state.engine}|${from}|${to}|${text}`;
     if (cache.has(key)) return cache.get(key);
     let result;
-    const prot = protectTerms(text);
+    const prot = protectTerms(text, from, to);
     if (prot.map.length) {
       try {
-        const r = await requestTranslate(prot.text, signal);
+        const r = await requestTranslate(prot.text, signal, from, to);
         const restored = restoreTerms(r, prot.map);
         if (restored !== null) result = restored;
       } catch (e) { if (e.name === 'AbortError') throw e; }
     }
-    if (result === undefined) result = await requestTranslate(text, signal); // không có thuật ngữ, hoặc cách trên thất bại
+    if (result === undefined) result = await requestTranslate(text, signal, from, to); // không có thuật ngữ, hoặc cách trên thất bại
     cache.set(key, result);
     if (cache.size > 300) cache.delete(cache.keys().next().value);
     return result;
@@ -513,8 +516,8 @@
   let meetingStart = 0, meetingTimer = null, wakeLock = null;
   let meetingChain = Promise.resolve(), lastMeetingText = '', lastMeetingAt = 0;
 
-  async function translateText(text) {
-    const parts = await Promise.all(splitChunks(text).map(c => translateChunk(c)));
+  async function translateText(text, from, to) {
+    const parts = await Promise.all(splitChunks(text).map(c => translateChunk(c, undefined, from, to)));
     return parts.join('').replace(/\s+\n/g, '\n').trim();
   }
   function queueMeeting(text) {
@@ -524,19 +527,22 @@
     const from = state.src, to = state.tgt;
     meetingChain = meetingChain.then(async () => {
       let out;
-      try { out = await translateText(text); } catch (_) { out = '[Chưa dịch được]'; }
+      try { out = await translateText(text, from, to); } catch (_) { out = '[Chưa dịch được]'; }
       addHistory({ src: text, out, from, to, meeting: true });
     });
   }
   function onMeetingResult(ev) {
     let interim = '';
+    let gotFinal = false;
     for (let i = ev.resultIndex; i < ev.results.length; i++) {
       const r = ev.results[i];
       const t = applyGlossary(heard(r).trim());
-      if (r.isFinal) { if (t) queueMeeting(t); } else interim += t;
+      if (r.isFinal) { if (t) { queueMeeting(t); gotFinal = true; } } else interim += t;
     }
     el.src.value = interim;
     updateCounter();
+    // Hai bên nói luân phiên: sau mỗi câu chốt, chuyển sang ngôn ngữ còn lại
+    if (gotFinal && state.autoTurn) setLangs(state.tgt, state.src, false);
   }
   async function requestWake() {
     try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (_) {}
@@ -563,6 +569,7 @@
     if (state.listening || wantListening) stopListening();
     archiveTurn();
     state.meeting = true;
+    state.mine = state.src; // bên đầu tiên nói nằm bên phải khung chat
     wantListening = true;
     committed = '';
     meetingStart = Date.now();
@@ -587,6 +594,18 @@
     if (wakeLock) { try { wakeLock.release(); } catch (_) {} wakeLock = null; }
     toast('Đã dừng chế độ họp');
   }
+  document.addEventListener('keydown', e => {
+    if (e.code !== 'Space' || !state.meeting || e.repeat) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    e.preventDefault();
+    setLangs(state.tgt, state.src, false); // Space: đổi người nói
+  });
+  // Tránh Space kích hoạt nút đang được chọn (ví dụ Dừng họp)
+  document.addEventListener('keyup', e => {
+    if (e.code === 'Space' && state.meeting && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) e.preventDefault();
+  });
+  el.chkAutoTurn.checked = state.autoTurn;
+  el.chkAutoTurn.onchange = () => { state.autoTurn = el.chkAutoTurn.checked; store.set('autoTurn', state.autoTurn ? '1' : '0'); };
   el.btnMeeting.onclick = () => (state.meeting ? stopMeeting() : startMeeting());
   el.btnMeetingStop.onclick = stopMeeting;
 
