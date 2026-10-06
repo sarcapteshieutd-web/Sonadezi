@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="1060" viewBox="0 0 1700 1060" font-family="DejaVu Sans, Arial, sans-serif">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker></defs>
+<rect width="1700" height="1060" fill="#ffffff"/>
+<text x="40" y="48" font-size="24" font-weight="700" fill="#0d4792">Quy trình: EMEET M0 Plus → Laptop (App + Google Cloud Translation) → Loa M0 Plus + Màn hình chiếu</text>
+<text x="40" y="78" font-size="16" fill="#475569">Sonadezi Long Thành · Chế độ họp, laptop chạy Chrome · Hàng 1: thu và nhận diện · Hàng 2: dịch và hiển thị · Hàng 3: đọc bản dịch ra loa (tùy chọn)</text>
+<rect x="40" y="120" width="270" height="130" rx="14" fill="#eef1f5" stroke="#334155" stroke-width="2.5"/>
+<circle cx="66" cy="146" r="15" fill="#334155"/><text x="66" y="152" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">1</text>
+<text x="90" y="152" font-size="18" font-weight="700" fill="#334155">Người nói</text>
+<text x="56" y="180" font-size="15" fill="#334155">Phát biểu tiếng Việt, Anh</text>
+<text x="56" y="200" font-size="15" fill="#334155">hoặc Trung</text>
+<text x="56" y="220" font-size="15" fill="#334155">(từng người một)</text>
+<rect x="360" y="120" width="270" height="130" rx="14" fill="#e6f4f1" stroke="#0f766e" stroke-width="2.5"/>
+<circle cx="386" cy="146" r="15" fill="#0f766e"/><text x="386" y="152" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">2</text>
+<text x="410" y="152" font-size="18" font-weight="700" fill="#0f766e">EMEET M0 Plus</text>
+<text x="410" y="174" font-size="18" font-weight="700" fill="#0f766e">(đầu vào)</text>
+<text x="376" y="202" font-size="15" fill="#334155">Mảng micro thu mọi hướng</text>
+<text x="376" y="222" font-size="15" fill="#334155">Khử vọng, giảm ồn (phần cứng)</text>
+<text x="376" y="242" font-size="15" fill="#334155">→ cáp USB vào laptop</text>
+<rect x="680" y="120" width="270" height="130" rx="14" fill="#e8f0fb" stroke="#0d4792" stroke-width="2.5"/>
+<circle cx="706" cy="146" r="15" fill="#0d4792"/><text x="706" y="152" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">3</text>
+<text x="730" y="152" font-size="18" font-weight="700" fill="#0d4792">Laptop · Chrome</text>
+<text x="696" y="180" font-size="15" fill="#334155">Nhận âm thanh từ M0 Plus</text>
+<text x="696" y="200" font-size="15" fill="#334155">(đầu vào mặc định)</text>
+<text x="696" y="220" font-size="15" fill="#334155">Mở app, Chế độ họp</text>
+<rect x="1000" y="120" width="270" height="130" rx="14" fill="#e8f0fb" stroke="#0d4792" stroke-width="2.5"/>
+<circle cx="1026" cy="146" r="15" fill="#0d4792"/><text x="1026" y="152" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">4</text>
+<text x="1050" y="152" font-size="18" font-weight="700" fill="#0d4792">App: nhận diện</text>
+<text x="1050" y="174" font-size="18" font-weight="700" fill="#0d4792">giọng nói</text>
+<text x="1016" y="202" font-size="15" fill="#334155">Web Speech API (Chrome)</text>
+<text x="1016" y="222" font-size="15" fill="#334155">Nghe 1 ngôn ngữ mỗi lượt</text>
+<text x="1016" y="242" font-size="15" fill="#334155">Chữ chạy theo lúc nói</text>
+<rect x="1320" y="120" width="270" height="130" rx="14" fill="#e8f0fb" stroke="#0d4792" stroke-width="2.5"/>
+<circle cx="1346" cy="146" r="15" fill="#0d4792"/><text x="1346" y="152" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">5</text>
+<text x="1370" y="152" font-size="18" font-weight="700" fill="#0d4792">App: làm sạch</text>
+<text x="1370" y="174" font-size="18" font-weight="700" fill="#0d4792">văn bản</text>
+<text x="1336" y="202" font-size="15" fill="#334155">Từ điển sửa lỗi nghe sai</text>
+<text x="1336" y="222" font-size="15" fill="#334155">Lọc độ tin cậy thấp</text>
+<text x="1336" y="242" font-size="15" fill="#334155">Bảng thuật ngữ chuyên ngành</text>
+<line x1="310" y1="185.0" x2="360" y2="185.0" stroke="#475569" stroke-width="3" marker-end="url(#a)"/>
+<line x1="630" y1="185.0" x2="680" y2="185.0" stroke="#475569" stroke-width="3" marker-end="url(#a)"/>
+<line x1="950" y1="185.0" x2="1000" y2="185.0" stroke="#475569" stroke-width="3" marker-end="url(#a)"/>
+<line x1="1270" y1="185.0" x2="1320" y2="185.0" stroke="#475569" stroke-width="3" marker-end="url(#a)"/>
+<rect x="1000" y="300" width="270" height="96" rx="14" fill="#f3edfe" stroke="#7c3aed" stroke-width="2.5" stroke-dasharray="8 6"/>
+<circle cx="1026" cy="326" r="15" fill="#7c3aed"/><text x="1026" y="332" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">☁</text>
+<text x="1050" y="332" font-size="18" font-weight="700" fill="#7c3aed">Máy chủ nhận diện</text>
+<text x="1050" y="354" font-size="18" font-weight="700" fill="#7c3aed">giọng nói (Chrome)</text>
+<text x="1016" y="382" font-size="15" fill="#334155">Dịch vụ của trình duyệt</text>
+<line x1="1135" y1="250" x2="1135" y2="300" stroke="#7c3aed" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#a)" marker-start="url(#a)"/>
+<text x="1150" y="282" text-anchor="start" font-size="14" font-style="italic" fill="#7c3aed">Internet</text>
+<rect x="1320" y="300" width="270" height="96" rx="14" fill="#f3edfe" stroke="#7c3aed" stroke-width="2.5" stroke-dasharray="8 6"/>
+<circle cx="1346" cy="326" r="15" fill="#7c3aed"/><text x="1346" y="332" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">☁</text>
+<text x="1370" y="332" font-size="18" font-weight="700" fill="#7c3aed">Google Cloud</text>
+<text x="1370" y="354" font-size="18" font-weight="700" fill="#7c3aed">Translation API</text>
+<text x="1336" y="382" font-size="15" fill="#334155">HTTPS + khóa API của bạn</text>
+<line x1="1455" y1="250" x2="1455" y2="300" stroke="#7c3aed" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#a)" marker-start="url(#a)"/>
+<text x="1470" y="282" text-anchor="start" font-size="14" font-style="italic" fill="#7c3aed">gửi câu / nhận dịch</text>
+<rect x="1320" y="470" width="270" height="130" rx="14" fill="#e8f0fb" stroke="#0d4792" stroke-width="2.5"/>
+<circle cx="1346" cy="496" r="15" fill="#0d4792"/><text x="1346" y="502" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">6</text>
+<text x="1370" y="502" font-size="18" font-weight="700" fill="#0d4792">App: khung chat</text>
+<text x="1336" y="530" font-size="15" fill="#334155">Bong bóng chữ gốc + dịch</text>
+<text x="1336" y="550" font-size="15" fill="#334155">Tự đổi ngôn ngữ mỗi lượt</text>
+<text x="1336" y="570" font-size="15" fill="#334155">hoặc phím Space / nút ⇄</text>
+<line x1="1455" y1="396" x2="1455" y2="470" stroke="#475569" stroke-width="3" marker-end="url(#a)"/>
+<text x="1470" y="440" text-anchor="start" font-size="14" font-style="italic" fill="#475569">bản dịch</text>
+<rect x="1000" y="470" width="270" height="130" rx="14" fill="#e8f6ec" stroke="#15803d" stroke-width="2.5"/>
+<circle cx="1026" cy="496" r="15" fill="#15803d"/><text x="1026" y="502" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">7</text>
+<text x="1050" y="502" font-size="18" font-weight="700" fill="#15803d">Màn hình lớn</text>
+<text x="1016" y="530" font-size="15" fill="#334155">Chữ phóng to, ẩn ô nhập</text>
+<text x="1016" y="550" font-size="15" fill="#334155">Xuất sang màn hình thứ hai</text>
+<text x="1016" y="570" font-size="15" fill="#334155">(cáp HDMI)</text>
+<rect x="680" y="470" width="270" height="130" rx="14" fill="#e8f6ec" stroke="#15803d" stroke-width="2.5"/>
+<circle cx="706" cy="496" r="15" fill="#15803d"/><text x="706" y="502" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">8</text>
+<text x="730" y="502" font-size="18" font-weight="700" fill="#15803d">TV / Máy chiếu</text>
+<text x="730" y="524" font-size="18" font-weight="700" fill="#15803d">phòng họp</text>
+<text x="696" y="552" font-size="15" fill="#334155">Mọi người đọc chữ gốc</text>
+<text x="696" y="572" font-size="15" fill="#334155">và chữ dịch trên màn hình</text>
+<rect x="360" y="470" width="270" height="130" rx="14" fill="#e8f0fb" stroke="#0d4792" stroke-width="2.5"/>
+<circle cx="386" cy="496" r="15" fill="#0d4792"/><text x="386" y="502" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">9</text>
+<text x="410" y="502" font-size="18" font-weight="700" fill="#0d4792">Lưu biên bản</text>
+<text x="376" y="530" font-size="15" fill="#334155">Làm song song từ khung chat</text>
+<text x="376" y="550" font-size="15" fill="#334155">Nút tải xuống: .txt / .csv</text>
+<text x="376" y="570" font-size="15" fill="#334155">(hội thoại lưu trên laptop)</text>
+<line x1="1320" y1="535.0" x2="1270" y2="535.0" stroke="#475569" stroke-width="3" marker-end="url(#a)"/>
+<line x1="1000" y1="535.0" x2="950" y2="535.0" stroke="#475569" stroke-width="3" marker-end="url(#a)"/>
+<text x="975" y="525.0" text-anchor="middle" font-size="14" font-style="italic" fill="#475569">HDMI</text>
+<rect x="30" y="662" width="1550" height="190" rx="18" fill="none" stroke="#c2410c" stroke-width="2" stroke-dasharray="3 6"/>
+<text x="46" y="686" font-size="16" font-weight="700" fill="#c2410c">Tùy chọn: bật "Đọc bản dịch ra loa" trong Chế độ họp</text>
+<rect x="1320" y="700" width="270" height="130" rx="14" fill="#fdeee6" stroke="#c2410c" stroke-width="2.5"/>
+<circle cx="1346" cy="726" r="15" fill="#c2410c"/><text x="1346" y="732" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">10</text>
+<text x="1370" y="732" font-size="18" font-weight="700" fill="#c2410c">Xếp hàng đọc</text>
+<text x="1336" y="760" font-size="15" fill="#334155">Đọc lần lượt, giữ 3 bản</text>
+<text x="1336" y="780" font-size="15" fill="#334155">dịch mới nhất</text>
+<text x="1336" y="800" font-size="15" fill="#334155">Tạm dừng nghe (micro nghỉ)</text>
+<rect x="1000" y="700" width="270" height="130" rx="14" fill="#fdeee6" stroke="#c2410c" stroke-width="2.5"/>
+<circle cx="1026" cy="726" r="15" fill="#c2410c"/><text x="1026" y="732" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">11</text>
+<text x="1050" y="732" font-size="18" font-weight="700" fill="#c2410c">Giọng đọc laptop</text>
+<text x="1016" y="760" font-size="15" fill="#334155">(giọng tích hợp sẵn)</text>
+<text x="1016" y="780" font-size="15" fill="#334155">Chọn giọng, tốc độ ở ⚙</text>
+<text x="1016" y="800" font-size="15" fill="#334155">Cài đặt</text>
+<rect x="680" y="700" width="270" height="130" rx="14" fill="#e6f4f1" stroke="#0f766e" stroke-width="2.5"/>
+<circle cx="706" cy="726" r="15" fill="#0f766e"/><text x="706" y="732" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">12</text>
+<text x="730" y="732" font-size="18" font-weight="700" fill="#0f766e">EMEET M0 Plus</text>
+<text x="730" y="754" font-size="18" font-weight="700" fill="#0f766e">(đầu ra)</text>
+<text x="696" y="782" font-size="15" fill="#334155">Laptop gửi âm thanh qua USB</text>
+<text x="696" y="802" font-size="15" fill="#334155">Loa M0 Plus phát bản dịch</text>
+<text x="696" y="822" font-size="15" fill="#334155">Khử vọng phần cứng</text>
+<rect x="360" y="700" width="270" height="130" rx="14" fill="#e8f0fb" stroke="#0d4792" stroke-width="2.5"/>
+<circle cx="386" cy="726" r="15" fill="#0d4792"/><text x="386" y="732" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">13</text>
+<text x="410" y="732" font-size="18" font-weight="700" fill="#0d4792">Đọc xong</text>
+<text x="376" y="760" font-size="15" fill="#334155">App tự mở micro nghe lại</text>
+<text x="376" y="780" font-size="15" fill="#334155">Lời nói lúc đang đọc</text>
+<text x="376" y="800" font-size="15" fill="#334155">KHÔNG được ghi nhận</text>
+<line x1="1320" y1="765.0" x2="1270" y2="765.0" stroke="#475569" stroke-width="3" marker-end="url(#a)"/>
+<line x1="1000" y1="765.0" x2="950" y2="765.0" stroke="#475569" stroke-width="3" marker-end="url(#a)"/>
+<text x="975" y="755.0" text-anchor="middle" font-size="14" font-style="italic" fill="#475569">USB</text>
+<line x1="680" y1="765.0" x2="630" y2="765.0" stroke="#475569" stroke-width="3" marker-end="url(#a)"/>
+<line x1="1455" y1="600" x2="1455" y2="700" stroke="#475569" stroke-width="3" marker-end="url(#a)"/>
+<text x="1470" y="654.0" text-anchor="start" font-size="14" font-style="italic" fill="#475569">nếu bật đọc</text>
+<path d="M 360 765.0 L 20 765.0 L 20 305 L 495 305 L 495 250" fill="none" stroke="#c2410c" stroke-width="3" marker-end="url(#a)"/>
+<text x="34" y="296" font-size="14" font-style="italic" fill="#c2410c">đọc xong: micro tự nghe lại</text>
+<rect x="30" y="900" width="1640" height="140" rx="14" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+<text x="50" y="930" font-size="17" font-weight="700" fill="#0f172a">Chú thích màu</text>
+<rect x="50" y="941" width="26" height="18" rx="4" fill="#e6f4f1" stroke="#0f766e" stroke-width="2"/><text x="86" y="955" font-size="14" fill="#334155">Thiết bị EMEET M0 Plus</text>
+<rect x="300" y="941" width="26" height="18" rx="4" fill="#e8f0fb" stroke="#0d4792" stroke-width="2"/><text x="336" y="955" font-size="14" fill="#334155">Laptop · App dịch</text>
+<rect x="550" y="941" width="26" height="18" rx="4" fill="#f3edfe" stroke="#7c3aed" stroke-width="2"/><text x="586" y="955" font-size="14" fill="#334155">Dịch vụ qua Internet</text>
+<rect x="50" y="969" width="26" height="18" rx="4" fill="#e8f6ec" stroke="#15803d" stroke-width="2"/><text x="86" y="983" font-size="14" fill="#334155">Hiển thị (màn hình)</text>
+<rect x="300" y="969" width="26" height="18" rx="4" fill="#fdeee6" stroke="#c2410c" stroke-width="2"/><text x="336" y="983" font-size="14" fill="#334155">Phát âm thanh (tùy chọn)</text>
+<rect x="550" y="969" width="26" height="18" rx="4" fill="#eef1f5" stroke="#334155" stroke-width="2"/><text x="586" y="983" font-size="14" fill="#334155">Người tham dự</text>
+<text x="840" y="930" font-size="16" font-weight="700" fill="#0f172a">Lưu ý quan trọng:</text>
+<text x="840" y="952" font-size="14" font-weight="400" fill="#334155">• Cần Internet ổn định: nhận diện giọng nói và dịch đều đi qua máy chủ bên ngoài.</text>
+<text x="840" y="974" font-size="14" font-weight="400" fill="#334155">• Khi đọc bản dịch, micro tạm nghỉ nên người nói tiếp phải chờ; thương thảo hợp đồng nên TẮT đọc tiếng, chỉ xem chữ.</text>
+<text x="840" y="996" font-size="14" font-weight="400" fill="#334155">• Đặt M0 Plus làm đầu vào và đầu ra mặc định của laptop; tăng dần âm lượng loa để kiểm tra không bị thu lại.</text>
+<text x="840" y="1018" font-size="14" font-weight="400" fill="#334155">• Bản dịch máy chỉ hỗ trợ hiểu nhanh; điều khoản, số liệu phải xác nhận bằng văn bản chính thức.</text>
+</svg>

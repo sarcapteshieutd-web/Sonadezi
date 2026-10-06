@@ -1,0 +1,61 @@
+rules_version = '2';
+
+// Quy tắc bảo mật cho tính năng "Phòng họp xem chung".
+// - Chỉ người đã đăng nhập ẩn danh (Firebase Anonymous Auth) mới đọc/ghi.
+// - Không ai liệt kê được danh sách phòng; phải biết mã phòng (20 ký tự ngẫu nhiên) mới đọc được.
+// - Chỉ chủ phòng (hostUid) được ghi tin nhắn, bản dịch và đóng phòng.
+// - Mọi quyền đọc/ghi chấm dứt khi phòng hết hạn (expiresAt).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function roomData(roomId) { return get(/databases/$(database)/documents/rooms/$(roomId)).data; }
+    function isHost(roomId) { return signedIn() && roomData(roomId).hostUid == request.auth.uid; }
+    function alive(roomId) { return request.time < roomData(roomId).expiresAt; }
+
+    match /rooms/{roomId} {
+      allow get: if signedIn() && request.time < resource.data.expiresAt;
+      allow list: if false;
+
+      allow create: if signedIn()
+        && roomId.size() >= 16
+        && request.resource.data.keys().hasOnly(['hostUid', 'createdAt', 'expiresAt', 'status', 'hostSrc', 'hostTgt'])
+        && request.resource.data.hostUid == request.auth.uid
+        && request.resource.data.status == 'open'
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt > request.time + duration.value(1, 'h')
+        && request.resource.data.expiresAt <= request.time + duration.value(25, 'h');
+
+      // Chủ phòng chỉ được đóng phòng hoặc rút ngắn thời hạn, không được kéo dài
+      allow update: if signedIn()
+        && resource.data.hostUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'expiresAt', 'hostSrc', 'hostTgt'])
+        && request.resource.data.expiresAt <= resource.data.expiresAt;
+
+      allow delete: if signedIn() && resource.data.hostUid == request.auth.uid;
+
+      match /messages/{messageId} {
+        allow get, list: if signedIn() && alive(roomId);
+
+        allow create: if isHost(roomId) && alive(roomId)
+          && request.resource.data.keys().hasOnly(['src', 'out', 'from', 'to', 'ts', 'meeting', 'expiresAt', 'tr'])
+          && request.resource.data.src is string && request.resource.data.src.size() <= 6000
+          && request.resource.data.out is string && request.resource.data.out.size() <= 8000;
+
+        // Chỉ được thêm bản dịch (trường tr), không sửa nội dung đã ghi
+        allow update: if isHost(roomId) && alive(roomId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tr']);
+
+        allow delete: if isHost(roomId);
+      }
+
+      match /viewers/{viewerUid} {
+        allow create, update: if signedIn() && request.auth.uid == viewerUid && alive(roomId)
+          && request.resource.data.keys().hasOnly(['lang', 'ts', 'expiresAt'])
+          && request.resource.data.lang is string && request.resource.data.lang.size() <= 4;
+        allow get, list: if isHost(roomId) || (signedIn() && request.auth.uid == viewerUid);
+        allow delete: if signedIn() && (request.auth.uid == viewerUid || isHost(roomId));
+      }
+    }
+  }
+}

@@ -143,3 +143,21 @@ Trong Chế độ họp, tích **"Đọc bản dịch ra loa"** để mỗi bả
 - Dùng micro hội nghị làm cả **đầu vào lẫn đầu ra mặc định** của laptop (Windows: Cài đặt → Hệ thống → Âm thanh), cắm USB.
 - Giọng đọc là giọng có sẵn trên laptop, chọn và chỉnh trong ⚙ → Giọng đọc.
 - Với thương thảo hợp đồng nên **tắt** tùy chọn này và chỉ đọc chữ trên màn hình để không mất lời nói.
+
+## 16. Phòng họp xem chung bằng mã QR
+Chủ phòng bấm biểu tượng mã QR ở góc khung chat → **Tạo phòng họp**; người trong phòng quét mã để xem chữ gốc và chữ dịch theo thời gian thực, tự chọn ngôn ngữ hiển thị (chỉ đọc). Cần thiết lập Firebase một lần; xem hướng dẫn chi tiết, quy tắc bảo mật, TTL, chi phí và quyền riêng tư tại **`docs/FIREBASE-SETUP.md`**.
+
+## 17. Giảm độ trễ trong Chế độ họp
+Độ trễ từ lúc người nói dứt câu đến lúc có bản dịch gồm: (1) trình duyệt xác nhận kết thúc câu, (2) gọi dịch, (3) hiển thị và đọc. Các tùy chọn trong ⚙ → **Chế độ họp: giảm độ trễ** (mặc định đều tắt):
+- **Dịch tăng dần:** khi đang nói, cứ khoảng 6 từ ổn định (giữ lại 3 từ cuối vì trình duyệt còn có thể sửa) app dịch ngay một cụm và hiện bản dịch tạm; khi chốt câu chỉ dịch phần đuôi còn lại. Tổng số ký tự gửi dịch xấp xỉ bằng dịch cả câu. Đổi lại, dịch theo cụm kém ngữ cảnh nên có thể kém chính xác hơn, nhất là khi trật tự từ khác nhau.
+- **Tự chốt câu sau khi im lặng (0,7 / 1 / 1,5 giây):** app chốt câu sớm, không chờ trình duyệt. Nếu trình duyệt sau đó báo thêm phần cuối, phần thêm hiện thành bong bóng riêng; nếu người nói ngừng giữa ý, câu bị cắt đôi.
+- **Hiện độ trễ trên từng bong bóng:** hiển thị số giây từ lúc chữ ngừng thay đổi (xấp xỉ lúc dứt câu) đến khi có bản dịch, để đo và so sánh các cấu hình trên thiết bị thật.
+
+Ngữ cảnh nạp sẵn (từ điển sửa lỗi nghe sai và bảng thuật ngữ trong `config.js`) đã có từ trước. Muốn độ trễ thấp hơn nữa cần nhận diện giọng nói dạng luồng từ dịch vụ trả phí qua máy chủ trung gian.
+
+## 18. Chế độ hai ô trái/phải và giao diện laptop
+- **Hai ô ngang cấp nhau** (nút hình hai cột trên thanh công cụ khung chat; mặc định bật trên laptop): ô trái hiển thị cuộc họp bằng ngôn ngữ của **bên bạn** (ngôn ngữ nguồn khi chọn cặp ngôn ngữ), ô phải bằng ngôn ngữ **bên kia**. Mỗi lượt nói là một hàng, hai ô thẳng hàng. Ô của người đang nói có viền xanh và nhãn "Nói", ô còn lại là "Bản dịch". Mỗi bên chỉ nhìn ô của mình và đọc theo đúng thứ tự cuộc trò chuyện. Mỗi ô có nút đọc lại và sao chép. Dòng đang nói ở cuối cũng chia hai ô.
+- **Giao diện laptop** (màn hình rộng từ 1024 px): khung nội dung dùng hết chiều rộng, cỡ chữ và khoảng cách tự phóng to theo kích thước cửa sổ (tối đa khoảng 1,4 lần), thanh chọn ngôn ngữ, thanh chế độ họp và nút công cụ nằm chung một hàng, ô nhập và micro nằm chung một hàng phía dưới để dành tối đa chiều cao cho nội dung.
+- **A− / A+:** chỉnh cỡ chữ thêm theo ý bạn, lưu trên thiết bị.
+- Chế độ màn hình lớn (chiếu TV) vẫn dùng được và phóng chữ lớn hơn nữa.
+- Trên điện thoại, chế độ hai ô mặc định tắt vì màn hình hẹp; có thể bật bằng nút hai cột.

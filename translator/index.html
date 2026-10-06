@@ -32,22 +32,31 @@
     .rec-ring.d2 { animation-delay: .65s; }
     @keyframes blink { 0%,100% { opacity: 1 } 50% { opacity: .45 } }
     /* Chế độ màn hình lớn: chữ phóng to, ẩn ô nhập */
-    .big #history, .big #liveRow { zoom: 1.5; }
-    .big #inputRow, .big #langBar { display: none; }
+    .big #history, .big #liveRow, .big #liveDual { zoom: 1.5; }
+    /* Chế độ hai ô trái/phải */
+    .dual #dualHead { display: grid; }
+    .dual #liveRow { display: none !important; }
+    body:not(.dual) #liveDual { display: none !important; }
+    .dual #liveDual:not(.hidden) { display: grid; }
+    .big #chatBar { display: none; }
+    .big #inputRow, .big #langBar, .big #viewerBar { display: none; }
+    /* Chế độ người xem: chỉ đọc */
+    .viewer #btnDonate, .viewer #btnExport, .viewer #btnClearHist, .viewer #btnSettings, .viewer #btnInstall,
+    .viewer #langBar, .viewer #dock, .viewer #meetingBar, .viewer #btnRoom { display: none !important; }
     .rec-blink { animation: blink 1s ease-in-out infinite; }
   </style>
 </head>
 
 <body class="overflow-hidden bg-[#f3f6fb] text-slate-900">
-  <div id="app" class="mx-auto flex h-[100dvh] max-w-xl flex-col px-4 pt-[env(safe-area-inset-top)]">
+  <div id="app" class="mx-auto flex h-[100dvh] max-w-xl flex-col px-4 pt-[env(safe-area-inset-top)] lg:max-w-none lg:px-8">
 
     <!-- Thanh thương hiệu -->
-    <header class="-mx-4 mb-2 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5 shadow-sm">
+    <header class="-mx-4 mb-2 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5 shadow-sm lg:-mx-8 lg:px-8">
       <div class="flex min-w-0 items-center gap-2">
         <img src="icons/logo-mark.png" alt="Sonadezi Long Thành" class="h-8 w-auto shrink-0" width="44" height="36" />
         <div class="leading-tight">
           <h1 class="whitespace-nowrap text-sm font-semibold tracking-tight text-brand-700">Phiên dịch trực tuyến</h1>
-          <p class="whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500">Sonadezi Long Thành</p>
+          <p class="whitespace-nowrap text-[0.625rem] font-medium uppercase tracking-[0.1em] text-slate-500">Sonadezi Long Thành</p>
         </div>
       </div>
       <div class="flex shrink-0 items-center">
@@ -75,19 +84,29 @@
       <button id="iosHintClose" class="float-right -mt-1 px-1 text-lg leading-none" aria-label="Đóng">×</button>
     </div>
 
+    <!-- Thanh người xem phòng họp -->
+    <div id="viewerBar" class="mb-2 hidden shrink-0 lg:w-full lg:max-w-3xl lg:self-center rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200/80">
+      <div class="flex items-center justify-between gap-3">
+        <label for="selViewerLang" class="text-sm font-medium text-slate-600">Ngôn ngữ hiển thị</label>
+        <select id="selViewerLang" class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-center text-[0.9375rem] font-semibold text-brand-700"></select>
+      </div>
+      <p id="viewerStatus" class="mt-1.5 text-xs text-slate-500"></p>
+    </div>
+
+    <div id="topRow" class="flex flex-col lg:flex-row lg:flex-wrap lg:items-center lg:gap-3">
     <!-- Chọn ngôn ngữ -->
-    <section id="langBar" class="shrink-0 rounded-2xl bg-white p-2 shadow-sm ring-1 ring-slate-200/80">
+    <section id="langBar" class="shrink-0 lg:w-[26rem] rounded-2xl bg-white p-2 shadow-sm ring-1 ring-slate-200/80">
       <div class="flex items-center gap-2">
-        <select id="selSrc" aria-label="Ngôn ngữ nguồn" class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 text-center text-[15px] font-semibold text-brand-700"></select>
+        <select id="selSrc" aria-label="Ngôn ngữ nguồn" class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 text-center text-[0.9375rem] font-semibold text-brand-700"></select>
         <button id="btnSwap" aria-label="Đảo chiều ngôn ngữ" class="shrink-0 rounded-full bg-brand-600 p-3.5 text-white shadow-lg shadow-brand-600/40 ring-4 ring-brand-100 transition hover:bg-brand-700 active:scale-90">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>
         </button>
-        <select id="selTgt" aria-label="Ngôn ngữ đích" class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 text-center text-[15px] font-semibold text-brand-700"></select>
+        <select id="selTgt" aria-label="Ngôn ngữ đích" class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 text-center text-[0.9375rem] font-semibold text-brand-700"></select>
       </div>
     </section>
 
     <!-- Thanh trạng thái chế độ họp -->
-    <div id="meetingBar" class="mt-2 hidden shrink-0 flex-col gap-1.5 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
+    <div id="meetingBar" class="mt-2 hidden shrink-0 flex-col lg:mt-0 lg:flex-1 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-5 gap-1.5 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
       <div class="flex items-center justify-between">
         <span class="flex items-center gap-2"><span class="rec-blink inline-block h-2 w-2 rounded-full bg-red-600"></span>Đang ghi · <span id="meetingTime" class="tabular-nums">00:00</span></span>
         <button id="btnMeetingStop" class="rounded-lg border border-red-300 px-2 py-0.5 text-xs font-medium">Dừng</button>
@@ -98,32 +117,57 @@
       </div>
       <div class="flex items-center justify-between gap-2">
         <label class="flex items-center gap-1.5 text-xs"><input id="chkMeetingSpeak" type="checkbox" class="h-4 w-4 accent-red-600" />Đọc bản dịch ra loa</label>
-        <span id="meetingSpeaking" class="hidden rounded bg-red-100 px-1.5 py-0.5 text-[11px] font-medium">Đang đọc · micro tạm nghỉ</span>
+        <span id="meetingSpeaking" class="hidden rounded bg-red-100 px-1.5 py-0.5 text-[0.6875rem] font-medium">Đang đọc · micro tạm nghỉ</span>
       </div>
-      <div class="text-[11px] text-red-600/80">Đổi người nói: bấm ⇄ hoặc phím Space.</div>
+      <div class="text-[0.6875rem] text-red-600/80">Đổi người nói: bấm ⇄ hoặc phím Space.</div>
+    </div>
+
+    <!-- Thanh công cụ khung chat -->
+    <div id="chatBar" class="mt-2 flex shrink-0 items-center justify-end gap-1.5 lg:ml-auto lg:mt-0">
+        <button id="btnDual" aria-label="Chia hai ô trái phải" title="Chia hai ô trái phải" class="rounded-full bg-white p-1.5 text-slate-500 shadow ring-1 ring-slate-200"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg></button>
+        <button id="btnFontMinus" aria-label="Giảm cỡ chữ" title="Giảm cỡ chữ" class="rounded-full bg-white px-2 py-1 text-xs font-semibold text-slate-500 shadow ring-1 ring-slate-200">A−</button>
+        <button id="btnFontPlus" aria-label="Tăng cỡ chữ" title="Tăng cỡ chữ" class="rounded-full bg-white px-2 py-1 text-sm font-semibold text-slate-500 shadow ring-1 ring-slate-200">A+</button>
+        <button id="btnRoom" aria-label="Phòng họp xem chung (mã QR)" title="Phòng họp xem chung (mã QR)" class="relative rounded-full bg-white p-1.5 text-slate-500 shadow ring-1 ring-slate-200">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/></svg>
+          <span id="roomDot" class="absolute right-0 top-0 hidden h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-white"></span>
+        </button>
+        <button id="btnBig" aria-label="Màn hình lớn" title="Màn hình lớn" aria-pressed="false" class="rounded-full bg-white p-1.5 text-slate-500 shadow ring-1 ring-slate-200">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        </button>
+    </div>
+
     </div>
 
     <!-- Khung chat -->
-    <main id="histWrap" class="mt-2 min-h-0 flex-1 overflow-y-auto rounded-2xl bg-white/70 p-3 ring-1 ring-slate-200/80">
-      <div class="sticky top-0 z-10 flex h-0 justify-end">
-        <button id="btnBig" aria-label="Màn hình lớn" title="Màn hình lớn" aria-pressed="false" class="-mr-1 -mt-1 rounded-full bg-white/90 p-1.5 text-slate-500 shadow ring-1 ring-slate-200">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
-        </button>
+    <main id="histWrap" class="mt-1.5 min-h-0 flex-1 overflow-y-auto rounded-2xl bg-white/70 p-3 ring-1 ring-slate-200/80">
+      <div id="dualHead" class="sticky top-0 z-10 -mx-3 -mt-3 mb-3 hidden grid-cols-2 gap-3 border-b border-slate-200 bg-white/95 px-3 py-2 text-sm font-semibold text-brand-700 backdrop-blur lg:gap-5">
+        <div id="dualHeadL" class="truncate"></div>
+        <div id="dualHeadR" class="truncate"></div>
       </div>
       <div id="emptyHint" class="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-slate-400">
         <img src="icons/logo-full.png" alt="Sonadezi Long Thành" class="h-24 w-auto opacity-80 mix-blend-multiply" width="85" height="100" />
         <p>Bấm micro hoặc gõ văn bản để bắt đầu.<br />Bấm ⇄ để đổi người nói.</p>
       </div>
       <div id="history" class="space-y-3"></div>
+      <div id="liveDual" class="mt-3 hidden grid-cols-2 gap-3 lg:gap-5">
+        <div class="rounded-2xl border border-dashed border-brand-300 bg-brand-50 px-3.5 py-2.5">
+          <div class="flex items-center gap-2 text-[0.6875rem] font-medium text-slate-500"><span id="ldLLbl"></span><span id="ldLRec" class="rec-blink hidden items-center gap-1 text-red-600"><span class="inline-block h-2 w-2 rounded-full bg-red-600"></span>Đang nghe</span></div>
+          <div id="ldLTxt" class="mt-0.5 whitespace-pre-wrap break-words text-lg leading-snug text-brand-900"></div>
+        </div>
+        <div class="rounded-2xl border border-dashed border-brand-300 bg-brand-50 px-3.5 py-2.5">
+          <div class="flex items-center gap-2 text-[0.6875rem] font-medium text-slate-500"><span id="ldRLbl"></span><span id="ldRRec" class="rec-blink hidden items-center gap-1 text-red-600"><span class="inline-block h-2 w-2 rounded-full bg-red-600"></span>Đang nghe</span></div>
+          <div id="ldRTxt" class="mt-0.5 whitespace-pre-wrap break-words text-lg leading-snug text-brand-900"></div>
+        </div>
+      </div>
       <div id="liveRow" class="mt-3 hidden">
         <div class="max-w-[88%] rounded-2xl border border-dashed border-brand-300 bg-brand-50 px-3.5 py-2.5">
-          <div class="mb-0.5 flex items-center gap-2 text-[11px] font-medium text-slate-500">
+          <div class="mb-0.5 flex items-center gap-2 text-[0.6875rem] font-medium text-slate-500">
             <span id="lblSrc"></span>
             <span id="recBadge" class="rec-blink hidden items-center gap-1 text-red-600"><span class="inline-block h-2 w-2 rounded-full bg-red-600"></span>Đang nghe</span>
           </div>
-          <div id="liveSrc" class="whitespace-pre-wrap break-words text-[15px] leading-snug text-slate-700"></div>
+          <div id="liveSrc" class="whitespace-pre-wrap break-words text-[0.9375rem] leading-snug text-slate-700"></div>
           <div class="mt-2 border-t border-brand-100 pt-2">
-            <div class="flex items-center gap-2 text-[11px] font-medium text-brand-600"><span id="lblTgt"></span><span id="status" class="font-normal text-slate-500"></span></div>
+            <div class="flex items-center gap-2 text-[0.6875rem] font-medium text-brand-600"><span id="lblTgt"></span><span id="status" class="font-normal text-slate-500"></span></div>
             <div id="outText" aria-live="polite" class="whitespace-pre-wrap break-words text-base font-semibold leading-snug text-brand-900"></div>
           </div>
         </div>
@@ -131,10 +175,10 @@
     </main>
 
     <!-- Thanh nhập và micro -->
-    <div class="shrink-0 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2">
-      <div id="inputRow" class="flex items-end gap-2">
+    <div id="dock" class="shrink-0 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 lg:flex lg:items-center lg:gap-6">
+      <div id="inputRow" class="flex items-end gap-2 lg:flex-1">
         <textarea id="srcText" rows="1" maxlength="5000" placeholder="Nhập văn bản…"
-          class="max-h-28 min-h-[44px] flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-base leading-snug outline-none focus:border-brand-300"></textarea>
+          class="max-h-28 min-h-[2.75rem] flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-base leading-snug outline-none focus:border-brand-300"></textarea>
         <button id="btnClear" aria-label="Xóa ô nhập" class="h-11 w-11 shrink-0 rounded-full text-slate-400 hover:bg-slate-100">
           <svg class="mx-auto" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
@@ -142,7 +186,7 @@
           <svg class="mx-auto" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4zM22 2 11 13"/></svg>
         </button>
       </div>
-      <div class="mt-2 grid grid-cols-[1fr_auto_1fr] items-center">
+      <div class="mt-2 grid grid-cols-[1fr_auto_1fr] items-center lg:mt-0 lg:w-[28rem] lg:shrink-0">
         <label class="flex items-center gap-1.5 text-xs text-slate-600">
           <input id="chkAuto" type="checkbox" class="h-4 w-4 accent-brand-600" checked />
           Tự đọc bản dịch
@@ -151,14 +195,14 @@
           <span id="ring1" class="rec-ring pointer-events-none absolute inset-0 hidden rounded-full bg-red-500"></span>
           <span id="ring2" class="rec-ring d2 pointer-events-none absolute inset-0 hidden rounded-full bg-red-500"></span>
           <button id="btnMic" aria-label="Bắt đầu nói" aria-pressed="false"
-            class="relative flex h-20 w-20 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg shadow-brand-600/40 transition active:scale-95">
+            class="relative flex h-20 w-20 items-center justify-center rounded-full lg:h-16 lg:w-16 bg-brand-600 text-white shadow-lg shadow-brand-600/40 transition active:scale-95">
             <svg id="icoMic" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></svg>
             <svg id="icoStop" class="hidden" width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
           </button>
         </div>
         <button id="btnMeeting" class="justify-self-end rounded-full border border-brand-600 px-3 py-1.5 text-xs font-medium text-brand-600">Chế độ họp</button>
       </div>
-      <p id="micHint" class="mt-1 text-center text-xs text-slate-500">Chạm để nói</p>
+      <p id="micHint" class="mt-1 text-center text-xs text-slate-500 lg:hidden">Chạm để nói</p>
     </div>
   </div>
 
@@ -197,6 +241,19 @@
         <button id="btnTest" type="button" class="mt-3 w-full rounded-xl border border-brand-600 py-2 text-sm font-medium text-brand-600">Nghe thử</button>
         <p class="mt-1 text-xs text-slate-500">Danh sách giọng phụ thuộc thiết bị. Giọng tiếng Việt thường nghe tự nhiên hơn nếu cài thêm gói giọng "Google" (Android) hoặc "Linh" cải tiến (iPhone) trong cài đặt hệ thống.</p>
       </div>
+      <div class="mt-5 border-t border-slate-200 pt-4">
+        <h3 class="text-sm font-semibold">Chế độ họp: giảm độ trễ</h3>
+        <label class="mt-2 flex items-start gap-2 text-sm"><input id="chkIncr" type="checkbox" class="mt-0.5 h-4 w-4 accent-brand-600" /><span>Dịch tăng dần: dịch từng cụm trong khi đang nói, chỉ dịch phần đuôi khi chốt câu</span></label>
+        <label class="mt-3 block text-sm">Tự chốt câu sau khi im lặng</label>
+        <select id="selCut" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2">
+          <option value="0">Tắt (chờ trình duyệt báo kết thúc câu)</option>
+          <option value="700">0,7 giây</option>
+          <option value="1000">1 giây</option>
+          <option value="1500">1,5 giây</option>
+        </select>
+        <label class="mt-3 flex items-center gap-2 text-sm"><input id="chkLat" type="checkbox" class="h-4 w-4 accent-brand-600" />Hiện độ trễ trên từng bong bóng (để so sánh)</label>
+        <p class="mt-1 text-xs text-slate-500">Dịch tăng dần dịch theo cụm nên có thể kém chính xác hơn dịch cả câu, nhất là khi trật tự từ khác nhau (Việt, Trung). Tự chốt câu có thể cắt câu giữa chừng nếu người nói ngừng giữa ý. Hãy thử và đối chiếu trước khi dùng cho họp quan trọng.</p>
+      </div>
       <button id="btnSave" class="mt-4 w-full rounded-xl bg-brand-600 py-2.5 font-medium text-white">Lưu</button>
     </div>
   </div>
@@ -223,6 +280,17 @@
         <button data-close class="px-2 text-2xl leading-none" aria-label="Đóng">×</button>
       </div>
       <div id="donateBody"></div>
+    </div>
+  </div>
+
+  <!-- Phòng họp xem chung -->
+  <div id="sheetRoom" data-modal class="fixed inset-0 z-20 hidden items-end bg-black/40 sm:items-center sm:justify-center">
+    <div class="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-5 pb-[max(env(safe-area-inset-bottom),1.25rem)] sm:rounded-2xl">
+      <div class="mb-2 flex items-center justify-between">
+        <h2 class="text-base font-semibold">Phòng họp xem chung</h2>
+        <button data-close class="px-2 text-2xl leading-none" aria-label="Đóng">×</button>
+      </div>
+      <div id="roomBody"></div>
     </div>
   </div>
 
