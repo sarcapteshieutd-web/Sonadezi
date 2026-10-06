@@ -213,6 +213,19 @@
         <button id="btnTest" type="button" class="mt-3 w-full rounded-xl border border-brand-600 py-2 text-sm font-medium text-brand-600">Nghe thử</button>
         <p class="mt-1 text-xs text-slate-500">Danh sách giọng phụ thuộc thiết bị. Giọng tiếng Việt thường nghe tự nhiên hơn nếu cài thêm gói giọng "Google" (Android) hoặc "Linh" cải tiến (iPhone) trong cài đặt hệ thống.</p>
       </div>
+      <div class="mt-5 border-t border-slate-200 pt-4">
+        <h3 class="text-sm font-semibold">Chế độ họp: giảm độ trễ</h3>
+        <label class="mt-2 flex items-start gap-2 text-sm"><input id="chkIncr" type="checkbox" class="mt-0.5 h-4 w-4 accent-brand-600" /><span>Dịch tăng dần: dịch từng cụm trong khi đang nói, chỉ dịch phần đuôi khi chốt câu</span></label>
+        <label class="mt-3 block text-sm">Tự chốt câu sau khi im lặng</label>
+        <select id="selCut" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2">
+          <option value="0">Tắt (chờ trình duyệt báo kết thúc câu)</option>
+          <option value="700">0,7 giây</option>
+          <option value="1000">1 giây</option>
+          <option value="1500">1,5 giây</option>
+        </select>
+        <label class="mt-3 flex items-center gap-2 text-sm"><input id="chkLat" type="checkbox" class="h-4 w-4 accent-brand-600" />Hiện độ trễ trên từng bong bóng (để so sánh)</label>
+        <p class="mt-1 text-xs text-slate-500">Dịch tăng dần dịch theo cụm nên có thể kém chính xác hơn dịch cả câu, nhất là khi trật tự từ khác nhau (Việt, Trung). Tự chốt câu có thể cắt câu giữa chừng nếu người nói ngừng giữa ý. Hãy thử và đối chiếu trước khi dùng cho họp quan trọng.</p>
+      </div>
       <button id="btnSave" class="mt-4 w-full rounded-xl bg-brand-600 py-2.5 font-medium text-white">Lưu</button>
     </div>
   </div>

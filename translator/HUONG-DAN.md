@@ -146,3 +146,11 @@ Trong Chế độ họp, tích **"Đọc bản dịch ra loa"** để mỗi bả
 
 ## 16. Phòng họp xem chung bằng mã QR
 Chủ phòng bấm biểu tượng mã QR ở góc khung chat → **Tạo phòng họp**; người trong phòng quét mã để xem chữ gốc và chữ dịch theo thời gian thực, tự chọn ngôn ngữ hiển thị (chỉ đọc). Cần thiết lập Firebase một lần; xem hướng dẫn chi tiết, quy tắc bảo mật, TTL, chi phí và quyền riêng tư tại **`docs/FIREBASE-SETUP.md`**.
+
+## 17. Giảm độ trễ trong Chế độ họp
+Độ trễ từ lúc người nói dứt câu đến lúc có bản dịch gồm: (1) trình duyệt xác nhận kết thúc câu, (2) gọi dịch, (3) hiển thị và đọc. Các tùy chọn trong ⚙ → **Chế độ họp: giảm độ trễ** (mặc định đều tắt):
+- **Dịch tăng dần:** khi đang nói, cứ khoảng 6 từ ổn định (giữ lại 3 từ cuối vì trình duyệt còn có thể sửa) app dịch ngay một cụm và hiện bản dịch tạm; khi chốt câu chỉ dịch phần đuôi còn lại. Tổng số ký tự gửi dịch xấp xỉ bằng dịch cả câu. Đổi lại, dịch theo cụm kém ngữ cảnh nên có thể kém chính xác hơn, nhất là khi trật tự từ khác nhau.
+- **Tự chốt câu sau khi im lặng (0,7 / 1 / 1,5 giây):** app chốt câu sớm, không chờ trình duyệt. Nếu trình duyệt sau đó báo thêm phần cuối, phần thêm hiện thành bong bóng riêng; nếu người nói ngừng giữa ý, câu bị cắt đôi.
+- **Hiện độ trễ trên từng bong bóng:** hiển thị số giây từ lúc chữ ngừng thay đổi (xấp xỉ lúc dứt câu) đến khi có bản dịch, để đo và so sánh các cấu hình trên thiết bị thật.
+
+Ngữ cảnh nạp sẵn (từ điển sửa lỗi nghe sai và bảng thuật ngữ trong `config.js`) đã có từ trước. Muốn độ trễ thấp hơn nữa cần nhận diện giọng nói dạng luồng từ dịch vụ trả phí qua máy chủ trung gian.

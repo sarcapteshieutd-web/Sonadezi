@@ -48,6 +48,7 @@
     app: $('app'), btnBig: $('btnBig'), btnRoom: $('btnRoom'), roomDot: $('roomDot'),
     sheetRoom: $('sheetRoom'), roomBody: $('roomBody'),
     viewerBar: $('viewerBar'), selViewerLang: $('selViewerLang'), viewerStatus: $('viewerStatus'),
+    chkIncr: $('chkIncr'), selCut: $('selCut'), chkLat: $('chkLat'),
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
     selEngine: $('selEngine'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
     inRate: $('inRate'), inPitch: $('inPitch'), lblRate: $('lblRate'), lblPitch: $('lblPitch'), btnTest: $('btnTest'), inEmail: $('inEmail'), inKey: $('inKey'),
@@ -73,6 +74,9 @@
     pitch: parseFloat(store.get('pitch', '1')) || 1,
     log: [], // toàn bộ lượt hội thoại, lưu trên thiết bị
     meeting: false,
+    incr: store.get('incr', '0') === '1',          // dịch tăng dần theo cụm khi đang nói
+    cutMs: parseInt(store.get('cutMs', '0'), 10) || 0, // tự chốt câu sau N ms im lặng (0 = tắt)
+    showLat: store.get('showLat', '0') === '1',    // hiện độ trễ trên bong bóng
     meetingSpeak: store.get('meetingSpeak', '0') === '1',
     speaking: false,
     autoTurn: store.get('autoTurn', '1') === '1',
@@ -127,7 +131,7 @@
 
   function setLangs(s, t, swapText) {
     const wasMeeting = state.meeting;
-    if (wasMeeting) { if (rec) { rec.onend = null; try { rec.abort(); } catch (_) {} } }
+    if (wasMeeting) { resetUtt(); if (rec) { rec.onend = null; try { rec.abort(); } catch (_) {} } }
     else if (state.listening) stopListening();
     archiveTurn();
     state.src = s;
@@ -185,7 +189,7 @@
     const meta = document.createElement('div');
     meta.className = 'mb-0.5 text-[11px] font-medium ' + (mine ? 'text-brand-100' : 'text-slate-500');
     const time = new Date(item.ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    meta.textContent = `${LANGS[item.from].name} · ${time}`;
+    meta.textContent = `${LANGS[item.from].name} · ${time}` + (state.showLat && item.lat != null ? ` · ⏱ ${(item.lat / 1000).toFixed(1)} s` : '');
 
     const orig = document.createElement('div');
     orig.className = 'whitespace-pre-wrap break-words text-[15px] leading-snug';
@@ -345,7 +349,7 @@
     el.liveRow.classList.toggle('hidden', !show);
     el.liveRow.classList.toggle('justify-end', state.src === state.mine);
     el.liveRow.classList.toggle('justify-start', state.src !== state.mine);
-    el.out.parentElement.classList.toggle('hidden', state.meeting);
+    el.out.parentElement.classList.toggle('hidden', state.meeting && !state.incr);
     if (show) el.emptyHint.classList.add('hidden');
     else if (!el.hist.children.length) el.emptyHint.classList.remove('hidden');
     el.src.style.height = 'auto';
@@ -546,17 +550,107 @@
     const parts = await Promise.all(splitChunks(text).map(c => translateChunk(c, undefined, from, to)));
     return parts.join('').replace(/\s+\n/g, '\n').trim();
   }
-  function queueMeeting(text) {
+  function queueMeeting(text, pre) {
     const now = Date.now();
     if (text === lastMeetingText && now - lastMeetingAt < 4000) return; // tránh lặp câu do lỗi của trình duyệt
     lastMeetingText = text; lastMeetingAt = now;
     const from = state.src, to = state.tgt;
+    const t0 = (pre && pre.tLast) || now; // mốc ngừng nói để đo độ trễ
     meetingChain = meetingChain.then(async () => {
       let out;
-      try { out = await translateText(text, from, to); } catch (_) { out = '[Chưa dịch được]'; }
-      addHistory({ src: text, out, from, to, meeting: true });
+      try {
+        if (pre && pre.consumed && pre.parts.length && text.startsWith(pre.consumed)) {
+          // Phần đầu câu đã được dịch sẵn khi đang nói: chỉ dịch thêm phần đuôi
+          const done = await Promise.all(pre.parts);
+          const rest = text.slice(pre.consumed.length).trim();
+          const tail = rest ? await translateText(rest, from, to) : '';
+          out = [...done, tail].filter(Boolean).join(LANGS[to].sp ? ' ' : '');
+        } else {
+          out = await translateText(text, from, to);
+        }
+      } catch (_) {
+        try { out = await translateText(text, from, to); } catch (__) { out = '[Chưa dịch được]'; }
+      }
+      addHistory({ src: text, out, from, to, meeting: true, lat: Date.now() - t0 });
       if (state.meetingSpeak && state.meeting && !/^\[Chưa dịch được\]$/.test(out)) enqueueSpeech(out, to);
     });
+  }
+
+  // ----- Dịch tăng dần và tự chốt câu (giảm độ trễ) -----
+  const normText = x => x.toLowerCase().replace(/[\p{P}\p{S}\s]+/gu, '');
+  // Nếu raw bắt đầu bằng prefix (bỏ qua dấu câu/khoảng trắng/hoa thường) thì trả phần còn lại, ngược lại trả null
+  function stripPrefix(raw, prefix) {
+    const target = normText(prefix);
+    if (!target) return raw;
+    let acc = '';
+    for (let i = 0; i < raw.length; i++) {
+      acc += normText(raw[i]);
+      if (acc === target) return raw.slice(i + 1).trim();
+      if (!target.startsWith(acc)) return null;
+    }
+    return null;
+  }
+  const newUtt = () => ({ consumed: '', parts: [], results: [], lastText: '', tLast: 0, forced: '', timer: null });
+  let utt = newUtt();
+  function resetUtt() { clearTimeout(utt.timer); utt = newUtt(); }
+
+  const MIN_WORDS = 6, TAIL_WORDS = 3, MIN_CJK = 10, TAIL_CJK = 4;
+  // Tìm vị trí cắt "ổn định": giữ lại vài từ cuối vì trình duyệt còn có thể sửa
+  function stableCut(rest, lang) {
+    if (lang.sp) {
+      const ends = []; const re = /\S+/g; let m;
+      while ((m = re.exec(rest))) ends.push({ end: m.index + m[0].length, w: m[0] });
+      const n = ends.length;
+      if (n < MIN_WORDS + TAIL_WORDS) return 0;
+      const last = n - TAIL_WORDS - 1;
+      for (let i = last; i >= MIN_WORDS - 1; i--) if (/[,;:.!?]$/.test(ends[i].w)) return ends[i].end;
+      return ends[last].end;
+    }
+    if (rest.length < MIN_CJK + TAIL_CJK) return 0;
+    const limit = rest.length - TAIL_CJK;
+    for (let i = limit - 1; i >= MIN_CJK - 1; i--) if (/[，。；、,.;!?！？]/.test(rest[i])) return i + 1;
+    return limit;
+  }
+  function showPartial() {
+    if (!state.incr || !state.meeting) return;
+    const done = [];
+    for (let i = 0; i < utt.results.length; i++) { if (utt.results[i] == null) break; done.push(utt.results[i]); }
+    el.out.textContent = done.join(LANGS[state.tgt].sp ? ' ' : '') + (done.length ? ' …' : '');
+    scrollChat();
+  }
+  function incrementalStep(T) {
+    if (utt.consumed && !T.startsWith(utt.consumed)) { utt.consumed = ''; utt.parts = []; utt.results = []; } // trình duyệt đã sửa phần đầu: bỏ phần đã dịch
+    const rest = T.slice(utt.consumed.length);
+    const cut = stableCut(rest, LANGS[state.src]);
+    if (cut <= 0) return;
+    const chunk = rest.slice(0, cut);
+    const idx = utt.parts.length;
+    utt.consumed += chunk;
+    const p = translateText(chunk.trim(), state.src, state.tgt);
+    p.then(r => { utt.results[idx] = r; showPartial(); }).catch(() => {});
+    utt.parts.push(p);
+  }
+  function snapshotUtt() { return { consumed: utt.consumed, parts: utt.parts.slice(), tLast: utt.tLast }; }
+  // Chốt câu sớm khi im lặng đủ lâu, không chờ trình duyệt báo kết thúc
+  function forceCommit() {
+    const text = utt.lastText.trim();
+    if (!text || !state.meeting) return;
+    queueMeeting(text, snapshotUtt());
+    const keep = text;
+    resetUtt(); utt.forced = keep;
+    el.src.value = ''; el.out.textContent = ''; updateCounter();
+  }
+  function commitFinal(f) {
+    let text = f;
+    if (utt.forced) {
+      const rest = stripPrefix(f, utt.forced);
+      if (rest === '') { resetUtt(); return false; }          // trùng với câu đã chốt sớm
+      if (rest !== null) text = rest;                          // chỉ thêm phần mới
+    }
+    queueMeeting(text, utt.forced ? undefined : snapshotUtt());
+    resetUtt();
+    el.out.textContent = '';
+    return true;
   }
 
   // Đọc bản dịch lần lượt; trong lúc đọc tạm dừng nghe để không thu lại tiếng dịch
@@ -593,10 +687,17 @@
     for (let i = ev.resultIndex; i < ev.results.length; i++) {
       const r = ev.results[i];
       const t = applyGlossary(heard(r).trim());
-      if (r.isFinal) { if (t) { queueMeeting(t); gotFinal = true; } } else interim += t;
+      if (r.isFinal) { if (t && commitFinal(t)) gotFinal = true; } else interim += t;
     }
+    if (utt.forced && interim) { const rest = stripPrefix(interim, utt.forced); if (rest !== null) interim = rest; }
     el.src.value = interim;
     updateCounter();
+    if (interim && !gotFinal) {
+      if (interim !== utt.lastText) { utt.lastText = interim; utt.tLast = Date.now(); }
+      if (state.incr) incrementalStep(interim);
+      clearTimeout(utt.timer);
+      if (state.cutMs > 0) utt.timer = setTimeout(forceCommit, state.cutMs);
+    }
     // Hai bên nói luân phiên: sau mỗi câu chốt, chuyển sang ngôn ngữ còn lại
     if (gotFinal && state.autoTurn) setLangs(state.tgt, state.src, false);
   }
@@ -642,6 +743,7 @@
     const rest = el.src.value.trim();
     state.meeting = false;
     wantListening = false;
+    resetUtt();
     speechQueue.length = 0;
     if ('speechSynthesis' in window) speechSynthesis.cancel();
     setSpeakingUI(false);
@@ -777,6 +879,7 @@
   };
   el.btnSettings.onclick = () => {
     loadVoices();
+    el.chkIncr.checked = state.incr; el.selCut.value = String(state.cutMs); el.chkLat.checked = state.showLat;
     el.selVoiceLang.value = state.tgt;
     fillVoices();
     el.inRate.value = state.rate; el.inRate.oninput();
@@ -799,6 +902,8 @@
     store.set('voice_' + el.selVoiceLang.value, el.selVoice.value);
     state.rate = +el.inRate.value; state.pitch = +el.inPitch.value;
     store.set('rate', String(state.rate)); store.set('pitch', String(state.pitch));
+    state.incr = el.chkIncr.checked; state.cutMs = parseInt(el.selCut.value, 10) || 0; state.showLat = el.chkLat.checked;
+    store.set('incr', state.incr ? '1' : '0'); store.set('cutMs', String(state.cutMs)); store.set('showLat', state.showLat ? '1' : '0');
     store.set('engine', state.engine); store.set('email', state.email); store.set('gkey', state.gkey);
     cache.clear();
     closeSheet(); toast('Đã lưu cài đặt'); translateNow();
