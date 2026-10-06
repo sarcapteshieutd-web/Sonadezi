@@ -6,10 +6,14 @@
 translator/
 ├── index.html           # Giao diện (Tailwind CSS, mobile-first)
 ├── app.js               # Logic: dịch, nhận diện giọng nói, đọc văn bản, cài đặt PWA
+├── styles.css           # CSS Tailwind đã build sẵn (không cần mạng/CDN)
+├── tailwind.config.js   # Bảng màu thương hiệu Sonadezi (chỉ cần khi sửa giao diện)
+├── input.css
 ├── manifest.json        # Khai báo PWA (tên, biểu tượng, màu, chế độ standalone)
 ├── service-worker.js    # Cache để cài được và chạy khi mạng yếu
 ├── HUONG-DAN.md         # Tài liệu này
 └── icons/
+    ├── logo-mark.png / logo-full.png   # Logo công ty
     ├── icon-192.png
     ├── icon-512.png
     ├── icon-512-maskable.png
@@ -83,3 +87,10 @@ Cảnh báo bảo mật: khóa nhập trên trình duyệt chỉ lưu tại thi�
 - **Đọc văn bản** cần thiết bị có giọng đọc tiếng tương ứng (cài thêm trong cài đặt hệ thống nếu thiếu, nhất là tiếng Trung/Việt).
 - Cần mạng để dịch và (trên Chrome) để nhận diện giọng nói; service worker chỉ giúp mở giao diện khi mất mạng.
 - Khi cập nhật mã, tăng số phiên bản `CACHE` trong `service-worker.js` (ví dụ `translator-v2`) để thiết bị nhận bản mới.
+
+## 8. Sửa giao diện
+Nếu thay đổi class Tailwind trong `index.html` hoặc `app.js`, build lại CSS bằng Node.js:
+```bash
+npx tailwindcss@3 -c tailwind.config.js -i input.css -o styles.css --minify
+```
+Sau đó tăng số phiên bản `CACHE` trong `service-worker.js`.

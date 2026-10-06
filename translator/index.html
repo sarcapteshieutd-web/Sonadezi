@@ -8,18 +8,17 @@
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#2563eb" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="color-scheme" content="light" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Dịch nhanh" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <link rel="preload" as="image" href="icons/logo-mark.png" />
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = { darkMode: 'media' };
-  </script>
+  <link rel="stylesheet" href="styles.css" />
   <style>
     html, body { height: 100%; }
     body { -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
@@ -36,22 +35,28 @@
   </style>
 </head>
 
-<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-  <div id="app" class="mx-auto flex min-h-full max-w-xl flex-col px-4 pb-6 pt-[max(env(safe-area-inset-top),1rem)]">
+<body class="bg-[#f3f6fb] text-slate-900">
+  <div id="app" class="mx-auto flex min-h-full max-w-xl flex-col px-4 pb-6 pt-[env(safe-area-inset-top)]">
 
-    <!-- Thanh tiêu đề -->
-    <header class="flex items-center justify-between py-2">
-      <h1 class="text-lg font-semibold tracking-tight">Dịch thời gian thực</h1>
+    <!-- Thanh thương hiệu -->
+    <header class="-mx-4 mb-3 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5 shadow-sm">
+      <div class="flex items-center gap-3">
+        <img src="icons/logo-mark.png" alt="Sonadezi Long Thành" class="h-9 w-auto" width="50" height="36" />
+        <div class="leading-tight">
+          <h1 class="text-[15px] font-semibold tracking-tight text-brand-700">Phiên dịch trực tuyến</h1>
+          <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">Sonadezi Long Thành</p>
+        </div>
+      </div>
       <div class="flex items-center gap-1">
-        <button id="btnInstall" class="hidden rounded-full bg-blue-600 px-3 py-1.5 text-sm font-medium text-white">Cài app</button>
-        <button id="btnSettings" aria-label="Cài đặt" class="rounded-full p-2 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800">
+        <button id="btnInstall" class="hidden rounded-full bg-brand-600 px-3 py-1.5 text-sm font-medium text-white">Cài app</button>
+        <button id="btnSettings" aria-label="Cài đặt" class="rounded-full p-2 text-slate-500 hover:bg-slate-100">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
       </div>
     </header>
 
     <!-- Gợi ý cài đặt trên iOS -->
-    <div id="iosHint" class="mb-2 hidden rounded-xl bg-blue-50 p-3 text-sm text-blue-900 dark:bg-blue-950 dark:text-blue-100">
+    <div id="iosHint" class="mb-2 hidden rounded-xl bg-brand-50 p-3 text-sm text-brand-900">
       Để cài ứng dụng: bấm nút <b>Chia sẻ</b>
       <svg class="inline" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
       rồi chọn <b>Thêm vào Màn hình chính</b>.
@@ -59,10 +64,10 @@
     </div>
 
     <!-- Chọn ngôn ngữ -->
-    <section class="rounded-2xl bg-white p-2 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+    <section class="rounded-2xl bg-white p-2 shadow-sm ring-1 ring-slate-200/80">
       <div class="flex items-center gap-2">
         <select id="selSrc" aria-label="Ngôn ngữ nguồn" class="min-w-0 flex-1 rounded-xl bg-transparent px-2 py-2.5 text-center text-base font-medium"></select>
-        <button id="btnSwap" aria-label="Đảo chiều ngôn ngữ" class="shrink-0 rounded-full bg-slate-100 p-2.5 text-blue-600 active:scale-90 dark:bg-slate-800">
+        <button id="btnSwap" aria-label="Đảo chiều ngôn ngữ" class="shrink-0 rounded-full bg-slate-100 p-2.5 text-brand-600 active:scale-90">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>
         </button>
         <select id="selTgt" aria-label="Ngôn ngữ đích" class="min-w-0 flex-1 rounded-xl bg-transparent px-2 py-2.5 text-center text-base font-medium"></select>
@@ -71,7 +76,7 @@
     </section>
 
     <!-- Lịch sử hội thoại -->
-    <section id="histWrap" class="mt-3 hidden rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+    <section id="histWrap" class="mt-3 hidden rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200/80">
       <div class="mb-2 flex items-center justify-between text-xs font-medium uppercase tracking-wide text-slate-500">
         <span>Hội thoại</span>
         <button id="btnClearHist" class="normal-case tracking-normal underline">Xóa lịch sử</button>
@@ -80,7 +85,7 @@
     </section>
 
     <!-- Ô văn bản gốc -->
-    <section class="mt-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+    <section class="mt-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/80">
       <div class="mb-1 flex items-center justify-between text-xs font-medium uppercase tracking-wide text-slate-500">
         <span id="lblSrc">Văn bản gốc</span>
         <span id="recBadge" class="rec-blink hidden items-center gap-1 text-red-600"><span class="inline-block h-2 w-2 rounded-full bg-red-600"></span>Đang nghe</span>
@@ -89,10 +94,10 @@
         class="w-full bg-transparent text-xl leading-snug outline-none placeholder:text-slate-400"></textarea>
       <div class="mt-1 flex items-center justify-between text-slate-500">
         <div class="flex gap-1">
-          <button id="btnSpeakSrc" aria-label="Đọc văn bản gốc" class="rounded-full p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
+          <button id="btnSpeakSrc" aria-label="Đọc văn bản gốc" class="rounded-full p-2 hover:bg-slate-100">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>
           </button>
-          <button id="btnClear" aria-label="Xóa" class="rounded-full p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
+          <button id="btnClear" aria-label="Xóa" class="rounded-full p-2 hover:bg-slate-100">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
           </button>
         </div>
@@ -101,13 +106,13 @@
     </section>
 
     <!-- Ô văn bản dịch -->
-    <section class="mt-3 rounded-2xl bg-blue-600 p-4 text-white shadow-sm">
-      <div class="mb-1 flex items-center justify-between text-xs font-medium uppercase tracking-wide text-blue-100">
+    <section class="mt-3 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-900 p-4 text-white shadow-md">
+      <div class="mb-1 flex items-center justify-between text-xs font-medium uppercase tracking-wide text-brand-100">
         <span id="lblTgt">Bản dịch</span>
         <span id="status" class="normal-case tracking-normal"></span>
       </div>
       <div id="outText" aria-live="polite" class="min-h-[6rem] whitespace-pre-wrap break-words text-xl leading-snug"></div>
-      <div class="mt-1 flex gap-1 text-blue-100">
+      <div class="mt-1 flex gap-1 text-brand-100">
         <button id="btnSpeakTgt" aria-label="Đọc bản dịch" class="rounded-full p-2 hover:bg-white/15">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>
         </button>
@@ -123,46 +128,50 @@
         <span id="ring1" class="rec-ring pointer-events-none absolute inset-0 hidden rounded-full bg-red-500"></span>
         <span id="ring2" class="rec-ring d2 pointer-events-none absolute inset-0 hidden rounded-full bg-red-500"></span>
         <button id="btnMic" aria-label="Bắt đầu nói" aria-pressed="false"
-          class="relative flex h-24 w-24 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-600/40 transition active:scale-95">
+          class="relative flex h-24 w-24 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg shadow-brand-600/40 transition active:scale-95">
           <svg id="icoMic" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8"/></svg>
           <svg id="icoStop" class="hidden" width="34" height="34" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
         </button>
       </div>
       <p id="micHint" class="text-sm text-slate-500">Chạm để nói, đổi chiều ⇄ để người kia nói</p>
-      <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-        <input id="chkAuto" type="checkbox" class="h-4 w-4 accent-blue-600" checked />
+      <label class="flex items-center gap-2 text-sm text-slate-600">
+        <input id="chkAuto" type="checkbox" class="h-4 w-4 accent-brand-600" checked />
         Tự động đọc bản dịch
       </label>
     </div>
+    <footer class="mt-2 flex flex-col items-center gap-1 border-t border-slate-200 pt-4 text-center">
+      <img src="icons/logo-full.png" alt="Sonadezi Long Thành" class="h-14 w-auto mix-blend-multiply" width="48" height="56" loading="lazy" />
+      <p class="text-[11px] text-slate-400">© Công ty Cổ phần Sonadezi Long Thành</p>
+    </footer>
   </div>
 
   <!-- Cài đặt -->
   <div id="sheet" class="fixed inset-0 z-20 hidden items-end bg-black/40 sm:items-center sm:justify-center">
-    <div class="w-full max-w-md rounded-t-2xl bg-white p-5 pb-[max(env(safe-area-inset-bottom),1.25rem)] dark:bg-slate-900 sm:rounded-2xl">
+    <div class="w-full max-w-md rounded-t-2xl bg-white p-5 pb-[max(env(safe-area-inset-bottom),1.25rem)] sm:rounded-2xl">
       <div class="mb-3 flex items-center justify-between">
         <h2 class="text-base font-semibold">Cài đặt dịch thuật</h2>
         <button id="btnSheetClose" class="px-2 text-2xl leading-none" aria-label="Đóng">×</button>
       </div>
       <label class="block text-sm font-medium">Nguồn dịch</label>
-      <select id="selEngine" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700">
+      <select id="selEngine" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2">
         <option value="mymemory">MyMemory (miễn phí, không cần khóa)</option>
         <option value="google">Google Cloud Translation (cần API key)</option>
       </select>
       <div id="boxMM" class="mt-3">
         <label class="block text-sm font-medium">Email (không bắt buộc)</label>
-        <input id="inEmail" type="email" placeholder="ten@congty.com" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700" />
+        <input id="inEmail" type="email" placeholder="ten@congty.com" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2" />
         <p class="mt-1 text-xs text-slate-500">Khai báo email giúp nâng hạn mức MyMemory từ 5.000 lên khoảng 50.000 ký tự/ngày.</p>
       </div>
       <div id="boxGG" class="mt-3 hidden">
         <label class="block text-sm font-medium">Google Cloud Translation API key</label>
-        <input id="inKey" type="password" autocomplete="off" placeholder="AIza…" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 dark:border-slate-700" />
+        <input id="inKey" type="password" autocomplete="off" placeholder="AIza…" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2" />
         <p class="mt-1 text-xs text-slate-500">Khóa chỉ lưu trên thiết bị này. Nên giới hạn khóa theo tên miền (HTTP referrer) trong Google Cloud Console.</p>
       </div>
-      <button id="btnSave" class="mt-4 w-full rounded-xl bg-blue-600 py-2.5 font-medium text-white">Lưu</button>
+      <button id="btnSave" class="mt-4 w-full rounded-xl bg-brand-600 py-2.5 font-medium text-white">Lưu</button>
     </div>
   </div>
 
-  <div id="toast" class="pointer-events-none fixed bottom-6 left-1/2 z-30 hidden -translate-x-1/2 rounded-full bg-slate-900 px-4 py-2 text-sm text-white shadow-lg dark:bg-white dark:text-slate-900"></div>
+  <div id="toast" class="pointer-events-none fixed bottom-6 left-1/2 z-30 hidden -translate-x-1/2 rounded-full bg-slate-900 px-4 py-2 text-sm text-white shadow-lg"></div>
 
   <script src="app.js"></script>
 </body>

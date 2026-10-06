@@ -84,7 +84,7 @@
       const b = document.createElement('button');
       const active = s === state.src && t === state.tgt;
       b.className = 'rounded-full px-3 py-1 text-xs font-medium ' +
-        (active ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300');
+        (active ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600');
       b.textContent = `${short(s)} → ${short(t)}`;
       b.onclick = () => setLangs(s, t, false);
       el.presets.appendChild(b);
@@ -131,12 +131,12 @@
   function addHistory(item) {
     el.histWrap.classList.remove('hidden');
     const d = document.createElement('div');
-    d.className = 'rounded-xl bg-slate-50 p-3 dark:bg-slate-800';
+    d.className = 'rounded-xl bg-slate-50 p-3';
     const a = document.createElement('div');
     a.className = 'text-xs text-slate-500';
     a.textContent = `${short(item.from)}: ${item.src}`;
     const b = document.createElement('div');
-    b.className = 'mt-0.5 flex items-start gap-2 font-medium text-blue-700 dark:text-blue-300';
+    b.className = 'mt-0.5 flex items-start gap-2 font-medium text-brand-700';
     const t = document.createElement('span');
     t.className = 'flex-1';
     t.textContent = `${short(item.to)}: ${item.out}`;
@@ -287,7 +287,7 @@
     el.recBadge.classList.toggle('hidden', !on);
     el.recBadge.classList.toggle('inline-flex', on);
     el.btnMic.classList.toggle('bg-red-600', on);
-    el.btnMic.classList.toggle('bg-blue-600', !on);
+    el.btnMic.classList.toggle('bg-brand-600', !on);
     el.btnMic.setAttribute('aria-pressed', String(on));
     el.btnMic.setAttribute('aria-label', on ? 'Dừng nói' : 'Bắt đầu nói');
     el.micHint.textContent = on ? 'Đang nghe… chạm để dừng' : 'Chạm để nói';
