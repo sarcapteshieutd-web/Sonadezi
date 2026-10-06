@@ -18,5 +18,17 @@ window.APP_CONFIG = {
   // Gói sử dụng hiển thị cho người dùng chọn mua; url là trang thanh toán của từng gói
   plans: [
     // { name: 'Gói tháng', price: '99.000đ / tháng', description: 'Dịch không giới hạn', url: 'https://...' }
-  ]
+  ],
+  // Cải thiện nhận diện giọng nói
+  recognition: {
+    // Bỏ qua câu đã chốt có độ tin cậy thấp hơn mức này (0 đến 1). Đặt 0 để tắt.
+    minConfidence: 0.3,
+    // Từ điển sửa lỗi: gặp "variants" thì thay bằng "to". Không phân biệt hoa/thường, cần khớp nguyên cụm từ.
+    // Các cách nghe sai dưới đây chỉ là ví dụ dự đoán; hãy bổ sung theo kết quả bạn thực sự thấy khi nói.
+    glossary: [
+      { to: 'Sonadezi', variants: ['so na đê di', 'sô na đê di', 'sô na đề di', 'so na de di', 'sona dezi', 'sona đê di', 'sonadesi', 'sonadezy'] },
+      { to: 'KCN', variants: ['ka xê en', 'ca xê en', 'ka c n'] },
+      { to: 'Sonadezi Long Thành', variants: ['sonadezi long thanh'] }
+    ]
+  }
 };
