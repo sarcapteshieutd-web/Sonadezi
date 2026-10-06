@@ -74,7 +74,12 @@ window.APP_CONFIG = {
   // Phòng họp xem chung (quét mã QR để xem chữ gốc + chữ dịch theo thời gian thực).
   // Điền thông tin dự án Firebase của bạn (xem docs/FIREBASE-SETUP.md). Các giá trị này là định danh công khai của ứng dụng web,
   // không phải mật khẩu; bảo mật nằm ở quy tắc Firestore (firebase/firestore.rules). Để trống thì tính năng sẽ không hoạt động.
-  firebase: { apiKey: '', authDomain: '', projectId: '', appId: '' },
+  firebase: {
+    apiKey: 'AIzaSyBDfKXNRsNiAH_MUZJobQqa-BNbqjBf528',
+    authDomain: 'sonadezi-phong-hop.firebaseapp.com',
+    projectId: 'sonadezi-phong-hop',
+    appId: '1:135526117927:web:0fa85a96f1020a993ed402'
+  },
   room: {
     ttlHours: 24,           // phòng tự hết hạn sau số giờ này (1 đến 24)
     maxExtraLanguages: 3    // số ngôn ngữ phụ tối đa được dịch thêm cho người xem (mỗi ngôn ngữ phụ tốn thêm chi phí dịch)
