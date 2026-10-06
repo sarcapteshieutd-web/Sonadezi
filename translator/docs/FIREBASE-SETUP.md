@@ -25,10 +25,19 @@ room: { ttlHours: 24, maxExtraLanguages: 3 },
 ```
 Các giá trị Firebase là **định danh công khai** của ứng dụng web, không phải mật khẩu; bảo mật nằm ở quy tắc Firestore. Nên giới hạn thêm khóa API theo tên miền: Google Cloud Console → APIs & Services → Credentials → khóa "Browser key" → *Websites* → thêm `https://sarcapteshieutd-web.github.io/*`.
 
-## 4. Tự động xóa dữ liệu sau khi hết hạn (nên làm)
-Quy tắc ở bước 2 đã chặn đọc khi hết hạn, nhưng dữ liệu vẫn nằm trong cơ sở dữ liệu cho tới khi bị xóa. Để tự xóa, bật **TTL** (Time-to-live) cho trường `expiresAt` ở các nhóm bộ sưu tập `rooms`, `messages` và `viewers`:
-- Firebase Console → Firestore → tab **Time-to-live** (hoặc Google Cloud Console → Firestore → TTL), tạo chính sách cho trường `expiresAt` của từng nhóm.
-- Tôi chưa xác nhận TTL có sẵn ở gói miễn phí hiện hành hay chỉ ở gói trả phí, và xóa theo TTL **không xảy ra đúng thời điểm** mà thường chậm hơn. Hãy đối chiếu tài liệu Firebase. Nếu không dùng TTL, vẫn có thể xóa thủ công trong Firestore Console.
+## 4. Xóa dữ liệu sau khi họp
+Quy tắc ở bước 2 chặn đọc/ghi khi phòng hết hạn, nhưng dữ liệu vẫn nằm trong cơ sở dữ liệu cho tới khi bị xóa. Có hai cách dọn:
+
+- **Xóa ngay khi kết thúc (không cần thanh toán, khuyến nghị):** trong cửa sổ phòng họp bấm **Kết thúc và xóa nội dung ngay**; app xóa toàn bộ tin nhắn, hồ sơ người xem và phòng khỏi Firestore (không hoàn tác được). Nút **Kết thúc, giữ nội dung đến khi hết hạn** chỉ đóng phòng, nội dung vẫn xem được đến hết hạn. Nếu chủ phòng quên bấm hoặc đóng trình duyệt giữa chừng, dữ liệu vẫn nằm lại (không ai đọc được sau khi hết hạn) và có thể xóa tay trong Firestore Console.
+- **TTL tự động (cần bật thanh toán):** chính sách TTL của Firestore yêu cầu dự án có liên kết tài khoản thanh toán; nếu chưa, lệnh sẽ báo `billing disabled`. Khi đã bật thanh toán, trong Google Cloud Shell chạy:
+```bash
+gcloud config set project TEN_DU_AN
+gcloud firestore fields ttls update expiresAt --collection-group=rooms --enable-ttl --async
+gcloud firestore fields ttls update expiresAt --collection-group=messages --enable-ttl --async
+gcloud firestore fields ttls update expiresAt --collection-group=viewers --enable-ttl --async
+gcloud firestore fields ttls list
+```
+  Việc xóa theo TTL không đúng thời điểm hết hạn mà thường chậm hơn; hãy đặt ngân sách cảnh báo ở mục Billing.
 
 ## 5. Dùng thử
 1. Merge thay đổi để GitHub Pages cập nhật; mở app, bấm biểu tượng mã QR ở góc khung chat, bấm **Tạo phòng họp**.

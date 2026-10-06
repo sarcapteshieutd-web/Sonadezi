@@ -4,7 +4,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, connectAuthEmulator } from 'firebase/auth';
 import {
   getFirestore, connectFirestoreEmulator, doc, getDoc, getDocs, setDoc, updateDoc, addDoc,
-  collection, onSnapshot, query, orderBy, Timestamp, deleteDoc
+  collection, onSnapshot, query, orderBy, Timestamp, deleteDoc, writeBatch
 } from 'firebase/firestore';
 import qrcode from 'qrcode-generator';
 
@@ -63,9 +63,21 @@ function create(cfg) {
     },
     async updateLangs(id, hostSrc, hostTgt) { await updateDoc(roomRef(id), { hostSrc, hostTgt }); },
     async closeRoom(id) { await updateDoc(roomRef(id), { status: 'closed' }); },
-    async deleteMessages(id) {
-      const snap = await getDocs(msgs(id));
-      await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+    // Xóa toàn bộ dữ liệu của phòng: tin nhắn, hồ sơ người xem, rồi đến chính phòng (làm cuối vì quy tắc cần phòng còn tồn tại)
+    async deleteRoomData(id) {
+      const batches = [];
+      const pushAll = async ref => {
+        const snap = await getDocs(ref);
+        for (let i = 0; i < snap.docs.length; i += 400) {
+          const b = writeBatch(db);
+          snap.docs.slice(i, i + 400).forEach(d => b.delete(d.ref));
+          batches.push(b.commit());
+        }
+      };
+      await pushAll(msgs(id));
+      await pushAll(collection(db, 'rooms', id, 'viewers'));
+      await Promise.all(batches);
+      await deleteDoc(roomRef(id));
     },
 
     async pushMessage(id, expiresAtMs, m) {
