@@ -9,6 +9,7 @@ translator/
 ├── styles.css           # CSS Tailwind đã build sẵn (không cần mạng/CDN)
 ├── tailwind.config.js   # Bảng màu thương hiệu Sonadezi (chỉ cần khi sửa giao diện)
 ├── input.css
+├── config.js            # Cấu hình nút Ủng hộ / gói sử dụng (sửa tệp này, không cần sửa mã)
 ├── manifest.json        # Khai báo PWA (tên, biểu tượng, màu, chế độ standalone)
 ├── service-worker.js    # Cache để cài được và chạy khi mạng yếu
 ├── HUONG-DAN.md         # Tài liệu này
@@ -94,3 +95,13 @@ Nếu thay đổi class Tailwind trong `index.html` hoặc `app.js`, build lại
 npx tailwindcss@3 -c tailwind.config.js -i input.css -o styles.css --minify
 ```
 Sau đó tăng số phiên bản `CACHE` trong `service-worker.js`.
+
+## 9. Lưu đoạn chat
+- Hội thoại tự được lưu trên thiết bị (tối đa 300 lượt gần nhất) nên tải lại trang vẫn còn; nút thùng rác xóa toàn bộ.
+- Nút **tải xuống** ở đầu trang mở hộp thoại lưu tệp: **.txt** (đọc nhanh) hoặc **.csv** (mở bằng Excel, đủ cột thời gian, ngôn ngữ, văn bản gốc và bản dịch). Trên điện thoại có thêm nút **Chia sẻ** (gửi qua Zalo, email…).
+- Dữ liệu chỉ nằm trên thiết bị người dùng, không gửi lên máy chủ nào ngoài dịch vụ dịch (MyMemory/Google).
+
+## 10. Nút Ủng hộ và gói sử dụng
+Nút trái tim ở đầu trang mở cửa sổ ủng hộ. Nội dung lấy từ `config.js`: QR chuyển khoản, thông tin tài khoản, liên kết thanh toán (chỉ nhận `https://`) và danh sách gói. Để trống thì mục tương ứng không hiện.
+
+Hạn chế quan trọng: ứng dụng chỉ chạy trên trình duyệt, không có máy chủ, nên **không thể tự xác nhận thanh toán, cấp hay khóa gói**. Các nút chỉ chuyển người dùng sang trang thanh toán của bạn. Nếu cần bán gói thật (chỉ người đã trả tiền mới dùng được), phải bổ sung máy chủ có đăng nhập và cổng thanh toán (ví dụ PayOS, Stripe) và dịch vụ dịch trả phí; việc này cần thiết kế riêng.

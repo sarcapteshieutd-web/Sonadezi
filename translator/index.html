@@ -40,19 +40,25 @@
 
     <!-- Thanh thương hiệu -->
     <header class="-mx-4 mb-2 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5 shadow-sm">
-      <div class="flex items-center gap-3">
-        <img src="icons/logo-mark.png" alt="Sonadezi Long Thành" class="h-9 w-auto" width="50" height="36" />
+      <div class="flex min-w-0 items-center gap-2">
+        <img src="icons/logo-mark.png" alt="Sonadezi Long Thành" class="h-8 w-auto shrink-0" width="44" height="36" />
         <div class="leading-tight">
-          <h1 class="text-[15px] font-semibold tracking-tight text-brand-700">Phiên dịch trực tuyến</h1>
-          <p class="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500">Sonadezi Long Thành</p>
+          <h1 class="whitespace-nowrap text-sm font-semibold tracking-tight text-brand-700">Phiên dịch trực tuyến</h1>
+          <p class="whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.1em] text-slate-500">Sonadezi Long Thành</p>
         </div>
       </div>
-      <div class="flex items-center gap-1">
+      <div class="flex shrink-0 items-center">
         <button id="btnInstall" class="hidden rounded-full bg-brand-600 px-3 py-1.5 text-sm font-medium text-white">Cài app</button>
-        <button id="btnClearHist" aria-label="Xóa hội thoại" class="rounded-full p-2 text-slate-500 hover:bg-slate-100">
+        <button id="btnDonate" aria-label="Ủng hộ nhà phát hành" class="rounded-full p-1.5 text-rose-500 hover:bg-slate-100">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+        </button>
+        <button id="btnExport" aria-label="Lưu đoạn chat" class="rounded-full p-1.5 text-slate-500 hover:bg-slate-100">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+        </button>
+        <button id="btnClearHist" aria-label="Xóa hội thoại" class="rounded-full p-1.5 text-slate-500 hover:bg-slate-100">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>
         </button>
-        <button id="btnSettings" aria-label="Cài đặt" class="rounded-full p-2 text-slate-500 hover:bg-slate-100">
+        <button id="btnSettings" aria-label="Cài đặt" class="rounded-full p-1.5 text-slate-500 hover:bg-slate-100">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </button>
       </div>
@@ -170,8 +176,34 @@
     </div>
   </div>
 
+  <!-- Lưu đoạn chat -->
+  <div id="sheetExport" data-modal class="fixed inset-0 z-20 hidden items-end bg-black/40 sm:items-center sm:justify-center">
+    <div class="w-full max-w-md rounded-t-2xl bg-white p-5 pb-[max(env(safe-area-inset-bottom),1.25rem)] sm:rounded-2xl">
+      <div class="mb-1 flex items-center justify-between">
+        <h2 class="text-base font-semibold">Lưu đoạn chat</h2>
+        <button data-close class="px-2 text-2xl leading-none" aria-label="Đóng">×</button>
+      </div>
+      <p id="expInfo" class="mb-3 text-sm text-slate-500"></p>
+      <button id="expTxt" class="w-full rounded-xl bg-brand-600 py-2.5 font-medium text-white">Tải tệp văn bản (.txt)</button>
+      <button id="expCsv" class="mt-2 w-full rounded-xl border border-brand-600 py-2.5 font-medium text-brand-600">Tải tệp Excel (.csv)</button>
+      <button id="expShare" class="mt-2 hidden w-full rounded-xl border border-slate-300 py-2.5 font-medium text-slate-700">Chia sẻ…</button>
+    </div>
+  </div>
+
+  <!-- Ủng hộ / gói sử dụng -->
+  <div id="sheetDonate" data-modal class="fixed inset-0 z-20 hidden items-end bg-black/40 sm:items-center sm:justify-center">
+    <div class="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-5 pb-[max(env(safe-area-inset-bottom),1.25rem)] sm:rounded-2xl">
+      <div class="mb-2 flex items-center justify-between">
+        <h2 id="donateTitle" class="text-base font-semibold"></h2>
+        <button data-close class="px-2 text-2xl leading-none" aria-label="Đóng">×</button>
+      </div>
+      <div id="donateBody"></div>
+    </div>
+  </div>
+
   <div id="toast" class="pointer-events-none fixed bottom-6 left-1/2 z-30 hidden -translate-x-1/2 rounded-full bg-slate-900 px-4 py-2 text-sm text-white shadow-lg"></div>
 
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
