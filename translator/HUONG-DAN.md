@@ -121,3 +121,8 @@ Trong `config.js`, mục `recognition`:
 - `glossary`: từ điển sửa lỗi, gặp cách nghe sai (`variants`) thì thay bằng từ đúng (`to`); không phân biệt hoa/thường, khớp nguyên cụm từ. Các cách nghe sai có sẵn chỉ là dự đoán; hãy ghi lại những câu app nghe sai thực tế rồi bổ sung vào danh sách.
 
 Cách này chỉ sửa kết quả sau khi nhận diện, không cải thiện chất lượng thu âm gốc. Nên kết hợp với micro ngoài và môi trường yên tĩnh.
+
+## 13. Bảng thuật ngữ dịch và chế độ màn hình lớn
+- **`terms` trong `config.js`:** danh sách cụm từ (tên dự án, thuật ngữ thuê đất, giới thiệu dự án, bảo trì bảo dưỡng) theo ba ngôn ngữ `vi`, `en`, `zh`. Khi câu nói chứa cụm ở ngôn ngữ nguồn, bản dịch dùng đúng cụm ở ngôn ngữ đích để các cuộc họp nhất quán. Ô để trống thì bỏ qua cặp ngôn ngữ đó. Nếu dịch vụ dịch làm mất ký hiệu thay thế, app tự quay về dịch bình thường.
+- **Bản Anh và Trung chưa được chuyên gia xác nhận.** Phải do Pháp chế hoặc phiên dịch kiểm tra trước khi dùng cho thương thảo hợp đồng; tên tiếng Trung chính thức của các khu công nghiệp đang để trống.
+- **Màn hình lớn:** nút phóng to ở góc phải khung chat, phóng chữ 1,5 lần, ẩn ô nhập và thanh chọn ngôn ngữ, vào toàn màn hình nếu trình duyệt cho phép; bấm lại hoặc nhấn Esc để thoát. Dùng khi chiếu khung chat lên TV hoặc máy chiếu trong phòng họp.

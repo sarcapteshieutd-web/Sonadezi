@@ -30,5 +30,45 @@ window.APP_CONFIG = {
       { to: 'KCN', variants: ['ka xê en', 'ca xê en', 'ka c n'] },
       { to: 'Sonadezi Long Thành', variants: ['sonadezi long thanh'] }
     ]
-  }
+  },
+  // Bảng thuật ngữ dịch: khi câu nói chứa cụm ở ngôn ngữ nguồn, bản dịch dùng đúng cụm ở ngôn ngữ đích.
+  // Ô để trống ('') thì bỏ qua cặp ngôn ngữ đó (để dịch vụ dịch tự quyết định).
+  // QUAN TRỌNG: bản Anh và Trung dưới đây do trợ lý AI đề xuất, CHƯA được người có chuyên môn xác nhận.
+  // Hãy để phòng Pháp chế / phiên dịch kiểm tra và sửa trước khi dùng cho thương thảo hợp đồng.
+  // Tên tiếng Trung chính thức của các khu công nghiệp để trống, hãy điền tên công ty đang sử dụng.
+  terms: [
+    // Dự án
+    { vi: 'Khu công nghiệp Long Thành', en: 'Long Thanh Industrial Park', zh: '' },
+    { vi: 'Khu công nghiệp Châu Đức', en: 'Chau Duc Industrial Park', zh: '' },
+    { vi: 'KCN Long Thành', en: 'Long Thanh Industrial Park', zh: '' },
+    { vi: 'KCN Châu Đức', en: 'Chau Duc Industrial Park', zh: '' },
+    // Thương thảo hợp đồng thuê đất
+    { vi: 'hợp đồng thuê đất', en: 'land lease agreement', zh: '土地租赁合同' },
+    { vi: 'thuê đất', en: 'land lease', zh: '土地租赁' },
+    { vi: 'tiền thuê đất', en: 'land rent', zh: '土地租金' },
+    { vi: 'đơn giá thuê', en: 'rental rate', zh: '租金单价' },
+    { vi: 'diện tích thuê', en: 'leased area', zh: '租赁面积' },
+    { vi: 'thời hạn thuê', en: 'lease term', zh: '租期' },
+    { vi: 'tiền đặt cọc', en: 'security deposit', zh: '押金' },
+    { vi: 'phí quản lý hạ tầng', en: 'infrastructure management fee', zh: '基础设施管理费' },
+    { vi: 'phí sử dụng hạ tầng', en: 'infrastructure usage fee', zh: '基础设施使用费' },
+    { vi: 'bàn giao mặt bằng', en: 'site handover', zh: '场地交付' },
+    { vi: 'gia hạn hợp đồng', en: 'contract renewal', zh: '合同续期' },
+    { vi: 'chấm dứt hợp đồng', en: 'contract termination', zh: '合同终止' },
+    { vi: 'phạt vi phạm hợp đồng', en: 'penalty for breach of contract', zh: '违约金' },
+    { vi: 'quyền sử dụng đất', en: 'land use rights', zh: '土地使用权' },
+    { vi: 'nhà đầu tư', en: 'investor', zh: '投资者' },
+    // Giới thiệu dự án
+    { vi: 'nhà xưởng xây sẵn', en: 'ready-built factory', zh: '标准厂房' },
+    { vi: 'nhà xưởng', en: 'factory building', zh: '厂房' },
+    { vi: 'hạ tầng kỹ thuật', en: 'technical infrastructure', zh: '技术基础设施' },
+    { vi: 'xử lý nước thải', en: 'wastewater treatment', zh: '废水处理' },
+    { vi: 'phòng cháy chữa cháy', en: 'fire prevention and fighting', zh: '消防' },
+    { vi: 'giấy phép xây dựng', en: 'construction permit', zh: '建筑许可证' },
+    // Bảo trì, bảo dưỡng
+    { vi: 'bảo trì bảo dưỡng', en: 'maintenance and servicing', zh: '维护保养' },
+    { vi: 'bảo trì', en: 'maintenance', zh: '维护' },
+    { vi: 'bảo dưỡng', en: 'servicing', zh: '保养' },
+    { vi: 'nghiệm thu', en: 'acceptance', zh: '验收' }
+  ]
 };
