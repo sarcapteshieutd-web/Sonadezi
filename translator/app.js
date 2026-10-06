@@ -43,6 +43,7 @@
     expInfo: $('expInfo'), expTxt: $('expTxt'), expCsv: $('expCsv'), expShare: $('expShare'),
     donateBody: $('donateBody'), donateTitle: $('donateTitle'),
     btnMeeting: $('btnMeeting'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
+    app: $('app'), btnBig: $('btnBig'),
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
     selEngine: $('selEngine'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
     inRate: $('inRate'), inPitch: $('inPitch'), lblRate: $('lblRate'), lblPitch: $('lblPitch'), btnTest: $('btnTest'), inEmail: $('inEmail'), inKey: $('inKey'),
@@ -231,9 +232,7 @@
     return chunks;
   }
 
-  async function translateChunk(text, signal) {
-    const key = `${state.engine}|${state.src}|${state.tgt}|${text}`;
-    if (cache.has(key)) return cache.get(key);
+  async function requestTranslate(text, signal) {
     let result;
     if (state.engine === 'google' && state.gkey) {
       const url = 'https://translation.googleapis.com/language/translate/v2?key=' + encodeURIComponent(state.gkey);
@@ -254,6 +253,45 @@
       if (Number(j.responseStatus) !== 200) throw new Error(j.responseDetails || 'MyMemory lỗi');
       result = decodeEntities(j.responseData.translatedText);
     }
+    return result;
+  }
+
+  // Bảng thuật ngữ dịch (config.terms): giữ cách dịch nhất quán cho tên dự án và thuật ngữ chuyên ngành
+  const TERMS = (window.APP_CONFIG && window.APP_CONFIG.terms) || [];
+  function protectTerms(text) {
+    const map = [];
+    let out = text;
+    const sp = LANGS[state.src].sp;
+    const cand = TERMS.filter(t => t[state.src] && t[state.tgt]).sort((a, b) => b[state.src].length - a[state.src].length);
+    for (const t of cand) {
+      const re = new RegExp((sp ? '(^|[^\\p{L}\\p{N}])' : '()') + escRe(t[state.src].trim()).replace(/\s+/g, '\\s+') + (sp ? '(?![\\p{L}\\p{N}])' : ''), 'giu');
+      out = out.replace(re, (m, pre) => { const tok = 'QXT' + map.length + 'Z'; map.push([tok, t[state.tgt]]); return pre + tok; });
+    }
+    return { text: out, map };
+  }
+  function restoreTerms(text, map) {
+    let out = text;
+    for (const [tok, to] of map) {
+      const re = new RegExp(tok, 'i');
+      if (!re.test(out)) return null; // dịch vụ làm mất ký hiệu: bỏ cách này
+      out = out.replace(re, () => to);
+    }
+    return /QXT\d+Z/i.test(out) ? null : out;
+  }
+
+  async function translateChunk(text, signal) {
+    const key = `${state.engine}|${state.src}|${state.tgt}|${text}`;
+    if (cache.has(key)) return cache.get(key);
+    let result;
+    const prot = protectTerms(text);
+    if (prot.map.length) {
+      try {
+        const r = await requestTranslate(prot.text, signal);
+        const restored = restoreTerms(r, prot.map);
+        if (restored !== null) result = restored;
+      } catch (e) { if (e.name === 'AbortError') throw e; }
+    }
+    if (result === undefined) result = await requestTranslate(text, signal); // không có thuật ngữ, hoặc cách trên thất bại
     cache.set(key, result);
     if (cache.size > 300) cache.delete(cache.keys().next().value);
     return result;
@@ -551,6 +589,25 @@
   }
   el.btnMeeting.onclick = () => (state.meeting ? stopMeeting() : startMeeting());
   el.btnMeetingStop.onclick = stopMeeting;
+
+  // ---------- Chế độ màn hình lớn (chiếu lên TV / máy chiếu) ----------
+  function setBig(on) {
+    el.app.classList.toggle('big', on);
+    el.btnBig.setAttribute('aria-pressed', String(on));
+    el.btnBig.title = on ? 'Thoát màn hình lớn' : 'Màn hình lớn';
+    updateCounter();
+  }
+  el.btnBig.onclick = () => {
+    const on = !el.app.classList.contains('big');
+    setBig(on);
+    try {
+      if (on && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+      else if (!on && document.fullscreenElement) document.exitFullscreen();
+    } catch (_) {}
+  };
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && el.app.classList.contains('big')) setBig(false);
+  });
 
   // ---------- Sự kiện ----------
   el.selSrc.onchange = () => {
