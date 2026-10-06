@@ -282,7 +282,7 @@
     return /QXT\d+Z/i.test(out) ? null : out;
   }
 
-  async function translateChunk(text, signal, from = from, to = to) {
+  async function translateChunk(text, signal, from = state.src, to = state.tgt) {
     const key = `${state.engine}|${from}|${to}|${text}`;
     if (cache.has(key)) return cache.get(key);
     let result;
