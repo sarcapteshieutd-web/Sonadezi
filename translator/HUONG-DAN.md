@@ -105,3 +105,12 @@ Sau đó tăng số phiên bản `CACHE` trong `service-worker.js`.
 Nút trái tim ở đầu trang mở cửa sổ ủng hộ. Nội dung lấy từ `config.js`: QR chuyển khoản, thông tin tài khoản, liên kết thanh toán (chỉ nhận `https://`) và danh sách gói. Để trống thì mục tương ứng không hiện.
 
 Hạn chế quan trọng: ứng dụng chỉ chạy trên trình duyệt, không có máy chủ, nên **không thể tự xác nhận thanh toán, cấp hay khóa gói**. Các nút chỉ chuyển người dùng sang trang thanh toán của bạn. Nếu cần bán gói thật (chỉ người đã trả tiền mới dùng được), phải bổ sung máy chủ có đăng nhập và cổng thanh toán (ví dụ PayOS, Stripe) và dịch vụ dịch trả phí; việc này cần thiết kế riêng.
+
+## 11. Chế độ họp
+Nút **Chế độ họp** (góc phải phía dưới) chỉ cần bấm một lần: ứng dụng tự nghe liên tục, mỗi câu nói xong được dịch và đưa lên khung chat (bong bóng bên trái), **không đọc bản dịch**, không cần chạm lại. Bấm **Dừng họp** (hoặc nút micro) để kết thúc; sau đó dùng nút tải xuống để lưu biên bản `.txt`/`.csv`.
+
+Giới hạn:
+- Nghe theo **một ngôn ngữ nguồn** tại một thời điểm; nếu người nói đổi ngôn ngữ, bấm ⇄ hoặc chọn lại ngôn ngữ (chế độ họp vẫn tiếp tục).
+- Chỉ ghi **chữ**, không lưu tệp âm thanh.
+- Trình duyệt ngừng nghe khi tắt màn hình hoặc chuyển sang ứng dụng khác; ứng dụng xin giữ màn hình sáng (nếu thiết bị hỗ trợ) nhưng nên để ứng dụng ở phía trước, cắm sạc nếu họp lâu.
+- Nhận diện giọng nói của trình duyệt cần mạng và độ chính xác giảm khi nhiều người nói chồng, ở xa micro hoặc ồn.

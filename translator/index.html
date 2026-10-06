@@ -83,6 +83,12 @@
       </div>
     </section>
 
+    <!-- Thanh trạng thái chế độ họp -->
+    <div id="meetingBar" class="mt-2 hidden shrink-0 items-center justify-between rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
+      <span class="flex items-center gap-2"><span class="rec-blink inline-block h-2 w-2 rounded-full bg-red-600"></span>Đang ghi và dịch cuộc họp · <span id="meetingTime" class="tabular-nums">00:00</span></span>
+      <button id="btnMeetingStop" class="rounded-lg border border-red-300 px-2 py-0.5 text-xs font-medium">Dừng</button>
+    </div>
+
     <!-- Khung chat -->
     <main id="histWrap" class="mt-2 min-h-0 flex-1 overflow-y-auto rounded-2xl bg-white/70 p-3 ring-1 ring-slate-200/80">
       <div id="emptyHint" class="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-slate-400">
@@ -131,7 +137,7 @@
             <svg id="icoStop" class="hidden" width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
           </button>
         </div>
-        <div></div>
+        <button id="btnMeeting" class="justify-self-end rounded-full border border-brand-600 px-3 py-1.5 text-xs font-medium text-brand-600">Chế độ họp</button>
       </div>
       <p id="micHint" class="mt-1 text-center text-xs text-slate-500">Chạm để nói</p>
     </div>
