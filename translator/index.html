@@ -33,7 +33,10 @@
     @keyframes blink { 0%,100% { opacity: 1 } 50% { opacity: .45 } }
     /* Chế độ màn hình lớn: chữ phóng to, ẩn ô nhập */
     .big #history, .big #liveRow { zoom: 1.5; }
-    .big #inputRow, .big #langBar { display: none; }
+    .big #inputRow, .big #langBar, .big #viewerBar { display: none; }
+    /* Chế độ người xem: chỉ đọc */
+    .viewer #btnDonate, .viewer #btnExport, .viewer #btnClearHist, .viewer #btnSettings, .viewer #btnInstall,
+    .viewer #langBar, .viewer #dock, .viewer #meetingBar, .viewer #btnRoom { display: none !important; }
     .rec-blink { animation: blink 1s ease-in-out infinite; }
   </style>
 </head>
@@ -75,6 +78,15 @@
       <button id="iosHintClose" class="float-right -mt-1 px-1 text-lg leading-none" aria-label="Đóng">×</button>
     </div>
 
+    <!-- Thanh người xem phòng họp -->
+    <div id="viewerBar" class="mb-2 hidden shrink-0 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200/80">
+      <div class="flex items-center justify-between gap-3">
+        <label for="selViewerLang" class="text-sm font-medium text-slate-600">Ngôn ngữ hiển thị</label>
+        <select id="selViewerLang" class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-center text-[15px] font-semibold text-brand-700"></select>
+      </div>
+      <p id="viewerStatus" class="mt-1.5 text-xs text-slate-500"></p>
+    </div>
+
     <!-- Chọn ngôn ngữ -->
     <section id="langBar" class="shrink-0 rounded-2xl bg-white p-2 shadow-sm ring-1 ring-slate-200/80">
       <div class="flex items-center gap-2">
@@ -105,7 +117,11 @@
 
     <!-- Khung chat -->
     <main id="histWrap" class="mt-2 min-h-0 flex-1 overflow-y-auto rounded-2xl bg-white/70 p-3 ring-1 ring-slate-200/80">
-      <div class="sticky top-0 z-10 flex h-0 justify-end">
+      <div class="sticky top-0 z-10 flex h-0 items-start justify-end gap-1.5">
+        <button id="btnRoom" aria-label="Phòng họp xem chung (mã QR)" title="Phòng họp xem chung (mã QR)" class="relative -mt-1 rounded-full bg-white/90 p-1.5 text-slate-500 shadow ring-1 ring-slate-200">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/></svg>
+          <span id="roomDot" class="absolute right-0 top-0 hidden h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-white"></span>
+        </button>
         <button id="btnBig" aria-label="Màn hình lớn" title="Màn hình lớn" aria-pressed="false" class="-mr-1 -mt-1 rounded-full bg-white/90 p-1.5 text-slate-500 shadow ring-1 ring-slate-200">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
         </button>
@@ -131,7 +147,7 @@
     </main>
 
     <!-- Thanh nhập và micro -->
-    <div class="shrink-0 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2">
+    <div id="dock" class="shrink-0 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2">
       <div id="inputRow" class="flex items-end gap-2">
         <textarea id="srcText" rows="1" maxlength="5000" placeholder="Nhập văn bản…"
           class="max-h-28 min-h-[44px] flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-base leading-snug outline-none focus:border-brand-300"></textarea>
@@ -223,6 +239,17 @@
         <button data-close class="px-2 text-2xl leading-none" aria-label="Đóng">×</button>
       </div>
       <div id="donateBody"></div>
+    </div>
+  </div>
+
+  <!-- Phòng họp xem chung -->
+  <div id="sheetRoom" data-modal class="fixed inset-0 z-20 hidden items-end bg-black/40 sm:items-center sm:justify-center">
+    <div class="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-5 pb-[max(env(safe-area-inset-bottom),1.25rem)] sm:rounded-2xl">
+      <div class="mb-2 flex items-center justify-between">
+        <h2 class="text-base font-semibold">Phòng họp xem chung</h2>
+        <button data-close class="px-2 text-2xl leading-none" aria-label="Đóng">×</button>
+      </div>
+      <div id="roomBody"></div>
     </div>
   </div>
 

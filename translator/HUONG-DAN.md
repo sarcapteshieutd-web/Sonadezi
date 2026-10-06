@@ -143,3 +143,6 @@ Trong Chế độ họp, tích **"Đọc bản dịch ra loa"** để mỗi bả
 - Dùng micro hội nghị làm cả **đầu vào lẫn đầu ra mặc định** của laptop (Windows: Cài đặt → Hệ thống → Âm thanh), cắm USB.
 - Giọng đọc là giọng có sẵn trên laptop, chọn và chỉnh trong ⚙ → Giọng đọc.
 - Với thương thảo hợp đồng nên **tắt** tùy chọn này và chỉ đọc chữ trên màn hình để không mất lời nói.
+
+## 16. Phòng họp xem chung bằng mã QR
+Chủ phòng bấm biểu tượng mã QR ở góc khung chat → **Tạo phòng họp**; người trong phòng quét mã để xem chữ gốc và chữ dịch theo thời gian thực, tự chọn ngôn ngữ hiển thị (chỉ đọc). Cần thiết lập Firebase một lần; xem hướng dẫn chi tiết, quy tắc bảo mật, TTL, chi phí và quyền riêng tư tại **`docs/FIREBASE-SETUP.md`**.
