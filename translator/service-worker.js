@@ -2,7 +2,7 @@
    - Tệp của ứng dụng: ưu tiên cache, cập nhật nền (stale-while-revalidate).
    - API dịch (MyMemory): luôn đi qua mạng, không cache.
 */
-const CACHE = 'translator-v4';
+const CACHE = 'translator-v5';
 const CORE = [
   './', './index.html', './app.js', './styles.css', './manifest.json',
   './icons/icon-192.png', './icons/icon-512.png',
