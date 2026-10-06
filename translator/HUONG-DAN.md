@@ -161,3 +161,5 @@ Ngữ cảnh nạp sẵn (từ điển sửa lỗi nghe sai và bảng thuật n
 - **A− / A+:** chỉnh cỡ chữ thêm theo ý bạn, lưu trên thiết bị.
 - Chế độ màn hình lớn (chiếu TV) vẫn dùng được và phóng chữ lớn hơn nữa.
 - Trên điện thoại, chế độ hai ô mặc định tắt vì màn hình hẹp; có thể bật bằng nút hai cột.
+
+Xóa dữ liệu phòng: khi kết thúc phòng, chọn **Kết thúc và xóa nội dung ngay** (xóa toàn bộ tin nhắn, người xem và phòng khỏi Firebase, không hoàn tác) hoặc **Kết thúc, giữ nội dung đến khi hết hạn**. TTL tự động của Firestore chỉ dùng được khi dự án bật thanh toán (xem `docs/FIREBASE-SETUP.md`, mục 4).
