@@ -163,3 +163,10 @@ Ngữ cảnh nạp sẵn (từ điển sửa lỗi nghe sai và bảng thuật n
 - Trên điện thoại, chế độ hai ô mặc định tắt vì màn hình hẹp; có thể bật bằng nút hai cột.
 
 Xóa dữ liệu phòng: khi kết thúc phòng, chọn **Kết thúc và xóa nội dung ngay** (xóa toàn bộ tin nhắn, người xem và phòng khỏi Firebase, không hoàn tác) hoặc **Kết thúc, giữ nội dung đến khi hết hạn**. TTL tự động của Firestore chỉ dùng được khi dự án bật thanh toán (xem `docs/FIREBASE-SETUP.md`, mục 4).
+
+## 19. Dịch chạy theo khi đang nói (mặc định bật)
+Trong Chế độ họp, bản dịch hiện dần cùng lúc với chữ đang nói, không còn đợi dứt câu mới dịch cả câu:
+- Cứ khoảng 6 từ ổn định, app dịch một cụm và giữ cố định; phần đuôi (các từ cuối còn có thể bị trình duyệt sửa) được dịch lại tối đa mỗi 0,6 giây và hiện kèm dấu "…".
+- Khi dứt câu, app **dùng lại** các cụm đã dịch và bản dịch phần đuôi; chỉ dịch thêm nếu phần đuôi cuối cùng khác với bản đã dịch. Vì vậy bong bóng chốt hiện gần như ngay và không còn cảnh "gộp lại rồi dịch lại".
+- Đổi lại: chi phí dịch tăng (thử nghiệm giả lập cho thấy khoảng 2 lần số ký tự; ước tính thực tế 2–4 lần), nhất là với Google Cloud Translation; MyMemory sẽ hết hạn mức nhanh hơn. Bản dịch tạm có thể đổi khi người nói nói thêm, và dịch theo cụm có thể kém chính xác hơn dịch cả câu.
+- Tắt ở ⚙ → Chế độ họp: giảm độ trễ → bỏ chọn "Dịch chạy theo khi đang nói".
