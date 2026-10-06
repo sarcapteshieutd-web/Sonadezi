@@ -78,7 +78,7 @@
     meeting: false,
     dual: store.get('dual', window.innerWidth >= 1024 ? '1' : '0') === '1',
     uiScale: parseFloat(store.get('uiScale', '1')) || 1,
-    incr: store.get('incr', '0') === '1',          // dịch tăng dần theo cụm khi đang nói
+    incr: store.get('incr', '1') === '1',          // dịch chạy theo khi đang nói (cụm ổn định + phần đuôi)
     cutMs: parseInt(store.get('cutMs', '0'), 10) || 0, // tự chốt câu sau N ms im lặng (0 = tắt)
     showLat: store.get('showLat', '0') === '1',    // hiện độ trễ trên bong bóng
     meetingSpeak: store.get('meetingSpeak', '0') === '1',
@@ -642,11 +642,13 @@
     meetingChain = meetingChain.then(async () => {
       let out;
       try {
-        if (pre && pre.consumed && pre.parts.length && text.startsWith(pre.consumed)) {
-          // Phần đầu câu đã được dịch sẵn khi đang nói: chỉ dịch thêm phần đuôi
+        const prefixOk = pre && text.startsWith(pre.consumed || '');
+        if (pre && prefixOk && (pre.parts.length || pre.tailResult)) {
+          // Đã dịch sẵn khi đang nói: dùng lại các cụm đã dịch; phần đuôi dùng lại nếu không đổi, nếu khác chỉ dịch phần đuôi
           const done = await Promise.all(pre.parts);
-          const rest = text.slice(pre.consumed.length).trim();
-          const tail = rest ? await translateText(rest, from, to) : '';
+          const rest = text.slice((pre.consumed || '').length).trim();
+          let tail = '';
+          if (rest) tail = (pre.tailResult && normText(rest) === normText(pre.tailText)) ? pre.tailResult : await translateText(rest, from, to);
           out = [...done, tail].filter(Boolean).join(LANGS[to].sp ? ' ' : '');
         } else {
           out = await translateText(text, from, to);
@@ -673,9 +675,10 @@
     }
     return null;
   }
-  const newUtt = () => ({ consumed: '', parts: [], results: [], lastText: '', tLast: 0, forced: '', timer: null });
+  const newUtt = () => ({ consumed: '', parts: [], results: [], lastText: '', tLast: 0, forced: '', timer: null,
+    tail: { text: '', done: '', result: null, seq: 0, at: 0, timer: null } });
   let utt = newUtt();
-  function resetUtt() { clearTimeout(utt.timer); utt = newUtt(); }
+  function resetUtt() { clearTimeout(utt.timer); clearTimeout(utt.tail.timer); utt = newUtt(); }
 
   const MIN_WORDS = 6, TAIL_WORDS = 3, MIN_CJK = 10, TAIL_CJK = 4;
   // Tìm vị trí cắt "ổn định": giữ lại vài từ cuối vì trình duyệt còn có thể sửa
@@ -694,26 +697,56 @@
     for (let i = limit - 1; i >= MIN_CJK - 1; i--) if (/[，。；、,.;!?！？]/.test(rest[i])) return i + 1;
     return limit;
   }
+  const joinOut = (arr) => arr.filter(Boolean).join(LANGS[state.tgt].sp ? ' ' : '');
   function showPartial() {
     if (!state.incr || !state.meeting) return;
     const done = [];
     for (let i = 0; i < utt.results.length; i++) { if (utt.results[i] == null) break; done.push(utt.results[i]); }
-    el.out.textContent = done.join(LANGS[state.tgt].sp ? ' ' : '') + (done.length ? ' …' : '');
+    const pending = utt.tail.text && normText(utt.tail.text) !== normText(utt.tail.done);
+    el.out.textContent = joinOut([...done, utt.tail.result]) + (pending || done.length < utt.parts.length ? ' …' : '');
     scrollChat();
   }
+  // Dịch phần đuôi (các từ cuối còn chưa ổn định) liên tục, tối đa mỗi TAIL_MS một lần
+  const TAIL_MS = 600;
+  function scheduleTail(tailText) {
+    const t = utt.tail;
+    t.text = tailText;
+    if (!tailText || normText(tailText) === normText(t.done)) { showPartial(); return; }
+    if (t.timer) { showPartial(); return; }
+    const wait = Math.max(0, TAIL_MS - (Date.now() - t.at));
+    t.timer = setTimeout(() => fireTail(utt), wait);
+    showPartial();
+  }
+  function fireTail(u) {
+    const t = u.tail;
+    t.timer = null;
+    const text = t.text.trim();
+    if (!text || normText(text) === normText(t.done)) return;
+    t.at = Date.now();
+    const my = ++t.seq;
+    translateText(text, state.src, state.tgt).then(r => {
+      if (u !== utt || my !== t.seq) return; // đã có yêu cầu mới hơn hoặc đã sang câu khác
+      t.done = text; t.result = r;
+      showPartial();
+      if (normText(t.text) !== normText(t.done)) scheduleTail(t.text); // chữ đã đổi trong lúc chờ: dịch tiếp
+    }).catch(() => {});
+  }
   function incrementalStep(T) {
-    if (utt.consumed && !T.startsWith(utt.consumed)) { utt.consumed = ''; utt.parts = []; utt.results = []; } // trình duyệt đã sửa phần đầu: bỏ phần đã dịch
+    if (utt.consumed && !T.startsWith(utt.consumed)) { utt.consumed = ''; utt.parts = []; utt.results = []; utt.tail.done = ''; utt.tail.result = null; } // trình duyệt đã sửa phần đầu: bỏ phần đã dịch
     const rest = T.slice(utt.consumed.length);
     const cut = stableCut(rest, LANGS[state.src]);
-    if (cut <= 0) return;
-    const chunk = rest.slice(0, cut);
-    const idx = utt.parts.length;
-    utt.consumed += chunk;
-    const p = translateText(chunk.trim(), state.src, state.tgt);
-    p.then(r => { utt.results[idx] = r; showPartial(); }).catch(() => {});
-    utt.parts.push(p);
+    if (cut > 0) {
+      const chunk = rest.slice(0, cut);
+      const idx = utt.parts.length;
+      utt.consumed += chunk;
+      utt.tail.done = ''; utt.tail.result = null; // phần đuôi cũ đã được gộp vào cụm mới
+      const p = translateText(chunk.trim(), state.src, state.tgt);
+      p.then(r => { utt.results[idx] = r; showPartial(); }).catch(() => {});
+      utt.parts.push(p);
+    }
+    scheduleTail(T.slice(utt.consumed.length).trim());
   }
-  function snapshotUtt() { return { consumed: utt.consumed, parts: utt.parts.slice(), tLast: utt.tLast }; }
+  function snapshotUtt() { return { consumed: utt.consumed, parts: utt.parts.slice(), tLast: utt.tLast, tailText: utt.tail.done, tailResult: utt.tail.result }; }
   // Chốt câu sớm khi im lặng đủ lâu, không chờ trình duyệt báo kết thúc
   function forceCommit() {
     const text = utt.lastText.trim();
