@@ -43,6 +43,7 @@
     expInfo: $('expInfo'), expTxt: $('expTxt'), expCsv: $('expCsv'), expShare: $('expShare'),
     donateBody: $('donateBody'), donateTitle: $('donateTitle'),
     btnMeeting: $('btnMeeting'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
+    chkMeetingSpeak: $('chkMeetingSpeak'), meetingSpeaking: $('meetingSpeaking'),
     chkAutoTurn: $('chkAutoTurn'), meetingLang: $('meetingLang'),
     app: $('app'), btnBig: $('btnBig'),
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
@@ -70,6 +71,8 @@
     pitch: parseFloat(store.get('pitch', '1')) || 1,
     log: [], // toàn bộ lượt hội thoại, lưu trên thiết bị
     meeting: false,
+    meetingSpeak: store.get('meetingSpeak', '0') === '1',
+    speaking: false,
     autoTurn: store.get('autoTurn', '1') === '1',
     mine: null, // ngôn ngữ của người dùng: lời của bên này hiện bên phải
     reqId: 0
@@ -129,7 +132,7 @@
     state.tgt = t;
     syncLangUI();
     updateCounter();
-    if (wasMeeting) beginSession(); // tiếp tục ghi họp với ngôn ngữ mới
+    if (wasMeeting && !state.speaking) beginSession(); // tiếp tục ghi họp với ngôn ngữ mới (khi đang đọc, sẽ nghe lại sau)
   }
 
   // ---------- Lịch sử hội thoại ----------
@@ -362,16 +365,14 @@
     return voices.filter(v => norm(v) === lang).concat(voices.filter(v => norm(v) !== lang && norm(v).startsWith(prefix)));
   }
 
-  function speak(text, langKey) {
-    if (!('speechSynthesis' in window)) { toast('Thiết bị không hỗ trợ đọc văn bản'); return; }
-    if (!text) return;
-    speechSynthesis.cancel();
+  function buildUtterances(text, langKey) {
     const lang = LANGS[langKey].tts;
     const list = voicesFor(langKey);
     const v = list.find(x => x.name === store.get('voice_' + langKey, '')) || list[0];
     if (!v && voices.length) toast('Thiết bị chưa có giọng đọc cho ' + LANGS[langKey].name);
     // Đọc từng câu để có quãng nghỉ tự nhiên, dễ nghe hơn
     const sentences = text.match(/[^.!?。！？\n]+[.!?。！？]*/g) || [text];
+    const out = [];
     for (const part of sentences) {
       if (!part.trim()) continue;
       const u = new SpeechSynthesisUtterance(part.trim());
@@ -379,8 +380,30 @@
       if (v) u.voice = v;
       u.rate = state.rate;
       u.pitch = state.pitch;
-      speechSynthesis.speak(u);
+      out.push(u);
     }
+    return out;
+  }
+
+  function speak(text, langKey) {
+    if (!('speechSynthesis' in window)) { toast('Thiết bị không hỗ trợ đọc văn bản'); return; }
+    if (!text) return;
+    speechSynthesis.cancel();
+    buildUtterances(text, langKey).forEach(u => speechSynthesis.speak(u));
+  }
+
+  // Đọc xong mới trả về (không cắt câu đang đọc). Có thời gian chờ tối đa phòng khi trình duyệt không báo kết thúc.
+  function speakAndWait(text, langKey) {
+    return new Promise(resolve => {
+      if (!('speechSynthesis' in window) || !text) { resolve(); return; }
+      const us = buildUtterances(text, langKey);
+      if (!us.length) { resolve(); return; }
+      const timer = setTimeout(resolve, Math.max(8000, text.length * 150));
+      const done = () => { clearTimeout(timer); resolve(); };
+      us[us.length - 1].onend = done;
+      us[us.length - 1].onerror = done;
+      us.forEach(u => speechSynthesis.speak(u));
+    });
   }
 
   // iOS/Safari yêu cầu phát âm đầu tiên phải từ thao tác chạm của người dùng
@@ -529,9 +552,39 @@
       let out;
       try { out = await translateText(text, from, to); } catch (_) { out = '[Chưa dịch được]'; }
       addHistory({ src: text, out, from, to, meeting: true });
+      if (state.meetingSpeak && state.meeting && !/^\[Chưa dịch được\]$/.test(out)) enqueueSpeech(out, to);
     });
   }
+
+  // Đọc bản dịch lần lượt; trong lúc đọc tạm dừng nghe để không thu lại tiếng dịch
+  const speechQueue = [];
+  let draining = false;
+  function setSpeakingUI(on) {
+    state.speaking = on;
+    el.meetingSpeaking.classList.toggle('hidden', !on);
+  }
+  function enqueueSpeech(text, langKey) {
+    speechQueue.push({ text, langKey });
+    while (speechQueue.length > 3) speechQueue.shift(); // chỉ giữ 3 bản dịch mới nhất, tránh đọc chậm hơn cuộc họp
+    drainSpeech();
+  }
+  async function drainSpeech() {
+    if (draining) return;
+    draining = true;
+    setSpeakingUI(true);
+    if (rec) { rec.onend = null; try { rec.abort(); } catch (_) {} } // tạm nghỉ micro
+    el.src.value = '';
+    updateCounter();
+    while (speechQueue.length && state.meeting) {
+      const item = speechQueue.shift();
+      await speakAndWait(item.text, item.langKey);
+    }
+    draining = false;
+    setSpeakingUI(false);
+    if (state.meeting) beginSession(); // đọc xong: nghe lại bằng ngôn ngữ hiện tại
+  }
   function onMeetingResult(ev) {
+    if (state.speaking) return; // đang đọc bản dịch: bỏ qua kết quả lẻ còn sót
     let interim = '';
     let gotFinal = false;
     for (let i = ev.resultIndex; i < ev.results.length; i++) {
@@ -568,6 +621,7 @@
     if (!SR) { toast('Trình duyệt không hỗ trợ nhận diện giọng nói. Dùng Chrome (Android) hoặc Safari (iOS 14.5+).'); return; }
     if (state.listening || wantListening) stopListening();
     archiveTurn();
+    unlockTTS();
     state.meeting = true;
     state.mine = state.src; // bên đầu tiên nói nằm bên phải khung chat
     wantListening = true;
@@ -585,6 +639,9 @@
     const rest = el.src.value.trim();
     state.meeting = false;
     wantListening = false;
+    speechQueue.length = 0;
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    setSpeakingUI(false);
     clearInterval(meetingTimer);
     if (rec) { rec.onend = null; try { rec.stop(); } catch (_) {} }
     if (rest) queueMeeting(rest);
@@ -604,6 +661,12 @@
   document.addEventListener('keyup', e => {
     if (e.code === 'Space' && state.meeting && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) e.preventDefault();
   });
+  el.chkMeetingSpeak.checked = state.meetingSpeak;
+  el.chkMeetingSpeak.onchange = () => {
+    state.meetingSpeak = el.chkMeetingSpeak.checked;
+    store.set('meetingSpeak', state.meetingSpeak ? '1' : '0');
+    if (!state.meetingSpeak) { speechQueue.length = 0; if ('speechSynthesis' in window) speechSynthesis.cancel(); }
+  };
   el.chkAutoTurn.checked = state.autoTurn;
   el.chkAutoTurn.onchange = () => { state.autoTurn = el.chkAutoTurn.checked; store.set('autoTurn', state.autoTurn ? '1' : '0'); };
   el.btnMeeting.onclick = () => (state.meeting ? stopMeeting() : startMeeting());

@@ -135,3 +135,11 @@ Trong **Chế độ họp**, thanh đỏ hiển thị rõ **ngôn ngữ đang ng
 Bong bóng của bên đầu tiên nói nằm bên phải, bên còn lại nằm bên trái. Mỗi câu được dịch theo đúng chiều của lượt nói đó, kể cả khi ngôn ngữ đã đổi trước lúc dịch xong.
 
 Giới hạn: app không tự nhận biết ngôn ngữ người nói; nếu để sai ngôn ngữ, câu sẽ bị nghe sai. Mỗi lần đổi, bộ nghe khởi động lại nên có thể mất vài từ đầu của lượt kế tiếp. Muốn nhận diện ngôn ngữ tự động cần chuyển sang dịch vụ nhận diện giọng nói trả phí.
+
+## 15. Đọc bản dịch trong Chế độ họp (micro hội nghị vừa thu vừa phát)
+Trong Chế độ họp, tích **"Đọc bản dịch ra loa"** để mỗi bản dịch được đọc ra đầu ra âm thanh của laptop:
+- Bản dịch được **xếp hàng và đọc lần lượt**, không cắt nhau. Hàng chờ chỉ giữ **3 bản dịch mới nhất**; các câu quá cũ bị bỏ qua phần đọc (chữ vẫn hiện đầy đủ trên khung chat).
+- Khi đang đọc, app **tạm dừng nghe** (hiện nhãn "Đang đọc · micro tạm nghỉ") để không thu lại tiếng dịch, đọc xong tự nghe lại. **Lời nói trong lúc đang đọc sẽ không được ghi nhận**, nên cần người nói chờ bản dịch đọc xong.
+- Dùng micro hội nghị làm cả **đầu vào lẫn đầu ra mặc định** của laptop (Windows: Cài đặt → Hệ thống → Âm thanh), cắm USB.
+- Giọng đọc là giọng có sẵn trên laptop, chọn và chỉnh trong ⚙ → Giọng đọc.
+- Với thương thảo hợp đồng nên **tắt** tùy chọn này và chỉ đọc chữ trên màn hình để không mất lời nói.
