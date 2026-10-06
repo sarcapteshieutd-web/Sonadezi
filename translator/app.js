@@ -42,6 +42,7 @@
     btnExport: $('btnExport'), btnDonate: $('btnDonate'), sheetExport: $('sheetExport'), sheetDonate: $('sheetDonate'),
     expInfo: $('expInfo'), expTxt: $('expTxt'), expCsv: $('expCsv'), expShare: $('expShare'),
     donateBody: $('donateBody'), donateTitle: $('donateTitle'),
+    btnMeeting: $('btnMeeting'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
     selEngine: $('selEngine'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
     inRate: $('inRate'), inPitch: $('inPitch'), lblRate: $('lblRate'), lblPitch: $('lblPitch'), btnTest: $('btnTest'), inEmail: $('inEmail'), inKey: $('inKey'),
@@ -66,6 +67,7 @@
     rate: parseFloat(store.get('rate', '0.95')) || 0.95,
     pitch: parseFloat(store.get('pitch', '1')) || 1,
     log: [], // toàn bộ lượt hội thoại, lưu trên thiết bị
+    meeting: false,
     mine: null, // ngôn ngữ của người dùng: lời của bên này hiện bên phải
     reqId: 0
   };
@@ -115,13 +117,15 @@
   }
 
   function setLangs(s, t, swapText) {
-    const wasListening = state.listening;
-    if (wasListening) stopListening();
+    const wasMeeting = state.meeting;
+    if (wasMeeting) { if (rec) { rec.onend = null; try { rec.abort(); } catch (_) {} } }
+    else if (state.listening) stopListening();
     archiveTurn();
     state.src = s;
     state.tgt = t;
     syncLangUI();
     updateCounter();
+    if (wasMeeting) beginSession(); // tiếp tục ghi họp với ngôn ngữ mới
   }
 
   // ---------- Lịch sử hội thoại ----------
@@ -160,7 +164,7 @@
       state.log.push(item);
       saveLog();
     }
-    const mine = item.from === state.mine;
+    const mine = item.from === state.mine && !item.meeting;
     el.emptyHint.classList.add('hidden');
     const row = document.createElement('div');
     row.className = 'flex ' + (mine ? 'justify-end' : 'justify-start');
@@ -294,6 +298,7 @@
     el.liveRow.classList.toggle('hidden', !show);
     el.liveRow.classList.toggle('justify-end', state.src === state.mine);
     el.liveRow.classList.toggle('justify-start', state.src !== state.mine);
+    el.out.parentElement.classList.toggle('hidden', state.meeting);
     if (show) el.emptyHint.classList.add('hidden');
     else if (!el.hist.children.length) el.emptyHint.classList.remove('hidden');
     el.src.style.height = 'auto';
@@ -391,6 +396,7 @@
     rec.onstart = () => setListeningUI(true);
 
     rec.onresult = ev => {
+      if (state.meeting) { onMeetingResult(ev); return; }
       let text = '';
       for (let i = 0; i < ev.results.length; i++) text += ev.results[i][0].transcript;
       const sep = committed && !/[\s]$/.test(committed) && LANGS[state.src].sp ? ' ' : '';
@@ -430,6 +436,7 @@
   }
 
   function finish() {
+    if (state.meeting) { stopMeeting(); return; }
     clearTimeout(silenceTimer);
     setListeningUI(false);
     translateNow(true); // dịch bản cuối và tự động đọc
@@ -442,6 +449,87 @@
     setListeningUI(false);
   }
 
+  // ---------- Chế độ họp: tự nghe liên tục, dịch lên khung chat, không đọc bản dịch ----------
+  let meetingStart = 0, meetingTimer = null, wakeLock = null;
+  let meetingChain = Promise.resolve(), lastMeetingText = '', lastMeetingAt = 0;
+
+  async function translateText(text) {
+    const parts = await Promise.all(splitChunks(text).map(c => translateChunk(c)));
+    return parts.join('').replace(/\s+\n/g, '\n').trim();
+  }
+  function queueMeeting(text) {
+    const now = Date.now();
+    if (text === lastMeetingText && now - lastMeetingAt < 4000) return; // tránh lặp câu do lỗi của trình duyệt
+    lastMeetingText = text; lastMeetingAt = now;
+    const from = state.src, to = state.tgt;
+    meetingChain = meetingChain.then(async () => {
+      let out;
+      try { out = await translateText(text); } catch (_) { out = '[Chưa dịch được]'; }
+      addHistory({ src: text, out, from, to, meeting: true });
+    });
+  }
+  function onMeetingResult(ev) {
+    let interim = '';
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const r = ev.results[i];
+      const t = r[0].transcript.trim();
+      if (r.isFinal) { if (t) queueMeeting(t); } else interim += t;
+    }
+    el.src.value = interim;
+    updateCounter();
+  }
+  async function requestWake() {
+    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (_) {}
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (state.meeting && document.visibilityState === 'visible') requestWake();
+  });
+  function tickMeeting() {
+    const s = Math.floor((Date.now() - meetingStart) / 1000);
+    el.meetingTime.textContent = `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
+  }
+  function setMeetingUI(on) {
+    el.meetingBar.classList.toggle('hidden', !on);
+    el.meetingBar.classList.toggle('flex', on);
+    el.btnMeeting.textContent = on ? 'Dừng họp' : 'Chế độ họp';
+    el.btnMeeting.classList.toggle('bg-red-600', on);
+    el.btnMeeting.classList.toggle('text-white', on);
+    el.btnMeeting.classList.toggle('border-red-600', on);
+    el.btnMeeting.classList.toggle('text-brand-600', !on);
+    el.btnMeeting.classList.toggle('border-brand-600', !on);
+  }
+  function startMeeting() {
+    if (!SR) { toast('Trình duyệt không hỗ trợ nhận diện giọng nói. Dùng Chrome (Android) hoặc Safari (iOS 14.5+).'); return; }
+    if (state.listening || wantListening) stopListening();
+    archiveTurn();
+    state.meeting = true;
+    wantListening = true;
+    committed = '';
+    meetingStart = Date.now();
+    clearInterval(meetingTimer);
+    meetingTimer = setInterval(tickMeeting, 1000);
+    tickMeeting();
+    setMeetingUI(true);
+    requestWake();
+    beginSession();
+  }
+  function stopMeeting() {
+    if (!state.meeting) return;
+    const rest = el.src.value.trim();
+    state.meeting = false;
+    wantListening = false;
+    clearInterval(meetingTimer);
+    if (rec) { rec.onend = null; try { rec.stop(); } catch (_) {} }
+    if (rest) queueMeeting(rest);
+    el.src.value = '';
+    setListeningUI(false);
+    setMeetingUI(false);
+    if (wakeLock) { try { wakeLock.release(); } catch (_) {} wakeLock = null; }
+    toast('Đã dừng chế độ họp');
+  }
+  el.btnMeeting.onclick = () => (state.meeting ? stopMeeting() : startMeeting());
+  el.btnMeetingStop.onclick = stopMeeting;
+
   // ---------- Sự kiện ----------
   el.selSrc.onchange = () => {
     const s = el.selSrc.value;
@@ -453,11 +541,11 @@
     setLangs(t === state.src ? state.tgt : state.src, t, false);
     state.mine = state.src;
   };
-  el.btnSwap.onclick = () => { setLangs(state.tgt, state.src, false); if (SR) startListening(); };
+  el.btnSwap.onclick = () => { setLangs(state.tgt, state.src, false); if (SR && !state.meeting) startListening(); };
 
   el.src.addEventListener('input', () => { updateCounter(); translateDebounced(); });
 
-  el.btnMic.onclick = () => (state.listening || wantListening ? stopListening_andTranslate() : startListening());
+  el.btnMic.onclick = () => (state.meeting ? stopMeeting() : state.listening || wantListening ? stopListening_andTranslate() : startListening());
   function stopListening_andTranslate() {
     wantListening = false;
     clearTimeout(silenceTimer);
@@ -673,14 +761,16 @@
       box.appendChild(img);
     }
     const b = d.bank || {};
-    if (b.accountNumber) {
+    if (b.accountNumber || b.accountName || b.bankName) {
       has = true;
       const c = node('div', 'mt-3 rounded-xl bg-slate-50 p-3 text-sm');
       [['Ngân hàng', b.bankName], ['Số tài khoản', b.accountNumber], ['Chủ tài khoản', b.accountName], ['Nội dung', b.note]]
         .filter(r => r[1]).forEach(r => { const row = node('div', 'flex justify-between gap-3'); row.append(node('span', 'text-slate-500', r[0]), node('span', 'font-medium text-right', r[1])); c.appendChild(row); });
+      if (b.accountNumber) {
       const cp = node('button', 'mt-2 w-full rounded-lg border border-brand-600 py-1.5 font-medium text-brand-600', 'Sao chép số tài khoản');
       cp.onclick = async () => { try { await navigator.clipboard.writeText(b.accountNumber); toast('Đã sao chép số tài khoản'); } catch (_) { toast('Không thể sao chép'); } };
       c.appendChild(cp);
+      }
       box.appendChild(c);
     }
     (d.links || []).forEach(l => {

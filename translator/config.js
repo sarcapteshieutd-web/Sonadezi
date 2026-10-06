@@ -7,9 +7,9 @@ window.APP_CONFIG = {
     title: 'Ủng hộ nhà phát hành',
     message: 'Cảm ơn bạn đã sử dụng ứng dụng. Mọi đóng góp giúp chúng tôi duy trì và phát triển thêm tính năng.',
     // Ảnh mã QR chuyển khoản (ví dụ VietQR), đặt tệp trong thư mục translator/ rồi ghi đường dẫn, ví dụ 'donate-qr.png'
-    qrImage: '',
+    qrImage: 'donate-qr.jpg',
     // Thông tin tài khoản nhận (hiển thị dạng chữ, có nút sao chép)
-    bank: { bankName: '', accountNumber: '', accountName: '', note: '' },
+    bank: { bankName: '', accountNumber: '', accountName: 'NGUYEN NGOC HIEU', note: 'Quét mã QR bằng ứng dụng ngân hàng hoặc ví điện tử (VietQR)' },
     // Liên kết thanh toán trực tuyến (PayPal.me, Buy Me a Coffee, liên kết thanh toán PayOS/Stripe, v.v.). Chỉ chấp nhận https://
     links: [
       // { label: 'Ủng hộ qua PayPal', url: 'https://paypal.me/...' }
