@@ -45,7 +45,9 @@
     btnMeeting: $('btnMeeting'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
     chkMeetingSpeak: $('chkMeetingSpeak'), meetingSpeaking: $('meetingSpeaking'),
     chkAutoTurn: $('chkAutoTurn'), meetingLang: $('meetingLang'),
-    app: $('app'), btnBig: $('btnBig'), btnRoom: $('btnRoom'), roomDot: $('roomDot'),
+    app: $('app'), btnBig: $('btnBig'), btnDual: $('btnDual'), btnFontMinus: $('btnFontMinus'), btnFontPlus: $('btnFontPlus'),
+    dualHeadL: $('dualHeadL'), dualHeadR: $('dualHeadR'), liveDual: $('liveDual'),
+    ldLLbl: $('ldLLbl'), ldLTxt: $('ldLTxt'), ldLRec: $('ldLRec'), ldRLbl: $('ldRLbl'), ldRTxt: $('ldRTxt'), ldRRec: $('ldRRec'), btnRoom: $('btnRoom'), roomDot: $('roomDot'),
     sheetRoom: $('sheetRoom'), roomBody: $('roomBody'),
     viewerBar: $('viewerBar'), selViewerLang: $('selViewerLang'), viewerStatus: $('viewerStatus'),
     chkIncr: $('chkIncr'), selCut: $('selCut'), chkLat: $('chkLat'),
@@ -74,6 +76,8 @@
     pitch: parseFloat(store.get('pitch', '1')) || 1,
     log: [], // toàn bộ lượt hội thoại, lưu trên thiết bị
     meeting: false,
+    dual: store.get('dual', window.innerWidth >= 1024 ? '1' : '0') === '1',
+    uiScale: parseFloat(store.get('uiScale', '1')) || 1,
     incr: store.get('incr', '0') === '1',          // dịch tăng dần theo cụm khi đang nói
     cutMs: parseInt(store.get('cutMs', '0'), 10) || 0, // tự chốt câu sau N ms im lặng (0 = tắt)
     showLat: store.get('showLat', '0') === '1',    // hiện độ trễ trên bong bóng
@@ -127,6 +131,7 @@
     el.meetingLang.textContent = LANGS[state.src].name;
     store.set('src', state.src);
     store.set('tgt', state.tgt);
+    syncDual();
   }
 
   function setLangs(s, t, swapText) {
@@ -178,6 +183,83 @@
       saveLog();
       roomPublish(item);
     }
+    el.emptyHint.classList.add('hidden');
+    el.hist.appendChild(renderItem(item));
+    scrollChat();
+  }
+
+  // ----- Chế độ hai ô trái/phải: mỗi bên đọc bằng ngôn ngữ của mình, các hàng thẳng nhau -----
+  function panelLangs() {
+    const m = state.mine;
+    if (state.src !== m && state.tgt !== m) return [state.src, state.tgt];
+    return [m, state.src === m ? state.tgt : state.src];
+  }
+  function renderDualItem(item) {
+    const row = document.createElement('div');
+    row.className = 'grid grid-cols-2 gap-3 lg:gap-5';
+    const time = new Date(item.ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    for (const lang of panelLangs()) {
+      const spoken = lang === item.from;
+      const text = lang === item.from ? item.src : lang === item.to ? item.out : null;
+      const cell = document.createElement('div');
+      cell.className = 'rounded-2xl px-3.5 py-2.5 shadow-sm ' + (spoken ? 'border-l-4 border-brand-600 bg-white' : 'bg-brand-50 ring-1 ring-brand-100');
+      const meta = document.createElement('div');
+      meta.className = 'mb-0.5 text-[0.6875rem] font-medium ' + (spoken ? 'text-brand-700' : 'text-slate-500');
+      meta.textContent = (spoken ? '🎤 Nói' : 'Bản dịch') + ' · ' + time + (state.showLat && item.lat != null && !spoken ? ` · ⏱ ${(item.lat / 1000).toFixed(1)} s` : '');
+      const t = document.createElement('div');
+      t.className = 'whitespace-pre-wrap break-words text-lg font-medium leading-snug text-slate-900';
+      t.textContent = text == null ? '—' : text;
+      cell.append(meta, t);
+      if (text != null) {
+        const tools = document.createElement('div');
+        tools.className = 'mt-1 flex gap-1 text-slate-500';
+        tools.append(
+          iconBtn(svgSpeaker, 'Đọc lại', () => speak(text, lang), 'hover:bg-slate-100'),
+          iconBtn(svgCopy, 'Sao chép', async () => { try { await navigator.clipboard.writeText(text); toast('Đã sao chép'); } catch (_) { toast('Không thể sao chép'); } }, 'hover:bg-slate-100')
+        );
+        cell.appendChild(tools);
+      }
+      row.appendChild(cell);
+    }
+    return row;
+  }
+  function renderItem(item) { return state.dual ? renderDualItem(item) : renderBubble(item); }
+  function renderAll() {
+    el.hist.innerHTML = '';
+    state.log.forEach(i => el.hist.appendChild(renderItem(i)));
+    if (state.log.length) el.emptyHint.classList.add('hidden');
+    scrollChat();
+  }
+  let lastPanels = '';
+  function syncDual() {
+    document.body.classList.toggle('dual', state.dual);
+    const [l, r] = panelLangs();
+    el.dualHeadL.textContent = LANGS[l].name;
+    el.dualHeadR.textContent = LANGS[r].name;
+    el.btnDual.classList.toggle('bg-brand-600', state.dual);
+    el.btnDual.classList.toggle('bg-white', !state.dual);
+    el.btnDual.classList.toggle('text-white', state.dual);
+    el.btnDual.classList.toggle('text-slate-500', !state.dual);
+    const key = state.dual + l + r;
+    if (key !== lastPanels) { lastPanels = key; renderAll(); }
+  }
+  // Dòng "đang nói" dạng hai ô
+  function liveDualUpdate() {
+    if (!state.dual) return;
+    const [l, r] = panelLangs();
+    const spokenLeft = state.src === l;
+    const srcTxt = el.src.value.trim();
+    const outTxt = el.out.textContent;
+    el.ldLLbl.textContent = LANGS[l].name; el.ldRLbl.textContent = LANGS[r].name;
+    el.ldLTxt.textContent = spokenLeft ? srcTxt : outTxt;
+    el.ldRTxt.textContent = spokenLeft ? outTxt : srcTxt;
+    el.ldLRec.classList.toggle('hidden', !(state.listening && spokenLeft));
+    el.ldRRec.classList.toggle('hidden', !(state.listening && !spokenLeft));
+    el.ldLRec.classList.toggle('inline-flex', state.listening && spokenLeft);
+    el.ldRRec.classList.toggle('inline-flex', state.listening && !spokenLeft);
+  }
+
+  function renderBubble(item) {
     const mine = item.from === state.mine;
     el.emptyHint.classList.add('hidden');
     const row = document.createElement('div');
@@ -187,18 +269,18 @@
       (mine ? 'rounded-br-md bg-brand-600 text-white' : 'rounded-bl-md border border-slate-200 bg-white text-slate-900');
 
     const meta = document.createElement('div');
-    meta.className = 'mb-0.5 text-[11px] font-medium ' + (mine ? 'text-brand-100' : 'text-slate-500');
+    meta.className = 'mb-0.5 text-[0.6875rem] font-medium ' + (mine ? 'text-brand-100' : 'text-slate-500');
     const time = new Date(item.ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     meta.textContent = `${LANGS[item.from].name} · ${time}` + (state.showLat && item.lat != null ? ` · ⏱ ${(item.lat / 1000).toFixed(1)} s` : '');
 
     const orig = document.createElement('div');
-    orig.className = 'whitespace-pre-wrap break-words text-[15px] leading-snug';
+    orig.className = 'whitespace-pre-wrap break-words text-[0.9375rem] leading-snug';
     orig.textContent = item.src;
 
     const tr = document.createElement('div');
     tr.className = 'mt-2 border-t pt-2 ' + (mine ? 'border-white/25' : 'border-slate-200');
     const lbl = document.createElement('div');
-    lbl.className = 'text-[11px] font-medium ' + (mine ? 'text-brand-100' : 'text-brand-600');
+    lbl.className = 'text-[0.6875rem] font-medium ' + (mine ? 'text-brand-100' : 'text-brand-600');
     lbl.textContent = LANGS[item.to].name;
     const out = document.createElement('div');
     out.className = 'whitespace-pre-wrap break-words text-base font-semibold leading-snug';
@@ -214,8 +296,7 @@
     tr.append(lbl, out, tools);
     bub.append(meta, orig, tr);
     row.appendChild(bub);
-    el.hist.appendChild(row);
-    scrollChat();
+    return row;
   }
 
   // ---------- Dịch ----------
@@ -347,6 +428,8 @@
     el.liveSrc.textContent = text;
     const show = !!text || state.listening;
     el.liveRow.classList.toggle('hidden', !show);
+    el.liveDual.classList.toggle('hidden', !show);
+    liveDualUpdate();
     el.liveRow.classList.toggle('justify-end', state.src === state.mine);
     el.liveRow.classList.toggle('justify-start', state.src !== state.mine);
     el.out.parentElement.classList.toggle('hidden', state.meeting && !state.incr);
@@ -728,6 +811,7 @@
     unlockTTS();
     state.meeting = true;
     state.mine = state.src; // bên đầu tiên nói nằm bên phải khung chat
+    syncDual();
     wantListening = true;
     committed = '';
     meetingStart = Date.now();
@@ -777,6 +861,25 @@
   el.btnMeeting.onclick = () => (state.meeting ? stopMeeting() : startMeeting());
   el.btnMeetingStop.onclick = stopMeeting;
 
+  new MutationObserver(() => liveDualUpdate()).observe(el.out, { childList: true, characterData: true, subtree: true });
+
+  // ---------- Cỡ chữ và bố cục theo màn hình (laptop) ----------
+  function applyScale() {
+    const w = window.innerWidth;
+    const hgt = window.innerHeight;
+    const auto = w >= 1024 ? Math.min(1.4, Math.max(1, Math.min(w / 1100, hgt / 720))) : 1; // laptop: phóng to theo cả chiều rộng và chiều cao
+    document.documentElement.style.fontSize = (16 * auto * state.uiScale).toFixed(2) + 'px';
+  }
+  function setScale(v) {
+    state.uiScale = Math.min(1.8, Math.max(0.8, Math.round(v * 20) / 20));
+    store.set('uiScale', String(state.uiScale));
+    applyScale();
+  }
+  el.btnFontMinus.onclick = () => setScale(state.uiScale - 0.1);
+  el.btnFontPlus.onclick = () => setScale(state.uiScale + 0.1);
+  window.addEventListener('resize', applyScale);
+  el.btnDual.onclick = () => { state.dual = !state.dual; store.set('dual', state.dual ? '1' : '0'); syncDual(); updateCounter(); };
+
   // ---------- Chế độ màn hình lớn (chiếu lên TV / máy chiếu) ----------
   function setBig(on) {
     el.app.classList.toggle('big', on);
@@ -800,12 +903,12 @@
   el.selSrc.onchange = () => {
     const s = el.selSrc.value;
     setLangs(s, s === state.tgt ? state.src : state.tgt, false);
-    state.mine = state.src;
+    state.mine = state.src; syncDual();
   };
   el.selTgt.onchange = () => {
     const t = el.selTgt.value;
     setLangs(t === state.src ? state.tgt : state.src, t, false);
-    state.mine = state.src;
+    state.mine = state.src; syncDual();
   };
   el.btnSwap.onclick = () => { setLangs(state.tgt, state.src, false); if (SR && !state.meeting) startListening(); };
 
@@ -1223,9 +1326,9 @@
         const { text, note } = pick(m);
         const row = node('div', 'flex justify-start');
         const bub = node('div', 'max-w-[92%] rounded-2xl rounded-bl-md border border-slate-200 bg-white px-3.5 py-2.5 shadow-sm');
-        bub.appendChild(node('div', 'text-[11px] font-medium text-slate-500', `${LANGS[m.from] ? LANGS[m.from].name : ''} · ${new Date(m.ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`));
+        bub.appendChild(node('div', 'text-[0.6875rem] font-medium text-slate-500', `${LANGS[m.from] ? LANGS[m.from].name : ''} · ${new Date(m.ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`));
         bub.appendChild(node('div', 'mt-0.5 whitespace-pre-wrap break-words text-lg font-semibold leading-snug text-brand-900', text));
-        if (note) bub.appendChild(node('div', 'text-[11px] italic text-slate-400', note));
+        if (note) bub.appendChild(node('div', 'text-[0.6875rem] italic text-slate-400', note));
         if (m.src !== text) bub.appendChild(node('div', 'mt-1 border-t border-slate-100 pt-1 text-xs text-slate-500', m.src));
         row.appendChild(bub);
         el.hist.appendChild(row);
@@ -1238,11 +1341,11 @@
   }
 
   // ---------- Khởi tạo ----------
+  applyScale();
   fillSelect(el.selVoiceLang, state.tgt);
   fillSelect(el.selSrc, state.src);
   fillSelect(el.selTgt, state.tgt);
   syncLangUI();
-  state.log.forEach(i => addHistory(i, true));
   updateCounter();
   if (!SR) el.micHint.textContent = 'Trình duyệt chưa hỗ trợ nhận diện giọng nói - bạn vẫn có thể gõ văn bản';
   if (viewerRoomId) startViewer(viewerRoomId); else resumeRoom();
