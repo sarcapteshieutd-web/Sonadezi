@@ -1,8 +1,8 @@
 /* Service worker - Dịch Thời Gian Thực
-   - Tệp của ứng dụng: ưu tiên cache, cập nhật nền (stale-while-revalidate).
+   - Tệp của ứng dụng: ưu tiên mạng (luôn lấy bản mới), mất mạng thì dùng bản đã lưu.
    - API dịch (MyMemory): luôn đi qua mạng, không cache.
 */
-const CACHE = 'translator-v12';
+const CACHE = 'translator-v13';
 const CORE = [
   './', './index.html', './app.js', './config.js', './donate-qr.jpg', './styles.css', './manifest.json',
   './icons/icon-192.png', './icons/icon-512.png',
@@ -34,16 +34,17 @@ self.addEventListener('fetch', e => {
   const sameOrigin = url.origin === location.origin;
   if (!sameOrigin) return; // API dịch và các nguồn khác: để trình duyệt xử lý
 
+  // Ưu tiên mạng để luôn nhận bản mới nhất ngay lần mở đầu tiên; mất mạng thì dùng bản đã lưu
   e.respondWith(
-    caches.match(req, { ignoreSearch: req.mode === 'navigate' }).then(hit => {
-      const fetching = fetch(req).then(res => {
-        if (res && (res.ok || res.type === 'opaque')) {
-          const copy = res.clone();
-          caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
-        }
-        return res;
-      }).catch(() => hit || (req.mode === 'navigate' ? caches.match('./index.html') : undefined));
-      return hit || fetching;
-    })
+    fetch(req).then(res => {
+      if (res && res.ok) {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+      }
+      return res;
+    }).catch(() =>
+      caches.match(req, { ignoreSearch: req.mode === 'navigate' })
+        .then(hit => hit || (req.mode === 'navigate' ? caches.match('./index.html') : undefined))
+    )
   );
 });
