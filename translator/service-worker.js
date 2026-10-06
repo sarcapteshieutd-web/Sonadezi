@@ -3,7 +3,7 @@
    - Tailwind CDN: lưu cache để dùng khi mất mạng.
    - API dịch (MyMemory): luôn đi qua mạng, không cache.
 */
-const CACHE = 'translator-v1';
+const CACHE = 'translator-v2';
 const CORE = [
   './', './index.html', './app.js', './manifest.json',
   './icons/icon-192.png', './icons/icon-512.png',

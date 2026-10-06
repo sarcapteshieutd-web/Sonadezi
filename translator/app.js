@@ -12,6 +12,7 @@
     ['en', 'vi'], ['vi', 'en'], ['zh', 'vi'], ['vi', 'zh'], ['en', 'zh'], ['zh', 'en']
   ];
   const DEBOUNCE_MS = 450;
+  const SILENCE_MS = 1800; // im lặng bao lâu thì tự kết thúc lượt nói
   const MAX_BYTES = 450; // MyMemory giới hạn ~500 byte/yêu cầu
 
   const $ = id => document.getElementById(id);
@@ -23,6 +24,7 @@
     chkAuto: $('chkAuto'), btnClear: $('btnClear'), btnCopy: $('btnCopy'),
     btnSpeakSrc: $('btnSpeakSrc'), btnSpeakTgt: $('btnSpeakTgt'),
     lblSrc: $('lblSrc'), lblTgt: $('lblTgt'), toast: $('toast'),
+    hist: $('history'), histWrap: $('histWrap'), btnClearHist: $('btnClearHist'),
     btnInstall: $('btnInstall'), iosHint: $('iosHint'), iosHintClose: $('iosHintClose'),
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
     selEngine: $('selEngine'), inEmail: $('inEmail'), inKey: $('inKey'),
@@ -103,15 +105,50 @@
   function setLangs(s, t, swapText) {
     const wasListening = state.listening;
     if (wasListening) stopListening();
-    if (swapText) {
-      const prevOut = state.translated;
-      el.src.value = prevOut || '';
-    }
+    archiveTurn();
     state.src = s;
     state.tgt = t;
     syncLangUI();
     updateCounter();
-    translateNow();
+  }
+
+  // ---------- Lịch sử hội thoại ----------
+  function archiveTurn() {
+    const text = el.src.value.trim();
+    if (text && state.translated) {
+      addHistory({ src: text, out: state.translated, from: state.src, to: state.tgt });
+    }
+    el.src.value = '';
+    el.out.textContent = '';
+    state.translated = '';
+    committed = '';
+    state.reqId++;
+    if (abortCtl) abortCtl.abort();
+    el.status.textContent = '';
+    updateCounter();
+  }
+
+  function addHistory(item) {
+    el.histWrap.classList.remove('hidden');
+    const d = document.createElement('div');
+    d.className = 'rounded-xl bg-slate-50 p-3 dark:bg-slate-800';
+    const a = document.createElement('div');
+    a.className = 'text-xs text-slate-500';
+    a.textContent = `${short(item.from)}: ${item.src}`;
+    const b = document.createElement('div');
+    b.className = 'mt-0.5 flex items-start gap-2 font-medium text-blue-700 dark:text-blue-300';
+    const t = document.createElement('span');
+    t.className = 'flex-1';
+    t.textContent = `${short(item.to)}: ${item.out}`;
+    const btn = document.createElement('button');
+    btn.className = 'shrink-0 rounded-full p-1 text-slate-500';
+    btn.setAttribute('aria-label', 'Đọc lại');
+    btn.textContent = '🔊';
+    btn.onclick = () => speak(item.out, item.to);
+    b.append(t, btn);
+    d.append(a, b);
+    el.hist.appendChild(d);
+    el.hist.scrollTop = el.hist.scrollHeight;
   }
 
   // ---------- Dịch ----------
@@ -239,6 +276,7 @@
   let committed = '';      // văn bản đã chốt trước phiên nhận diện hiện tại
   let wantListening = false;
   let lastNetError = 0;
+  let silenceTimer = null;
 
   function setListeningUI(on) {
     state.listening = on;
@@ -263,7 +301,7 @@
     unlockTTS();
     if ('speechSynthesis' in window) speechSynthesis.cancel();
     wantListening = true;
-    committed = el.src.value.trim();
+    archiveTurn(); // mỗi lần bấm micro là một lượt nói mới
     beginSession();
   }
 
@@ -283,6 +321,8 @@
       el.src.value = (committed + sep + text).trimStart();
       updateCounter();
       translateDebounced(); // dịch ngay trong khi đang nói
+      clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(stopListening_andTranslate, SILENCE_MS);
     };
 
     rec.onerror = ev => {
@@ -314,12 +354,14 @@
   }
 
   function finish() {
+    clearTimeout(silenceTimer);
     setListeningUI(false);
     translateNow(true); // dịch bản cuối và tự động đọc
   }
 
   function stopListening() {
     wantListening = false;
+    clearTimeout(silenceTimer);
     if (rec) { rec.onend = null; try { rec.stop(); } catch (_) {} }
     setListeningUI(false);
   }
@@ -333,13 +375,14 @@
     const t = el.selTgt.value;
     setLangs(t === state.src ? state.tgt : state.src, t, false);
   };
-  el.btnSwap.onclick = () => setLangs(state.tgt, state.src, true);
+  el.btnSwap.onclick = () => { setLangs(state.tgt, state.src, false); if (SR) startListening(); };
 
   el.src.addEventListener('input', () => { updateCounter(); translateDebounced(); });
 
   el.btnMic.onclick = () => (state.listening || wantListening ? stopListening_andTranslate() : startListening());
   function stopListening_andTranslate() {
     wantListening = false;
+    clearTimeout(silenceTimer);
     if (rec) { try { rec.stop(); } catch (_) { finish(); } } else finish();
   }
 
@@ -349,6 +392,7 @@
     updateCounter(); translateNow();
     el.src.focus();
   };
+  el.btnClearHist.onclick = () => { el.hist.innerHTML = ''; el.histWrap.classList.add('hidden'); };
   el.btnCopy.onclick = async () => {
     if (!state.translated) return;
     try { await navigator.clipboard.writeText(state.translated); toast('Đã sao chép'); }
