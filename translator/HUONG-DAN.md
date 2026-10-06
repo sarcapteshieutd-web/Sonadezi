@@ -114,3 +114,10 @@ Giới hạn:
 - Chỉ ghi **chữ**, không lưu tệp âm thanh.
 - Trình duyệt ngừng nghe khi tắt màn hình hoặc chuyển sang ứng dụng khác; ứng dụng xin giữ màn hình sáng (nếu thiết bị hỗ trợ) nhưng nên để ứng dụng ở phía trước, cắm sạc nếu họp lâu.
 - Nhận diện giọng nói của trình duyệt cần mạng và độ chính xác giảm khi nhiều người nói chồng, ở xa micro hoặc ồn.
+
+## 12. Cải thiện độ chính xác nhận diện giọng nói
+Trong `config.js`, mục `recognition`:
+- `minConfidence` (0–1, mặc định 0,3): bỏ qua câu đã chốt có độ tin cậy thấp hơn mức này, giúp loại câu vô nghĩa do tiếng ồn. Tăng lên (ví dụ 0,5) nếu còn nhiều câu rác; giảm xuống hoặc đặt 0 nếu app bỏ sót câu đúng. Trình duyệt không báo độ tin cậy (giá trị 0) thì câu được giữ lại.
+- `glossary`: từ điển sửa lỗi, gặp cách nghe sai (`variants`) thì thay bằng từ đúng (`to`); không phân biệt hoa/thường, khớp nguyên cụm từ. Các cách nghe sai có sẵn chỉ là dự đoán; hãy ghi lại những câu app nghe sai thực tế rồi bổ sung vào danh sách.
+
+Cách này chỉ sửa kết quả sau khi nhận diện, không cải thiện chất lượng thu âm gốc. Nên kết hợp với micro ngoài và môi trường yên tĩnh.

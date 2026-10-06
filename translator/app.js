@@ -350,6 +350,27 @@
     speechSynthesis.speak(u);
   }
 
+  // ---------- Cải thiện nhận diện: từ điển sửa lỗi và lọc độ tin cậy ----------
+  const RCFG = (window.APP_CONFIG && window.APP_CONFIG.recognition) || {};
+  const MIN_CONF = typeof RCFG.minConfidence === 'number' ? RCFG.minConfidence : 0;
+  const escRe = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const GLOSSARY = (RCFG.glossary || []).flatMap(g =>
+    (g.variants || []).filter(Boolean).map(v => ({ re: new RegExp('(^|[^\\p{L}\\p{N}])' + escRe(v.trim()).replace(/\s+/g, '\\s+') + '(?![\\p{L}\\p{N}])', 'giu'), to: g.to }))
+  ).sort((a, b) => b.re.source.length - a.re.source.length);
+
+  // Thay các cách nghe sai bằng từ đúng (theo config.js)
+  function applyGlossary(text) {
+    let out = text;
+    for (const g of GLOSSARY) out = out.replace(g.re, (_, pre) => pre + g.to);
+    return out;
+  }
+  // Bỏ câu đã chốt mà trình duyệt chấm độ tin cậy quá thấp (0 = trình duyệt không báo, giữ lại)
+  function heard(result) {
+    const alt = result[0];
+    if (result.isFinal && MIN_CONF > 0 && alt.confidence > 0 && alt.confidence < MIN_CONF) return '';
+    return alt.transcript;
+  }
+
   // ---------- Nhận diện giọng nói (STT) ----------
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let rec = null;
@@ -398,7 +419,8 @@
     rec.onresult = ev => {
       if (state.meeting) { onMeetingResult(ev); return; }
       let text = '';
-      for (let i = 0; i < ev.results.length; i++) text += ev.results[i][0].transcript;
+      for (let i = 0; i < ev.results.length; i++) text += heard(ev.results[i]);
+      text = applyGlossary(text);
       const sep = committed && !/[\s]$/.test(committed) && LANGS[state.src].sp ? ' ' : '';
       el.src.value = (committed + sep + text).trimStart();
       updateCounter();
@@ -472,7 +494,7 @@
     let interim = '';
     for (let i = ev.resultIndex; i < ev.results.length; i++) {
       const r = ev.results[i];
-      const t = r[0].transcript.trim();
+      const t = applyGlossary(heard(r).trim());
       if (r.isFinal) { if (t) queueMeeting(t); } else interim += t;
     }
     el.src.value = interim;
