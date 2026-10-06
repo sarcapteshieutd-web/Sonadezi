@@ -31,11 +31,11 @@
   const $ = id => document.getElementById(id);
   const el = {
     selSrc: $('selSrc'), selTgt: $('selTgt'), btnSwap: $('btnSwap'),
-    src: $('srcText'), out: $('outText'), counter: $('counter'), status: $('status'),
+    src: $('srcText'), out: $('outText'), status: $('status'),
+    liveRow: $('liveRow'), liveSrc: $('liveSrc'), emptyHint: $('emptyHint'), btnSend: $('btnSend'),
     btnMic: $('btnMic'), icoMic: $('icoMic'), icoStop: $('icoStop'),
     ring1: $('ring1'), ring2: $('ring2'), recBadge: $('recBadge'), micHint: $('micHint'),
-    chkAuto: $('chkAuto'), btnClear: $('btnClear'), btnCopy: $('btnCopy'),
-    btnSpeakSrc: $('btnSpeakSrc'), btnSpeakTgt: $('btnSpeakTgt'),
+    chkAuto: $('chkAuto'), btnClear: $('btnClear'),
     lblSrc: $('lblSrc'), lblTgt: $('lblTgt'), toast: $('toast'),
     hist: $('history'), histWrap: $('histWrap'), btnClearHist: $('btnClearHist'),
     btnInstall: $('btnInstall'), iosHint: $('iosHint'), iosHintClose: $('iosHintClose'),
@@ -62,10 +62,13 @@
     translated: '',
     rate: parseFloat(store.get('rate', '0.95')) || 0.95,
     pitch: parseFloat(store.get('pitch', '1')) || 1,
+    mine: null, // ngôn ngữ của người dùng: lời của bên này hiện bên phải
     reqId: 0
   };
   if (!LANGS[state.src]) state.src = 'en';
   if (!LANGS[state.tgt] || state.tgt === state.src) state.tgt = state.src === 'vi' ? 'en' : 'vi';
+
+  state.mine = state.src;
 
   // ---------- Tiện ích ----------
   let toastTimer;
@@ -131,27 +134,59 @@
     updateCounter();
   }
 
+  const svgSpeaker = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg>';
+  const svgCopy = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+
+  function scrollChat() { el.histWrap.scrollTop = el.histWrap.scrollHeight; }
+
+  function iconBtn(html, label, fn, cls) {
+    const b = document.createElement('button');
+    b.className = 'shrink-0 rounded-full p-1.5 ' + cls;
+    b.setAttribute('aria-label', label);
+    b.innerHTML = html;
+    b.onclick = fn;
+    return b;
+  }
+
   function addHistory(item) {
-    el.histWrap.classList.remove('hidden');
-    const d = document.createElement('div');
-    d.className = 'rounded-xl bg-slate-50 p-3';
-    const a = document.createElement('div');
-    a.className = 'text-xs text-slate-500';
-    a.textContent = `${short(item.from)}: ${item.src}`;
-    const b = document.createElement('div');
-    b.className = 'mt-0.5 flex items-start gap-2 font-medium text-brand-700';
-    const t = document.createElement('span');
-    t.className = 'flex-1';
-    t.textContent = `${short(item.to)}: ${item.out}`;
-    const btn = document.createElement('button');
-    btn.className = 'shrink-0 rounded-full p-1 text-slate-500';
-    btn.setAttribute('aria-label', 'Đọc lại');
-    btn.textContent = '🔊';
-    btn.onclick = () => speak(item.out, item.to);
-    b.append(t, btn);
-    d.append(a, b);
-    el.hist.appendChild(d);
-    el.hist.scrollTop = el.hist.scrollHeight;
+    const mine = item.from === state.mine;
+    el.emptyHint.classList.add('hidden');
+    const row = document.createElement('div');
+    row.className = 'flex ' + (mine ? 'justify-end' : 'justify-start');
+    const bub = document.createElement('div');
+    bub.className = 'max-w-[88%] rounded-2xl px-3.5 py-2.5 shadow-sm ' +
+      (mine ? 'rounded-br-md bg-brand-600 text-white' : 'rounded-bl-md border border-slate-200 bg-white text-slate-900');
+
+    const meta = document.createElement('div');
+    meta.className = 'mb-0.5 text-[11px] font-medium ' + (mine ? 'text-brand-100' : 'text-slate-500');
+    const time = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    meta.textContent = `${LANGS[item.from].name} · ${time}`;
+
+    const orig = document.createElement('div');
+    orig.className = 'whitespace-pre-wrap break-words text-[15px] leading-snug';
+    orig.textContent = item.src;
+
+    const tr = document.createElement('div');
+    tr.className = 'mt-2 border-t pt-2 ' + (mine ? 'border-white/25' : 'border-slate-200');
+    const lbl = document.createElement('div');
+    lbl.className = 'text-[11px] font-medium ' + (mine ? 'text-brand-100' : 'text-brand-600');
+    lbl.textContent = LANGS[item.to].name;
+    const out = document.createElement('div');
+    out.className = 'whitespace-pre-wrap break-words text-base font-semibold leading-snug';
+    out.textContent = item.out;
+    const tools = document.createElement('div');
+    tools.className = 'mt-1 flex gap-1 ' + (mine ? 'text-brand-100' : 'text-slate-500');
+    tools.append(
+      iconBtn(svgSpeaker, 'Đọc lại', () => speak(item.out, item.to), mine ? 'hover:bg-white/15' : 'hover:bg-slate-100'),
+      iconBtn(svgCopy, 'Sao chép', async () => {
+        try { await navigator.clipboard.writeText(item.out); toast('Đã sao chép'); } catch (_) { toast('Không thể sao chép'); }
+      }, mine ? 'hover:bg-white/15' : 'hover:bg-slate-100')
+    );
+    tr.append(lbl, out, tools);
+    bub.append(meta, orig, tr);
+    row.appendChild(bub);
+    el.hist.appendChild(row);
+    scrollChat();
   }
 
   // ---------- Dịch ----------
@@ -229,7 +264,10 @@
       state.translated = parts.join('').replace(/\s+\n/g, '\n').trim();
       el.out.textContent = state.translated;
       el.status.textContent = '';
-      if (speakAfter && el.chkAuto.checked) speak(state.translated, state.tgt);
+      if (speakAfter) {
+        if (el.chkAuto.checked) speak(state.translated, state.tgt);
+        archiveTurn(); // đưa lượt này vào khung chat
+      }
     } catch (e) {
       if (e.name === 'AbortError') return;
       if (id === state.reqId) el.status.textContent = 'Lỗi: ' + e.message;
@@ -237,8 +275,19 @@
   }
   const translateDebounced = debounce(() => translateNow(false), DEBOUNCE_MS);
 
+  // Cập nhật bong bóng "đang nói" ở cuối khung chat và độ cao ô nhập
   function updateCounter() {
-    el.counter.textContent = `${el.src.value.length}/5000`;
+    const text = el.src.value.trim();
+    el.liveSrc.textContent = text;
+    const show = !!text || state.listening;
+    el.liveRow.classList.toggle('hidden', !show);
+    el.liveRow.classList.toggle('justify-end', state.src === state.mine);
+    el.liveRow.classList.toggle('justify-start', state.src !== state.mine);
+    if (show) el.emptyHint.classList.add('hidden');
+    else if (!el.hist.children.length) el.emptyHint.classList.remove('hidden');
+    el.src.style.height = 'auto';
+    el.src.style.height = Math.min(el.src.scrollHeight, 112) + 'px';
+    scrollChat();
   }
 
   // ---------- Đọc văn bản (TTS) ----------
@@ -306,6 +355,7 @@
     el.btnMic.setAttribute('aria-pressed', String(on));
     el.btnMic.setAttribute('aria-label', on ? 'Dừng nói' : 'Bắt đầu nói');
     el.micHint.textContent = on ? 'Đang nghe… chạm để dừng' : 'Chạm để nói';
+    updateCounter();
   }
 
   function startListening() {
@@ -385,10 +435,12 @@
   el.selSrc.onchange = () => {
     const s = el.selSrc.value;
     setLangs(s, s === state.tgt ? state.src : state.tgt, false);
+    state.mine = state.src;
   };
   el.selTgt.onchange = () => {
     const t = el.selTgt.value;
     setLangs(t === state.src ? state.tgt : state.src, t, false);
+    state.mine = state.src;
   };
   el.btnSwap.onclick = () => { setLangs(state.tgt, state.src, false); if (SR) startListening(); };
 
@@ -405,16 +457,21 @@
     if (state.listening) stopListening();
     el.src.value = ''; committed = '';
     updateCounter(); translateNow();
-    el.src.focus();
+    if (!state.listening) el.src.focus();
   };
-  el.btnClearHist.onclick = () => { el.hist.innerHTML = ''; el.histWrap.classList.add('hidden'); };
-  el.btnCopy.onclick = async () => {
-    if (!state.translated) return;
-    try { await navigator.clipboard.writeText(state.translated); toast('Đã sao chép'); }
-    catch (_) { toast('Không thể sao chép'); }
+  el.btnClearHist.onclick = () => {
+    el.hist.innerHTML = '';
+    updateCounter();
+    el.emptyHint.classList.remove('hidden');
   };
-  el.btnSpeakTgt.onclick = () => speak(state.translated, state.tgt);
-  el.btnSpeakSrc.onclick = () => speak(el.src.value.trim(), state.src);
+  const sendTyped = () => {
+    if (state.listening || !el.src.value.trim()) return;
+    translateNow(true);
+  };
+  el.btnSend.onclick = sendTyped;
+  el.src.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTyped(); }
+  });
   el.chkAuto.checked = state.auto;
   el.chkAuto.onchange = () => { state.auto = el.chkAuto.checked; store.set('auto', state.auto ? '1' : '0'); };
 
