@@ -42,7 +42,7 @@
     btnExport: $('btnExport'), btnDonate: $('btnDonate'), sheetExport: $('sheetExport'), sheetDonate: $('sheetDonate'),
     expInfo: $('expInfo'), expTxt: $('expTxt'), expCsv: $('expCsv'), expShare: $('expShare'),
     donateBody: $('donateBody'), donateTitle: $('donateTitle'),
-    btnMeeting: $('btnMeeting'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
+    btnMeeting: $('btnMeeting'), btnConf: $('btnConf'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
     chkMeetingSpeak: $('chkMeetingSpeak'), chkConf: $('chkConf'), meetingSpeaking: $('meetingSpeaking'),
     chkAutoTurn: $('chkAutoTurn'), meetingLang: $('meetingLang'),
     app: $('app'), btnBig: $('btnBig'), btnDual: $('btnDual'), btnFontMinus: $('btnFontMinus'), btnFontPlus: $('btnFontPlus'),
@@ -846,6 +846,7 @@
   function setMeetingUI(on) {
     el.meetingBar.classList.toggle('hidden', !on);
     el.meetingBar.classList.toggle('flex', on);
+    syncConfBtn();
     el.btnMeeting.textContent = on ? 'Dừng họp' : 'Chế độ họp';
     el.btnMeeting.classList.toggle('bg-red-600', on);
     el.btnMeeting.classList.toggle('text-white', on);
@@ -905,15 +906,29 @@
     store.set('meetingSpeak', state.meetingSpeak ? '1' : '0');
     if (!state.meetingSpeak) { speechQueue.length = 0; if ('speechSynthesis' in window) speechSynthesis.cancel(); }
   };
+  function syncConfBtn() {
+    const on = state.meeting && state.conf;
+    el.btnConf.textContent = on ? '⏹ Dừng hội nghị' : '🎧 Hội nghị';
+    el.btnConf.classList.toggle('bg-red-600', on);
+    el.btnConf.classList.toggle('bg-brand-600', !on);
+  }
   function syncConf() {
     if (state.conf) { state.autoTurn = false; el.chkAutoTurn.checked = false; }
     el.chkAutoTurn.disabled = state.conf; // hội nghị: ngôn ngữ cố định, không đảo lượt
     el.chkConf.checked = state.conf;
+    syncConfBtn();
   }
   el.chkConf.onchange = () => { state.conf = el.chkConf.checked; store.set('conf', state.conf ? '1' : '0'); syncConf(); };
   el.chkAutoTurn.checked = state.autoTurn;
   syncConf();
   el.chkAutoTurn.onchange = () => { state.autoTurn = el.chkAutoTurn.checked; store.set('autoTurn', state.autoTurn ? '1' : '0'); };
+  // Nút ngoài: bật nhanh chế độ hội nghị (ngôn ngữ cố định, nghe bằng tai nghe, micro không tắt)
+  el.btnConf.onclick = () => {
+    if (state.meeting && state.conf) { stopMeeting(); return; }
+    state.conf = true; store.set('conf', '1'); syncConf();
+    if (!state.meeting) startMeeting();
+    toast('Chế độ hội nghị: hãy cắm tai nghe và chọn làm thiết bị phát của máy');
+  };
   el.btnMeeting.onclick = () => (state.meeting ? stopMeeting() : startMeeting());
   el.btnMeetingStop.onclick = stopMeeting;
 
