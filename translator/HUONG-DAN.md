@@ -170,3 +170,16 @@ Trong Chế độ họp, bản dịch hiện dần cùng lúc với chữ đang 
 - Khi dứt câu, app **dùng lại** các cụm đã dịch và bản dịch phần đuôi; chỉ dịch thêm nếu phần đuôi cuối cùng khác với bản đã dịch. Vì vậy bong bóng chốt hiện gần như ngay và không còn cảnh "gộp lại rồi dịch lại".
 - Đổi lại: chi phí dịch tăng (thử nghiệm giả lập cho thấy khoảng 2 lần số ký tự; ước tính thực tế 2–4 lần), nhất là với Google Cloud Translation; MyMemory sẽ hết hạn mức nhanh hơn. Bản dịch tạm có thể đổi khi người nói nói thêm, và dịch theo cụm có thể kém chính xác hơn dịch cả câu.
 - Tắt ở ⚙ → Chế độ họp: giảm độ trễ → bỏ chọn "Dịch chạy theo khi đang nói".
+
+## 20. Giảm độ trễ phòng họp và nghe bản dịch bằng tai nghe
+**Giảm độ trễ cho người xem:**
+- Bản "đang nói": người xem thấy ngay chữ chủ phòng đang nói (khung nét đứt, nhãn "Đang nói…"), cập nhật tối đa mỗi 1,2 giây (`room.liveIntervalMs` trong `config.js`), tự ẩn khi câu được chốt. Chỉ ghi khi có người xem và nội dung thay đổi.
+- Ngôn ngữ phụ được dịch **song song** và ghi **một lần** thay vì lần lượt từng ngôn ngữ.
+- Hộp "Phòng họp" hiện độ trễ ghi lên máy chủ gần nhất để kiểm tra.
+- Bản "đang nói" của ngôn ngữ phụ hiển thị theo bản dịch của chủ phòng; bản dịch riêng chỉ có sau khi câu được chốt.
+- **Bắt buộc:** dán lại `firebase/firestore.rules` vào Firebase Console và bấm Publish (xem docs/FIREBASE-SETUP.md).
+
+**Nghe bằng tai nghe trên điện thoại:** người xem mở liên kết phòng, chọn ngôn ngữ, cắm tai nghe và bật "Đọc bản dịch bằng tai nghe".
+- Chỉ đọc bản dịch của câu mới; bỏ qua lời cùng ngôn ngữ của chính người xem; không đọc lại tin cũ khi mới vào.
+- Tối đa 3 câu chờ đọc; câu chưa có bản dịch quá khoảng 6 giây sẽ bị bỏ qua.
+- Cần giữ màn hình sáng và trang đang mở; tôi chưa kiểm chứng trên điện thoại thật khi khóa màn hình (nhiều trình duyệt tạm dừng đọc ở nền).

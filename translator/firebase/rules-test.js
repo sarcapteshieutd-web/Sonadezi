@@ -34,6 +34,16 @@ let pass=0,fail=0; const t=(name,got,exp)=>{ const ok=exp==='ok'?got===200:got==
  t('Người xem ghi hồ sơ cho người khác bị chặn',await call('PATCH','/rooms/'+id+'/viewers/'+A.uid,Bv.tok,{lang:S('en'),ts:I(now),expiresAt:T(now+24*3600e3)}),'deny');
  t('Người xem liệt kê danh sách người xem bị chặn',await call('GET','/rooms/'+id+'/viewers',Bv.tok),'deny');
  t('Chủ liệt kê người xem',await call('GET','/rooms/'+id+'/viewers',A.tok),'ok');
+ const live={utt:S('u1'),src:S('xin chào các'),out:S('hello'),from:S('vi'),to:S('en'),ts:I(now),expiresAt:T(now+24*3600e3)};
+ t('Chủ ghi bản đang nói (live/now)',await call('PATCH','/rooms/'+id+'/live/now',A.tok,live),'ok');
+ t('Người xem ghi bản đang nói bị chặn',await call('PATCH','/rooms/'+id+'/live/now',Bv.tok,live),'deny');
+ t('Người xem đọc bản đang nói',await call('GET','/rooms/'+id+'/live/now',Bv.tok),'ok');
+ t('Không đăng nhập đọc bản đang nói bị chặn',await call('GET','/rooms/'+id+'/live/now',null),'deny');
+ t('Ghi live với mã tài liệu khác "now" bị chặn',await call('PATCH','/rooms/'+id+'/live/other',A.tok,live),'deny');
+ t('Ghi live có trường lạ bị chặn',await call('PATCH','/rooms/'+id+'/live/now',A.tok,{...live,evil:S('x')}),'deny');
+ t('Ghi tin nhắn có trường utt',await call('PATCH','/rooms/'+id+'/messages/m3',A.tok,{...msg,utt:S('u1')}),'ok');
+ t('Người xem xóa bản đang nói bị chặn',await call('DELETE','/rooms/'+id+'/live/now',Bv.tok),'deny');
+ t('Chủ xóa bản đang nói',await call('DELETE','/rooms/'+id+'/live/now',A.tok),'ok');
  t('Chủ kéo dài hạn phòng bị chặn',await call('PATCH','/rooms/'+id,A.tok,{expiresAt:T(now+48*3600e3)},['expiresAt']),'deny');
  t('Người khác đóng phòng bị chặn',await call('PATCH','/rooms/'+id,Bv.tok,{status:S('closed')},['status']),'deny');
  t('Chủ đóng phòng',await call('PATCH','/rooms/'+id,A.tok,{status:S('closed')},['status']),'ok');

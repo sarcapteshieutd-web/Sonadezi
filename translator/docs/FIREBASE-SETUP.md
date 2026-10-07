@@ -15,6 +15,7 @@ Vào **Firestore Database → Rules**, xóa nội dung cũ, dán toàn bộ nộ
 
 Quy tắc này bảo đảm:
 - chỉ người đăng nhập ẩn danh mới đọc/ghi; **không ai liệt kê được danh sách phòng**, phải biết mã phòng (20 ký tự ngẫu nhiên) mới đọc được;
+- **Cập nhật mới:** quy tắc nay có thêm trường `utt` và tài liệu `live/now` (bản "đang nói"). Nếu bạn đã dán quy tắc cũ, **phải dán lại và Publish**; chưa dán lại thì app vẫn chạy nhưng không có bản "đang nói";
 - **chỉ chủ phòng** ghi tin nhắn và bản dịch; người xem không gửi được nội dung;
 - phòng tự **hết quyền truy cập sau tối đa 24 giờ** và chủ phòng không thể kéo dài hạn.
 
@@ -47,7 +48,8 @@ gcloud firestore fields ttls list
 
 ## 6. Cách hoạt động và chi phí
 - **Chủ phòng giữ khóa Google Cloud Translation.** Khi người xem chọn ngôn ngữ khác với cặp ngôn ngữ của chủ phòng, **laptop chủ phòng dịch thêm** cho ngôn ngữ đó và ghi lên phòng. Mỗi ngôn ngữ phụ làm tăng số ký tự dịch, nên chi phí dịch nhân lên theo số ngôn ngữ phụ. Giới hạn `maxExtraLanguages` (mặc định 3) để kiểm soát. Nếu laptop chủ phòng tắt hoặc mất mạng, người xem chỉ thấy bản dịch của chủ phòng.
-- **Firebase** tính phí theo số lần đọc/ghi và dung lượng. Mỗi tin nhắn gồm một lần ghi, cộng thêm một lần ghi cho mỗi ngôn ngữ phụ; mỗi người xem đọc lại mỗi thay đổi. Hạn mức miễn phí và giá hiện hành bạn kiểm tra tại trang giá Firebase; tôi chưa xác minh con số.
+- **Firebase** tính phí theo số lần đọc/ghi và dung lượng. Mỗi tin nhắn gồm một lần ghi, cộng thêm một lần ghi cho mỗi ngôn ngữ phụ; mỗi người xem đọc lại mỗi thay đổi. Gói miễn phí (Spark) theo tài liệu Firebase tại thời điểm tra cứu: **1 GiB lưu trữ; 50.000 lượt đọc/ngày; 20.000 lượt ghi/ngày; 20.000 lượt xóa/ngày; 10 GiB dữ liệu ra/tháng**; bộ đếm ngày đặt lại khoảng nửa đêm giờ Thái Bình Dương. Hãy đối chiếu lại tại firebase.google.com/pricing vì hạn mức có thể thay đổi.
+- **Ước tính (không phải số đo thực tế):** cuộc họp 2 giờ, 7 người xem, khoảng 150 câu: khoảng 4.000 lượt ghi (gồm bản "đang nói") và 30.000 lượt đọc, trong hạn mức miễn phí của một ngày. Có thể giảm bằng cách tăng `room.liveIntervalMs` trong `config.js` (ví dụ 2000) hoặc dùng ít ngôn ngữ phụ.
 - **Quyền riêng tư:** nội dung họp được lưu trên máy chủ Firebase đến khi hết hạn (tối đa 24 giờ). Hãy đối chiếu quy định bảo mật nội bộ của công ty trước khi dùng cho nội dung nhạy cảm. Chỉ người có mã QR/liên kết xem được, nên chỉ chia sẻ cho người được phép.
 
 ## 7. Build lại thư viện phòng họp (chỉ khi sửa `src/room.js`)
