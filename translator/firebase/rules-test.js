@@ -44,6 +44,25 @@ let pass=0,fail=0; const t=(name,got,exp)=>{ const ok=exp==='ok'?got===200:got==
  t('Ghi tin nhắn có trường utt',await call('PATCH','/rooms/'+id+'/messages/m3',A.tok,{...msg,utt:S('u1')}),'ok');
  t('Người xem xóa bản đang nói bị chặn',await call('DELETE','/rooms/'+id+'/live/now',Bv.tok),'deny');
  t('Chủ xóa bản đang nói',await call('DELETE','/rooms/'+id+'/live/now',A.tok),'ok');
+ // Máy thứ hai (cohost)
+ const C=await signUp(), D=await signUp(), code='abcdefghjkmnpqrstuvwxyz234';
+ const cohost=c=>({code:S(c),ts:I(now),expiresAt:T(now+24*3600e3)});
+ t('Người xem đọc mã mời bị chặn',await call('GET','/rooms/'+id+'/secret/code',Bv.tok),'deny');
+ t('Người khác tạo mã mời bị chặn',await call('PATCH','/rooms/'+id+'/secret/code',Bv.tok,{code:S(code)}),'deny');
+ t('Chủ tạo mã mời',await call('PATCH','/rooms/'+id+'/secret/code',A.tok,{code:S(code)}),'ok');
+ t('Chủ đọc mã mời',await call('GET','/rooms/'+id+'/secret/code',A.tok),'ok');
+ t('Máy thứ hai nhập sai mã bị chặn',await call('PATCH','/rooms/'+id+'/cohosts/'+C.uid,C.tok,cohost('saimasaimasaimasaima')),'deny');
+ t('Máy thứ hai chưa ghi danh không ghi tin được',await call('PATCH','/rooms/'+id+'/messages/c0',C.tok,msg),'deny');
+ t('Ghi danh máy thứ hai cho người khác bị chặn',await call('PATCH','/rooms/'+id+'/cohosts/'+D.uid,C.tok,cohost(code)),'deny');
+ t('Máy thứ hai nhập đúng mã',await call('PATCH','/rooms/'+id+'/cohosts/'+C.uid,C.tok,cohost(code)),'ok');
+ t('Máy thứ hai ghi tin nhắn (có trường by)',await call('PATCH','/rooms/'+id+'/messages/c1',C.tok,{...msg,by:S('co')}),'ok');
+ t('Máy thứ hai không thêm bản dịch (chỉ chủ)',await call('PATCH','/rooms/'+id+'/messages/c1',C.tok,{tr:{mapValue:{fields:{zh:S('x')}}}},['tr']),'deny');
+ t('Máy thứ hai ghi live/co',await call('PATCH','/rooms/'+id+'/live/co',C.tok,live),'ok');
+ t('Máy thứ hai ghi live/now bị chặn',await call('PATCH','/rooms/'+id+'/live/now',C.tok,live),'deny');
+ t('Chủ ghi live/co bị chặn',await call('PATCH','/rooms/'+id+'/live/co',A.tok,live),'deny');
+ t('Người xem liệt kê máy thứ hai bị chặn',await call('GET','/rooms/'+id+'/cohosts',Bv.tok),'deny');
+ t('Chủ liệt kê máy thứ hai',await call('GET','/rooms/'+id+'/cohosts',A.tok),'ok');
+ t('Chủ thêm bản dịch cho tin của máy thứ hai',await call('PATCH','/rooms/'+id+'/messages/c1',A.tok,{tr:{mapValue:{fields:{zh:S('你好')}}}},['tr']),'ok');
  t('Chủ kéo dài hạn phòng bị chặn',await call('PATCH','/rooms/'+id,A.tok,{expiresAt:T(now+48*3600e3)},['expiresAt']),'deny');
  t('Người khác đóng phòng bị chặn',await call('PATCH','/rooms/'+id,Bv.tok,{status:S('closed')},['status']),'deny');
  t('Chủ đóng phòng',await call('PATCH','/rooms/'+id,A.tok,{status:S('closed')},['status']),'ok');

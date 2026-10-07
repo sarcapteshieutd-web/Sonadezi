@@ -11,6 +11,7 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function roomData(roomId) { return get(/databases/$(database)/documents/rooms/$(roomId)).data; }
     function isHost(roomId) { return signedIn() && roomData(roomId).hostUid == request.auth.uid; }
+    function isCohost(roomId) { return signedIn() && exists(/databases/$(database)/documents/rooms/$(roomId)/cohosts/$(request.auth.uid)); }
     function alive(roomId) { return request.time < roomData(roomId).expiresAt; }
 
     match /rooms/{roomId} {
@@ -37,8 +38,9 @@ service cloud.firestore {
       match /messages/{messageId} {
         allow get, list: if signedIn() && alive(roomId);
 
-        allow create: if isHost(roomId) && alive(roomId)
-          && request.resource.data.keys().hasOnly(['src', 'out', 'from', 'to', 'ts', 'meeting', 'expiresAt', 'tr', 'utt'])
+        // Chủ phòng và máy thứ hai (đã nhập đúng mã mời) được ghi tin nhắn
+        allow create: if (isHost(roomId) || isCohost(roomId)) && alive(roomId)
+          && request.resource.data.keys().hasOnly(['src', 'out', 'from', 'to', 'ts', 'meeting', 'expiresAt', 'tr', 'utt', 'by'])
           && request.resource.data.src is string && request.resource.data.src.size() <= 6000
           && request.resource.data.out is string && request.resource.data.out.size() <= 8000;
 
@@ -52,11 +54,31 @@ service cloud.firestore {
       // Bản "đang nói": một tài liệu duy nhất (live/now), chủ phòng ghi đè liên tục
       match /live/{docId} {
         allow get: if signedIn() && alive(roomId);
-        allow create, update: if isHost(roomId) && alive(roomId) && docId == 'now'
+        allow create, update: if alive(roomId)
+          && ((docId == 'now' && isHost(roomId)) || (docId == 'co' && isCohost(roomId)))
           && request.resource.data.keys().hasOnly(['utt', 'src', 'out', 'from', 'to', 'ts', 'expiresAt'])
           && request.resource.data.src is string && request.resource.data.src.size() <= 6000
           && request.resource.data.out is string && request.resource.data.out.size() <= 8000;
         allow delete: if isHost(roomId);
+      }
+
+      // Mã mời máy thứ hai: chỉ chủ phòng đọc/ghi; quy tắc cohosts đối chiếu mã này
+      match /secret/{docId} {
+        allow get, delete: if isHost(roomId) && docId == 'code';
+        allow create: if isHost(roomId) && docId == 'code'
+          && request.resource.data.keys().hasOnly(['code'])
+          && request.resource.data.code is string && request.resource.data.code.size() >= 16 && request.resource.data.code.size() <= 64;
+      }
+
+      // Máy thứ hai: tự ghi danh bằng đúng mã mời của chủ phòng
+      match /cohosts/{cohostUid} {
+        allow create, update: if signedIn() && request.auth.uid == cohostUid && alive(roomId)
+          && request.resource.data.keys().hasOnly(['code', 'ts', 'expiresAt'])
+          && request.resource.data.code is string
+          && request.resource.data.code == get(/databases/$(database)/documents/rooms/$(roomId)/secret/code).data.code;
+        allow get: if signedIn() && (request.auth.uid == cohostUid || isHost(roomId));
+        allow list: if isHost(roomId);
+        allow delete: if signedIn() && (request.auth.uid == cohostUid || isHost(roomId));
       }
 
       match /viewers/{viewerUid} {
