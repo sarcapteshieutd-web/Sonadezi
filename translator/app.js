@@ -49,7 +49,7 @@
     dualHeadL: $('dualHeadL'), dualHeadR: $('dualHeadR'), liveDual: $('liveDual'),
     ldLLbl: $('ldLLbl'), ldLTxt: $('ldLTxt'), ldLRec: $('ldLRec'), ldRLbl: $('ldRLbl'), ldRTxt: $('ldRTxt'), ldRRec: $('ldRRec'), btnRoom: $('btnRoom'), roomDot: $('roomDot'),
     sheetRoom: $('sheetRoom'), roomBody: $('roomBody'),
-    viewerBar: $('viewerBar'), selViewerLang: $('selViewerLang'), viewerStatus: $('viewerStatus'), chkEar: $('chkEar'),
+    viewerBar: $('viewerBar'), selViewerLang: $('selViewerLang'), viewerStatus: $('viewerStatus'), coBar: $('coBar'), coStatus: $('coStatus'), chkEar: $('chkEar'),
     chkIncr: $('chkIncr'), selCut: $('selCut'), chkLat: $('chkLat'),
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
     selEngine: $('selEngine'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
@@ -84,6 +84,7 @@
     meetingSpeak: store.get('meetingSpeak', '0') === '1',
     speaking: false,
     autoTurn: store.get('autoTurn', '1') === '1',
+    twoMode: false, // chế độ hai máy laptop dùng chung phòng
     mine: null, // ngôn ngữ của người dùng: lời của bên này hiện bên phải
     reqId: 0
   };
@@ -183,6 +184,7 @@
       saveLog();
       roomPublish(item);
     }
+    if (state.twoMode) return; // chế độ hai máy: khung chat hiển thị từ phòng chung
     el.emptyHint.classList.add('hidden');
     el.hist.appendChild(renderItem(item));
     scrollChat();
@@ -229,6 +231,7 @@
     state.log.forEach(i => el.hist.appendChild(renderItem(i)));
     if (state.log.length) el.emptyHint.classList.add('hidden');
     scrollChat();
+    if (state.twoMode) renderFeed();
   }
   let lastPanels = '';
   function syncDual() {
@@ -658,7 +661,7 @@
         try { out = await translateText(text, from, to); } catch (__) { out = '[Chưa dịch được]'; }
       }
       addHistory({ src: text, out, from, to, meeting: true, lat: Date.now() - t0 });
-      if (state.meetingSpeak && state.meeting && !/^\[Chưa dịch được\]$/.test(out)) enqueueSpeech(out, to);
+      if (state.meetingSpeak && state.meeting && !state.twoMode && !/^\[Chưa dịch được\]$/.test(out)) enqueueSpeech(out, to);
     });
   }
 
@@ -1196,7 +1199,8 @@
   const LIVE_MS = typeof ROOMCFG.liveIntervalMs === 'number' ? ROOMCFG.liveIntervalMs : 800;
   const newUttId = () => Math.random().toString(36).slice(2, 10);
   const room = { kit: null, id: null, expiresAtMs: 0, active: false, unsubViewers: null, viewers: [], allowed: [], recent: [], chain: Promise.resolve(),
-    utt: newUttId(), noUtt: false, liveOff: false, liveKey: '', liveAt: 0, liveTimer: 0, writeMs: 0 };
+    utt: newUttId(), noUtt: false, liveOff: false, liveKey: '', liveAt: 0, liveTimer: 0, writeMs: 0,
+    role: 'host', code: '', cohosts: [], unsubCo: null };
 
   function loadScript(src) {
     return new Promise((resolve, reject) => {
@@ -1243,7 +1247,8 @@
   }
   // Đẩy bản "đang nói" lên phòng (giới hạn tần suất; chỉ khi có người xem và nội dung thay đổi)
   function roomLive() {
-    if (!room.active || room.liveOff || !room.viewers.length) return;
+    const co = room.role === 'co';
+    if (!room.active || room.liveOff || (!co && !room.viewers.length && !state.twoMode)) return;
     const src = el.src.value.trim();
     if (!src) return;
     const out = (el.out.textContent || '').trim();
@@ -1252,7 +1257,7 @@
     const wait = room.liveAt + LIVE_MS - Date.now();
     if (wait > 0) { if (!room.liveTimer) room.liveTimer = setTimeout(() => { room.liveTimer = 0; roomLive(); }, wait); return; }
     room.liveKey = key; room.liveAt = Date.now();
-    room.kit.setLive(room.id, room.expiresAtMs, { utt: room.utt, src, out, from: state.src, to: state.tgt })
+    room.kit.setLive(room.id, room.expiresAtMs, { utt: room.utt, src, out, from: state.src, to: state.tgt }, co ? 'co' : 'now')
       .catch(e => { if (e && e.code === 'permission-denied') room.liveOff = true; });
   }
   function onViewers(list) {
@@ -1268,6 +1273,7 @@
     if (!room.active) return;
     const utt = room.utt;
     room.utt = newUttId(); room.liveKey = '';
+    if (room.role === 'co') item = Object.assign({}, item, { by: 'co' });
     try {
       const t0 = Date.now();
       let id;
@@ -1284,14 +1290,95 @@
       const rec = { id, src: item.src, out: item.out, from: item.from, to: item.to, tr: {} };
       room.recent.push(rec);
       if (room.recent.length > 40) room.recent.shift();
-      translateForViewers(rec);
+      if (room.role !== 'co') translateForViewers(rec); // chỉ máy chủ phòng dịch thêm cho ngôn ngữ phụ của người xem
     } catch (e) { toast('Không gửi được tin lên phòng: ' + (e.code || e.message)); }
+  }
+
+  // ---------- Hai máy laptop: mỗi máy một ngôn ngữ cố định, dùng chung một phòng ----------
+  const feed = { msgs: [], lives: {}, seen: null, unsub: [] };
+  const mySlot = () => (room.role === 'co' ? 'co' : 'now');
+  function feedBubble(m, live) {
+    const mine = m.from === state.src;
+    const big = mine ? m.src : m.out;
+    const small = mine ? m.out : m.src;
+    const row = node('div', 'flex ' + (mine ? 'justify-end' : 'justify-start'));
+    const cls = live ? 'border border-dashed border-brand-300 bg-brand-50 text-brand-900' : (mine ? 'rounded-br-md bg-brand-600 text-white' : 'rounded-bl-md border border-slate-200 bg-white text-slate-900');
+    const bub = node('div', 'max-w-[88%] rounded-2xl px-3.5 py-2.5 shadow-sm ' + cls);
+    const time = live ? 'Đang nói…' : new Date(m.ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    bub.appendChild(node('div', 'text-[0.6875rem] font-medium ' + (mine && !live ? 'text-brand-100' : 'text-slate-500'), `${LANGS[m.from] ? LANGS[m.from].name : ''} · ${time}`));
+    bub.appendChild(node('div', 'mt-0.5 whitespace-pre-wrap break-words text-lg font-semibold leading-snug', big || '…'));
+    if (small && small !== big) bub.appendChild(node('div', 'mt-1 border-t pt-1 text-xs ' + (mine && !live ? 'border-white/20 text-brand-100' : 'border-slate-100 text-slate-500'), small));
+    row.appendChild(bub);
+    return row;
+  }
+  function renderFeed() {
+    if (!state.twoMode) return;
+    const wrap = el.histWrap;
+    const near = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 80;
+    el.hist.innerHTML = '';
+    if (feed.msgs.length) el.emptyHint.classList.add('hidden');
+    for (const m of feed.msgs) el.hist.appendChild(feedBubble(m, false));
+    const recent = feed.msgs.slice(-6);
+    for (const slot of ['now', 'co']) {
+      const l = feed.lives[slot];
+      if (slot === mySlot() || !l || !l.src || Date.now() - l.ts > 20000) continue;
+      if (recent.some(m => m.utt && m.utt === l.utt)) continue;
+      el.hist.appendChild(feedBubble(l, true));
+    }
+    if (near) scrollChat();
+  }
+  function onFeed(list) {
+    feed.msgs = list;
+    if (feed.seen === null) feed.seen = new Set(list.map(m => m.id)); // tin cũ lúc mới vào: không dịch bù, không đọc
+    else for (const m of list) {
+      if (feed.seen.has(m.id)) continue;
+      feed.seen.add(m.id);
+      const fromOther = room.role === 'co' ? m.by !== 'co' : m.by === 'co';
+      if (!fromOther) continue;
+      if (room.role === 'host') { // máy chủ phòng dịch thêm các ngôn ngữ phụ cho tin của máy thứ hai
+        const rec = { id: m.id, src: m.src, out: m.out, from: m.from, to: m.to, tr: m.tr || {} };
+        room.recent.push(rec); if (room.recent.length > 40) room.recent.shift();
+        translateForViewers(rec);
+      }
+      // Đọc bản dịch của người bên kia bằng ngôn ngữ của máy này
+      if (state.meetingSpeak && state.meeting && m.to === state.src && m.out) enqueueSpeech(m.out, m.to);
+    }
+    renderFeed();
+  }
+  function enterTwoMode() {
+    if (state.twoMode) return;
+    state.twoMode = true;
+    state.autoTurn = false; el.chkAutoTurn.checked = false; // ngôn ngữ cố định, không đảo lượt
+    state.dual = false; syncDual();
+    for (const b of [el.btnSwap, el.btnDual, el.chkAutoTurn.parentElement]) b.classList.add('hidden');
+    feed.msgs = []; feed.lives = {}; feed.seen = null;
+    feed.unsub.push(room.kit.subscribeMessages(room.id, onFeed, () => {}));
+    const other = mySlot() === 'co' ? 'now' : 'co';
+    feed.unsub.push(room.kit.subscribeLive(room.id, other, l => { feed.lives[other] = l; renderFeed(); }));
+    renderFeed();
+    toast('Chế độ hai máy: mỗi máy giữ một ngôn ngữ cố định');
+  }
+  function leaveTwoMode() {
+    feed.unsub.forEach(u => { try { u(); } catch (_) {} });
+    feed.unsub = [];
+    if (!state.twoMode) return;
+    state.twoMode = false;
+    for (const b of [el.btnSwap, el.btnDual, el.chkAutoTurn.parentElement]) b.classList.remove('hidden');
+    renderAll();
   }
   async function activateRoom(info) {
     room.id = info.id; room.expiresAtMs = info.expiresAtMs; room.active = true;
     room.recent = []; room.allowed = []; room.viewers = []; room.utt = newUttId(); room.noUtt = false; room.liveOff = false; room.liveKey = '';
     if (room.unsubViewers) room.unsubViewers();
     room.unsubViewers = room.kit.subscribeViewers(room.id, onViewers, () => {});
+    room.role = 'host'; room.code = info.code || ''; room.cohosts = [];
+    if (!info.code) room.kit.ensureCoCode(room.id).then(c => { room.code = c; if (el.sheetRoom.classList.contains('flex')) renderRoom(); }).catch(() => {});
+    if (room.unsubCo) room.unsubCo();
+    room.unsubCo = room.kit.subscribeCohosts(room.id, list => {
+      room.cohosts = list;
+      if (list.length) enterTwoMode();
+      if (el.sheetRoom.classList.contains('flex')) renderRoom();
+    });
     saveRoom(); setRoomDot();
   }
   async function createRoomNow() {
@@ -1307,6 +1394,8 @@
     if (!room.active) return;
     const id = room.id;
     if (room.unsubViewers) room.unsubViewers();
+    if (room.unsubCo) { room.unsubCo(); room.unsubCo = null; }
+    leaveTwoMode();
     room.active = false; room.id = null; room.chain = Promise.resolve();
     saveRoom(); setRoomDot();
     let failed = false;
@@ -1355,6 +1444,20 @@
     const cp = node('button', 'mt-2 w-full rounded-lg border border-brand-600 py-1.5 text-sm font-medium text-brand-600', 'Sao chép liên kết');
     cp.onclick = async () => { try { await navigator.clipboard.writeText(url); toast('Đã sao chép liên kết'); } catch (_) { toast('Không thể sao chép'); } };
     b.appendChild(cp);
+    b.appendChild(node('h3', 'mt-5 border-t border-slate-200 pt-3 text-sm font-semibold text-brand-700', 'Laptop thứ hai (mỗi máy một ngôn ngữ cố định)'));
+    if (!room.code) {
+      b.appendChild(node('p', 'mt-1 text-xs text-amber-700', 'Chưa tạo được mã mời máy thứ hai (cần xuất bản lại quy tắc Firestore).'));
+    } else {
+      const coUrl = joinUrl(room.id) + '&co=' + room.code;
+      b.appendChild(node('p', 'mt-1 text-xs text-slate-500', 'Mở liên kết này trên laptop bên kia. Máy đó tự lấy ngôn ngữ ngược với máy này. Không chia sẻ liên kết cho người xem.'));
+      const qr2 = node('div', 'mx-auto mt-2 w-40 rounded-xl border border-slate-200 bg-white p-2');
+      qr2.innerHTML = room.kit.qrSvg(coUrl);
+      b.appendChild(qr2);
+      const cp2 = node('button', 'mt-2 w-full rounded-lg border border-brand-600 py-1.5 text-sm font-medium text-brand-600', 'Sao chép liên kết máy thứ hai');
+      cp2.onclick = async () => { try { await navigator.clipboard.writeText(coUrl); toast('Đã sao chép liên kết máy thứ hai'); } catch (_) { toast('Không thể sao chép'); } };
+      b.appendChild(cp2);
+      b.appendChild(node('p', 'mt-1 text-sm', room.cohosts.length ? 'Máy thứ hai: đã kết nối' : 'Máy thứ hai: chưa kết nối'));
+    }
     const exp = new Date(room.expiresAtMs);
     const names = [...new Set(room.viewers.map(v => LANGS[v.lang] ? LANGS[v.lang].name : v.lang))];
     b.appendChild(node('p', 'mt-3 text-sm', `Đang xem: ${room.viewers.length} người${names.length ? ' (' + names.join(', ') + ')' : ''}`));
@@ -1418,27 +1521,29 @@
     }
     let ended = false;
     // Bản "đang nói" của chủ phòng: hiện ngay khi họ còn đang nói; ẩn khi câu đã được chốt thành tin nhắn
-    let live = null;
+    const lives = { now: null, co: null };
     function renderLive() {
-      const old = document.getElementById('viewerLive');
-      if (old) old.remove();
-      const last = msgs[msgs.length - 1];
-      if (!live || !live.src || ended || (last && last.utt === live.utt)) return;
-      const text = lang === live.from ? live.src : live.out;
-      const note = lang !== live.from && lang !== live.to ? `(bản dịch sang ${LANGS[live.to] ? LANGS[live.to].name : ''})` : '';
-      const row = node('div', 'flex justify-start');
-      row.id = 'viewerLive';
-      const bub = node('div', 'max-w-[92%] rounded-2xl rounded-bl-md border border-dashed border-brand-200 bg-brand-50/60 px-3.5 py-2.5');
-      bub.appendChild(node('div', 'text-[0.6875rem] font-medium text-brand-700', 'Đang nói…'));
-      bub.appendChild(node('div', 'mt-0.5 whitespace-pre-wrap break-words text-lg font-semibold leading-snug text-brand-900/80', text || '…'));
-      if (note) bub.appendChild(node('div', 'text-[0.6875rem] italic text-slate-400', note));
-      row.appendChild(bub);
-      el.hist.appendChild(row);
-      if (live) scrollChat();
+      document.querySelectorAll('.viewerLive').forEach(n => n.remove());
+      if (ended) return;
+      const recent = msgs.slice(-6);
+      for (const slot of ['now', 'co']) {
+        const live = lives[slot];
+        if (!live || !live.src || Date.now() - live.ts > 20000 || recent.some(m => m.utt && m.utt === live.utt)) continue;
+        const text = lang === live.from ? live.src : live.out;
+        const note = lang !== live.from && lang !== live.to ? `(bản dịch sang ${LANGS[live.to] ? LANGS[live.to].name : ''})` : '';
+        const row = node('div', 'viewerLive flex justify-start');
+        const bub = node('div', 'max-w-[92%] rounded-2xl rounded-bl-md border border-dashed border-brand-200 bg-brand-50/60 px-3.5 py-2.5');
+        bub.appendChild(node('div', 'text-[0.6875rem] font-medium text-brand-700', 'Đang nói…'));
+        bub.appendChild(node('div', 'mt-0.5 whitespace-pre-wrap break-words text-lg font-semibold leading-snug text-brand-900/80', text || '…'));
+        if (note) bub.appendChild(node('div', 'text-[0.6875rem] italic text-slate-400', note));
+        row.appendChild(bub);
+        el.hist.appendChild(row);
+      }
+      scrollChat();
     }
     const baseRender = render;
     render = () => { baseRender(); renderLive(); };
-    kit.subscribeLive(id, l => { live = l; renderLive(); });
+    for (const slot of ['now', 'co']) kit.subscribeLive(id, slot, l => { lives[slot] = l; renderLive(); });
 
     // Đọc bản dịch bằng tai nghe: chỉ đọc tin mới, bỏ qua lời cùng ngôn ngữ của người xem
     const EAR_WAIT_MS = 6000;
@@ -1489,6 +1594,27 @@
     }, () => {});
   }
 
+
+  // Phía máy laptop thứ hai (liên kết có ?room=...&co=...): ghi âm và dịch bằng ngôn ngữ cố định của máy này
+  async function startCohost(id, code) {
+    el.coBar.classList.remove('hidden');
+    const say = t => { el.coStatus.textContent = t; };
+    say('Đang kết nối…');
+    if (!roomEnabled) { say('Chưa cấu hình phòng họp'); return; }
+    let kit, info;
+    try { kit = await getKit(); info = await kit.getRoom(id); } catch (e) { say('Không kết nối được: ' + (e.code || e.message)); return; }
+    if (!info || info.expiresAtMs < Date.now() || info.status !== 'open') { say('Phòng không tồn tại, đã đóng hoặc hết hạn'); return; }
+    try { await kit.joinAsCohost(id, info.expiresAtMs, code); }
+    catch (e) { say('Không vào được với tư cách máy thứ hai: mã mời sai hoặc quy tắc Firestore chưa cập nhật (' + (e.code || e.message) + ')'); return; }
+    room.kit = kit; room.id = id; room.expiresAtMs = info.expiresAtMs; room.role = 'co'; room.active = true;
+    if (LANGS[info.hostTgt] && LANGS[info.hostSrc]) setLangs(info.hostTgt, info.hostSrc, false); // máy này nói ngôn ngữ đích của máy chủ phòng
+    enterTwoMode();
+    say(`Đã kết nối phòng họp. Máy này nói ${LANGS[state.src].name}, dịch sang ${LANGS[state.tgt].name}. Bấm "Chế độ họp" để bắt đầu ghi.`);
+    kit.subscribeRoom(id, r => {
+      if (!r || r.status === 'closed') { room.active = false; say('Chủ phòng đã kết thúc phòng họp'); }
+    }, () => {});
+  }
+
   // ---------- Khởi tạo ----------
   applyScale();
   fillSelect(el.selVoiceLang, state.tgt);
@@ -1497,5 +1623,8 @@
   syncLangUI();
   updateCounter();
   if (!SR) el.micHint.textContent = 'Trình duyệt chưa hỗ trợ nhận diện giọng nói - bạn vẫn có thể gõ văn bản';
-  if (viewerRoomId) startViewer(viewerRoomId); else resumeRoom();
+  const coCode = new URLSearchParams(location.search).get('co');
+  if (viewerRoomId && coCode) startCohost(viewerRoomId, coCode);
+  else if (viewerRoomId) startViewer(viewerRoomId);
+  else resumeRoom();
 })();

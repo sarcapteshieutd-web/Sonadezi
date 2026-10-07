@@ -32,7 +32,9 @@ function create(cfg) {
   const roomRef = id => doc(db, 'rooms', id);
   const msgs = id => collection(db, 'rooms', id, 'messages');
   const viewerRef = (id, u) => doc(db, 'rooms', id, 'viewers', u);
-  const liveRef = id => doc(db, 'rooms', id, 'live', 'now');
+  const liveRef = (id, slot = 'now') => doc(db, 'rooms', id, 'live', slot); // 'now' = chủ phòng, 'co' = máy thứ hai
+  const secretRef = id => doc(db, 'rooms', id, 'secret', 'code');
+  const cohostRef = (id, u) => doc(db, 'rooms', id, 'cohosts', u);
 
   return {
     async init() {
@@ -47,7 +49,23 @@ function create(cfg) {
       const id = randomRoomId();
       const expiresAt = Timestamp.fromMillis(Date.now() + ttlHours * 3600 * 1000);
       await setDoc(roomRef(id), { hostUid: uid, createdAt: Date.now(), expiresAt, status: 'open', hostSrc, hostTgt });
-      return { id, expiresAtMs: expiresAt.toMillis() };
+      let code = '';
+      try { code = await this.ensureCoCode(id); } catch (_) { /* quy tắc cũ chưa cập nhật: bỏ qua, chỉ mất tính năng máy thứ hai */ }
+      return { id, expiresAtMs: expiresAt.toMillis(), code };
+    },
+    // Mã mời máy thứ hai (chỉ chủ phòng đọc được)
+    async ensureCoCode(id) {
+      const s = await getDoc(secretRef(id));
+      if (s.exists()) return s.data().code;
+      const code = randomRoomId();
+      await setDoc(secretRef(id), { code });
+      return code;
+    },
+    async joinAsCohost(id, expiresAtMs, code) {
+      await setDoc(cohostRef(id, uid), { code, ts: Date.now(), expiresAt: Timestamp.fromMillis(expiresAtMs) });
+    },
+    subscribeCohosts(id, cb) {
+      return onSnapshot(collection(db, 'rooms', id, 'cohosts'), snap => cb(snap.docs.map(d => d.id)), () => {});
     },
     async getRoom(id) {
       const s = await getDoc(roomRef(id));
@@ -76,7 +94,10 @@ function create(cfg) {
         }
       };
       await pushAll(msgs(id));
-      await deleteDoc(liveRef(id)).catch(() => {});
+      await deleteDoc(liveRef(id, 'now')).catch(() => {});
+      await deleteDoc(liveRef(id, 'co')).catch(() => {});
+      await deleteDoc(secretRef(id)).catch(() => {});
+      await pushAll(collection(db, 'rooms', id, 'cohosts')).catch(() => {});
       await pushAll(collection(db, 'rooms', id, 'viewers'));
       await Promise.all(batches);
       await deleteDoc(roomRef(id));
@@ -84,7 +105,7 @@ function create(cfg) {
 
     async pushMessage(id, expiresAtMs, m) {
       const ref = await addDoc(msgs(id), {
-        src: m.src, out: m.out, from: m.from, to: m.to, ts: m.ts, meeting: !!m.meeting, utt: m.utt || '',
+        src: m.src, out: m.out, from: m.from, to: m.to, ts: m.ts, meeting: !!m.meeting, utt: m.utt || '', ...(m.by ? { by: m.by } : {}),
         expiresAt: Timestamp.fromMillis(expiresAtMs), tr: {}
       });
       return ref.id;
@@ -101,14 +122,14 @@ function create(cfg) {
       await updateDoc(doc(db, 'rooms', id, 'messages', msgId), upd);
     },
     // Bản "đang nói": một tài liệu duy nhất, ghi đè liên tục
-    async setLive(id, expiresAtMs, m) {
-      await setDoc(liveRef(id), {
+    async setLive(id, expiresAtMs, m, slot = 'now') {
+      await setDoc(liveRef(id, slot), {
         utt: m.utt, src: m.src, out: m.out, from: m.from, to: m.to, ts: Date.now(),
         expiresAt: Timestamp.fromMillis(expiresAtMs)
       });
     },
-    subscribeLive(id, cb) {
-      return onSnapshot(liveRef(id), snap => cb(snap.exists() ? snap.data() : null), () => {});
+    subscribeLive(id, slot, cb) {
+      return onSnapshot(liveRef(id, slot), snap => cb(snap.exists() ? snap.data() : null), () => {});
     },
     async setTranslation(id, msgId, lang, text) {
       await updateDoc(doc(db, 'rooms', id, 'messages', msgId), { ['tr.' + lang]: text });

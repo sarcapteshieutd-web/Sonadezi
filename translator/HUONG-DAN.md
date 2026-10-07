@@ -183,3 +183,16 @@ Trong Chế độ họp, bản dịch hiện dần cùng lúc với chữ đang 
 - Chỉ đọc bản dịch của câu mới; bỏ qua lời cùng ngôn ngữ của chính người xem; không đọc lại tin cũ khi mới vào.
 - Tối đa 3 câu chờ đọc; câu chưa có bản dịch quá khoảng 6 giây sẽ bị bỏ qua.
 - Cần giữ màn hình sáng và trang đang mở; tôi chưa kiểm chứng trên điện thoại thật khi khóa màn hình (nhiều trình duyệt tạm dừng đọc ở nền).
+
+## 21. Phòng họp hai laptop (mỗi máy một ngôn ngữ cố định)
+Dùng khi mỗi bên bàn có một laptop và một micro riêng (ví dụ bên Việt, bên Anh), thay cho việc dùng chung một micro và bấm đổi lượt.
+1. Trên laptop thứ nhất (chủ phòng): chọn ngôn ngữ (ví dụ Việt → Anh), bấm biểu tượng Phòng họp → Tạo phòng họp.
+2. Trong hộp Phòng họp, kéo xuống mục **Laptop thứ hai**: mở liên kết đó (hoặc quét mã QR) trên laptop thứ hai. Máy thứ hai tự lấy ngôn ngữ ngược lại (Anh → Việt). **Không chia sẻ liên kết này cho người xem**; người xem dùng mã QR phía trên.
+3. Trên cả hai máy bấm **Chế độ họp** để bắt đầu ghi.
+- Mỗi máy chỉ nghe một ngôn ngữ cố định nên không cần đoán ngôn ngữ hay bấm đổi lượt; nút đảo chiều và "Tự đổi sau mỗi lượt" bị ẩn.
+- Hai màn hình hiện chung một cuộc hội thoại; chữ lớn là ngôn ngữ của máy đó, chữ nhỏ là bản gốc hoặc bản dịch. Có cả dòng "Đang nói…" của bên kia.
+- Nếu bật "Đọc bản dịch ra loa", mỗi máy đọc **bản dịch lời của người bên kia** bằng ngôn ngữ của máy mình, không đọc lại lời bên mình.
+- Người xem qua QR vẫn xem được cả hai bên; máy chủ phòng dịch thêm các ngôn ngữ phụ cho cả hai máy.
+- Lưu ý: tiếng loa của máy này có thể lọt vào micro của máy kia. Đặt hai máy xa nhau, hạ âm lượng loa và theo dõi kết quả khi thử thực tế (tôi chưa kiểm chứng ở phòng họp thật).
+- Bắt buộc dán lại `firebase/firestore.rules` vào Firebase Console và bấm Publish (có thêm quy tắc cho máy thứ hai).
+- Xuất file chỉ chứa phần ghi trên máy đó, không gồm tin của máy kia.
