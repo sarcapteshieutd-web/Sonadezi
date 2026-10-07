@@ -32,6 +32,7 @@ function create(cfg) {
   const roomRef = id => doc(db, 'rooms', id);
   const msgs = id => collection(db, 'rooms', id, 'messages');
   const viewerRef = (id, u) => doc(db, 'rooms', id, 'viewers', u);
+  const liveRef = id => doc(db, 'rooms', id, 'live', 'now');
 
   return {
     async init() {
@@ -75,6 +76,7 @@ function create(cfg) {
         }
       };
       await pushAll(msgs(id));
+      await deleteDoc(liveRef(id)).catch(() => {});
       await pushAll(collection(db, 'rooms', id, 'viewers'));
       await Promise.all(batches);
       await deleteDoc(roomRef(id));
@@ -82,7 +84,7 @@ function create(cfg) {
 
     async pushMessage(id, expiresAtMs, m) {
       const ref = await addDoc(msgs(id), {
-        src: m.src, out: m.out, from: m.from, to: m.to, ts: m.ts, meeting: !!m.meeting,
+        src: m.src, out: m.out, from: m.from, to: m.to, ts: m.ts, meeting: !!m.meeting, utt: m.utt || '',
         expiresAt: Timestamp.fromMillis(expiresAtMs), tr: {}
       });
       return ref.id;
@@ -91,6 +93,22 @@ function create(cfg) {
       return onSnapshot(query(msgs(id), orderBy('ts', 'asc')), snap => {
         cb(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       }, onError);
+    },
+    // Ghi nhiều bản dịch một lần (1 lượt ghi thay vì mỗi ngôn ngữ một lượt)
+    async setTranslations(id, msgId, obj) {
+      const upd = {};
+      for (const [l, t] of Object.entries(obj)) upd['tr.' + l] = t;
+      await updateDoc(doc(db, 'rooms', id, 'messages', msgId), upd);
+    },
+    // Bản "đang nói": một tài liệu duy nhất, ghi đè liên tục
+    async setLive(id, expiresAtMs, m) {
+      await setDoc(liveRef(id), {
+        utt: m.utt, src: m.src, out: m.out, from: m.from, to: m.to, ts: Date.now(),
+        expiresAt: Timestamp.fromMillis(expiresAtMs)
+      });
+    },
+    subscribeLive(id, cb) {
+      return onSnapshot(liveRef(id), snap => cb(snap.exists() ? snap.data() : null), () => {});
     },
     async setTranslation(id, msgId, lang, text) {
       await updateDoc(doc(db, 'rooms', id, 'messages', msgId), { ['tr.' + lang]: text });

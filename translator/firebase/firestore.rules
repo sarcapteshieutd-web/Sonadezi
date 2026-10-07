@@ -38,7 +38,7 @@ service cloud.firestore {
         allow get, list: if signedIn() && alive(roomId);
 
         allow create: if isHost(roomId) && alive(roomId)
-          && request.resource.data.keys().hasOnly(['src', 'out', 'from', 'to', 'ts', 'meeting', 'expiresAt', 'tr'])
+          && request.resource.data.keys().hasOnly(['src', 'out', 'from', 'to', 'ts', 'meeting', 'expiresAt', 'tr', 'utt'])
           && request.resource.data.src is string && request.resource.data.src.size() <= 6000
           && request.resource.data.out is string && request.resource.data.out.size() <= 8000;
 
@@ -46,6 +46,16 @@ service cloud.firestore {
         allow update: if isHost(roomId) && alive(roomId)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tr']);
 
+        allow delete: if isHost(roomId);
+      }
+
+      // Bản "đang nói": một tài liệu duy nhất (live/now), chủ phòng ghi đè liên tục
+      match /live/{docId} {
+        allow get: if signedIn() && alive(roomId);
+        allow create, update: if isHost(roomId) && alive(roomId) && docId == 'now'
+          && request.resource.data.keys().hasOnly(['utt', 'src', 'out', 'from', 'to', 'ts', 'expiresAt'])
+          && request.resource.data.src is string && request.resource.data.src.size() <= 6000
+          && request.resource.data.out is string && request.resource.data.out.size() <= 8000;
         allow delete: if isHost(roomId);
       }
 
