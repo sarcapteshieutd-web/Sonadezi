@@ -681,7 +681,7 @@
   let utt = newUtt();
   function resetUtt() { clearTimeout(utt.timer); clearTimeout(utt.tail.timer); utt = newUtt(); }
 
-  const MIN_WORDS = 6, TAIL_WORDS = 3, MIN_CJK = 10, TAIL_CJK = 4;
+  const MIN_WORDS = 4, TAIL_WORDS = 3, MIN_CJK = 8, TAIL_CJK = 4;
   // Tìm vị trí cắt "ổn định": giữ lại vài từ cuối vì trình duyệt còn có thể sửa
   function stableCut(rest, lang) {
     if (lang.sp) {
@@ -708,7 +708,7 @@
     scrollChat();
   }
   // Dịch phần đuôi (các từ cuối còn chưa ổn định) liên tục, tối đa mỗi TAIL_MS một lần
-  const TAIL_MS = 600;
+  const TAIL_MS = 400;
   function scheduleTail(tailText) {
     const t = utt.tail;
     t.text = tailText;
@@ -1193,7 +1193,7 @@
   const roomEnabled = !!(FB.apiKey && FB.projectId);
   const MAX_EXTRA = typeof ROOMCFG.maxExtraLanguages === 'number' ? ROOMCFG.maxExtraLanguages : 3;
   const BACKLOG = 15; // số tin gần nhất được dịch bù khi có ngôn ngữ mới tham gia
-  const LIVE_MS = typeof ROOMCFG.liveIntervalMs === 'number' ? ROOMCFG.liveIntervalMs : 1200;
+  const LIVE_MS = typeof ROOMCFG.liveIntervalMs === 'number' ? ROOMCFG.liveIntervalMs : 800;
   const newUttId = () => Math.random().toString(36).slice(2, 10);
   const room = { kit: null, id: null, expiresAtMs: 0, active: false, unsubViewers: null, viewers: [], allowed: [], recent: [], chain: Promise.resolve(),
     utt: newUttId(), noUtt: false, liveOff: false, liveKey: '', liveAt: 0, liveTimer: 0, writeMs: 0 };
