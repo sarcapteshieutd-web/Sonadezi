@@ -43,7 +43,7 @@
     expInfo: $('expInfo'), expTxt: $('expTxt'), expCsv: $('expCsv'), expShare: $('expShare'),
     donateBody: $('donateBody'), donateTitle: $('donateTitle'),
     btnMeeting: $('btnMeeting'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
-    chkMeetingSpeak: $('chkMeetingSpeak'), meetingSpeaking: $('meetingSpeaking'),
+    chkMeetingSpeak: $('chkMeetingSpeak'), chkConf: $('chkConf'), meetingSpeaking: $('meetingSpeaking'),
     chkAutoTurn: $('chkAutoTurn'), meetingLang: $('meetingLang'),
     app: $('app'), btnBig: $('btnBig'), btnDual: $('btnDual'), btnFontMinus: $('btnFontMinus'), btnFontPlus: $('btnFontPlus'),
     dualHeadL: $('dualHeadL'), dualHeadR: $('dualHeadR'), liveDual: $('liveDual'),
@@ -84,6 +84,7 @@
     meetingSpeak: store.get('meetingSpeak', '0') === '1',
     speaking: false,
     autoTurn: store.get('autoTurn', '1') === '1',
+    conf: store.get('conf', '0') === '1', // chế độ hội nghị: nghe bản dịch qua tai nghe/loa, micro luôn mở
     twoMode: false, // chế độ hai máy laptop dùng chung phòng
     mine: null, // ngôn ngữ của người dùng: lời của bên này hiện bên phải
     reqId: 0
@@ -459,6 +460,7 @@
     return voices.filter(v => norm(v) === lang).concat(voices.filter(v => norm(v) !== lang && norm(v).startsWith(prefix)));
   }
 
+  let speechBoost = 1; // đọc nhanh hơn khi bản dịch đang dồn lại
   function buildUtterances(text, langKey) {
     const lang = LANGS[langKey].tts;
     const list = voicesFor(langKey);
@@ -472,7 +474,7 @@
       const u = new SpeechSynthesisUtterance(part.trim());
       u.lang = lang;
       if (v) u.voice = v;
-      u.rate = state.rate;
+      u.rate = Math.min(2, state.rate * speechBoost);
       u.pitch = state.pitch;
       out.push(u);
     }
@@ -661,7 +663,7 @@
         try { out = await translateText(text, from, to); } catch (__) { out = '[Chưa dịch được]'; }
       }
       addHistory({ src: text, out, from, to, meeting: true, lat: Date.now() - t0 });
-      if (state.meetingSpeak && state.meeting && !state.twoMode && !/^\[Chưa dịch được\]$/.test(out)) enqueueSpeech(out, to);
+      if ((state.meetingSpeak || state.conf) && state.meeting && !state.twoMode && !/^\[Chưa dịch được\]$/.test(out)) enqueueSpeech(out, to);
     });
   }
 
@@ -782,12 +784,22 @@
   }
   function enqueueSpeech(text, langKey) {
     speechQueue.push({ text, langKey });
-    while (speechQueue.length > 3) speechQueue.shift(); // chỉ giữ 3 bản dịch mới nhất, tránh đọc chậm hơn cuộc họp
+    while (speechQueue.length > (state.conf ? 2 : 3)) speechQueue.shift(); // chỉ giữ vài bản dịch mới nhất, tránh đọc chậm hơn cuộc họp
     drainSpeech();
   }
   async function drainSpeech() {
     if (draining) return;
     draining = true;
+    if (state.conf) { // hội nghị: không tắt micro, đọc dồn thì tăng tốc để bắt kịp
+      while (speechQueue.length && state.meeting) {
+        const item = speechQueue.shift();
+        speechBoost = speechQueue.length ? 1.25 : 1;
+        await speakAndWait(item.text, item.langKey);
+      }
+      speechBoost = 1;
+      draining = false;
+      return;
+    }
     setSpeakingUI(true);
     if (rec) { rec.onend = null; try { rec.abort(); } catch (_) {} } // tạm nghỉ micro
     el.src.value = '';
@@ -893,7 +905,14 @@
     store.set('meetingSpeak', state.meetingSpeak ? '1' : '0');
     if (!state.meetingSpeak) { speechQueue.length = 0; if ('speechSynthesis' in window) speechSynthesis.cancel(); }
   };
+  function syncConf() {
+    if (state.conf) { state.autoTurn = false; el.chkAutoTurn.checked = false; }
+    el.chkAutoTurn.disabled = state.conf; // hội nghị: ngôn ngữ cố định, không đảo lượt
+    el.chkConf.checked = state.conf;
+  }
+  el.chkConf.onchange = () => { state.conf = el.chkConf.checked; store.set('conf', state.conf ? '1' : '0'); syncConf(); };
   el.chkAutoTurn.checked = state.autoTurn;
+  syncConf();
   el.chkAutoTurn.onchange = () => { state.autoTurn = el.chkAutoTurn.checked; store.set('autoTurn', state.autoTurn ? '1' : '0'); };
   el.btnMeeting.onclick = () => (state.meeting ? stopMeeting() : startMeeting());
   el.btnMeetingStop.onclick = stopMeeting;
