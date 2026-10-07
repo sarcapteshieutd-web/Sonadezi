@@ -126,6 +126,7 @@
       </div>
       <div class="flex items-center justify-between gap-2">
         <label class="flex items-center gap-1.5 text-xs"><input id="chkMeetingSpeak" type="checkbox" class="h-4 w-4 accent-red-600" />Đọc bản dịch ra loa</label>
+        <label class="flex items-center gap-1.5 text-xs"><input id="chkConf" type="checkbox" class="h-4 w-4 accent-red-600" />Chế độ hội nghị (nghe bằng tai nghe, micro không tắt)</label>
         <span id="meetingSpeaking" class="hidden rounded bg-red-100 px-1.5 py-0.5 text-[0.6875rem] font-medium">Đang đọc · micro tạm nghỉ</span>
       </div>
       <div class="text-[0.6875rem] text-red-600/80">Đổi người nói: bấm ⇄ hoặc phím Space.</div>
@@ -259,6 +260,9 @@
           <option value="700">0,7 giây</option>
           <option value="1000">1 giây</option>
           <option value="1500">1,5 giây</option>
+          <option value="2000">2 giây</option>
+          <option value="3000">3 giây</option>
+          <option value="4000">4 giây</option>
         </select>
         <label class="mt-3 flex items-center gap-2 text-sm"><input id="chkLat" type="checkbox" class="h-4 w-4 accent-brand-600" />Hiện độ trễ trên từng bong bóng (để so sánh)</label>
         <p class="mt-1 text-xs text-slate-500">Dịch theo cụm và dịch phần đuôi khi chưa dứt câu có thể kém chính xác hơn dịch cả câu, nhất là khi trật tự từ khác nhau (Việt, Trung); bản dịch tạm có thể đổi khi người nói nói thêm. Tự chốt câu có thể cắt câu giữa chừng nếu người nói ngừng giữa ý. Hãy thử và đối chiếu trước khi dùng cho họp quan trọng.</p>

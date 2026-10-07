@@ -196,3 +196,13 @@ Dùng khi mỗi bên bàn có một laptop và một micro riêng (ví dụ bên
 - Lưu ý: tiếng loa của máy này có thể lọt vào micro của máy kia. Đặt hai máy xa nhau, hạ âm lượng loa và theo dõi kết quả khi thử thực tế (tôi chưa kiểm chứng ở phòng họp thật).
 - Bắt buộc dán lại `firebase/firestore.rules` vào Firebase Console và bấm Publish (có thêm quy tắc cho máy thứ hai).
 - Xuất file chỉ chứa phần ghi trên máy đó, không gồm tin của máy kia.
+
+## 22. Chế độ hội nghị (nghe bản dịch bằng tai nghe hoặc loa)
+Dùng khi bạn đi dự hội nghị, người trình bày nói ngoại ngữ và bạn muốn nghe bản dịch liên tục bằng tai nghe.
+1. Chọn ngôn ngữ nguồn là ngôn ngữ người nói (ví dụ Tiếng Anh) và ngôn ngữ đích của bạn (ví dụ Tiếng Việt).
+2. Cắm hoặc ghép tai nghe (hoặc loa) với thiết bị, và chọn nó làm thiết bị phát âm thanh mặc định của hệ thống. Trình duyệt không tự chọn được thiết bị phát.
+3. Bấm **Chế độ họp** → tích **Chế độ hội nghị (nghe bằng tai nghe, micro không tắt)**.
+- Khác với chế độ họp thường: micro **không tắt** khi app đọc bản dịch, nên không mất lời người nói. Ngôn ngữ cố định, không tự đảo lượt.
+- Nếu bản dịch dồn lại, app giữ tối đa 2 câu mới nhất và đọc nhanh hơn khoảng 25% để bắt kịp; câu cũ hơn có thể bị bỏ qua.
+- Dùng **tai nghe** để tiếng đọc không lọt vào micro. Nếu phát ra loa ngoài, tiếng đọc có thể bị micro thu lại và dịch nhầm.
+- Micro đặt gần nguồn âm (gần loa hội trường hoặc lấy tín hiệu từ bàn trộn âm thanh) cho kết quả tốt nhất. Chưa đo độ trễ thực tế tại hội nghị.
