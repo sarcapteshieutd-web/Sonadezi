@@ -24,6 +24,15 @@
     id:  L('Tiếng Indonesia', 'Indonesia', 'id', 'id-ID'),
     ms:  L('Tiếng Mã Lai', 'Mã Lai', 'ms', 'ms-MY')
   };
+  // Giọng/vùng nói cho nhận diện (đầu vào). Mã vùng do trình duyệt quyết định có hỗ trợ hay không.
+  const REGIONS = {
+    en: [['en-US', 'Mỹ (US)'], ['en-GB', 'Anh (UK)'], ['en-AU', 'Úc (AU)'], ['en-ZA', 'Nam Phi (ZA)'], ['en-IN', 'Ấn Độ (IN)'], ['en-CA', 'Canada (CA)'], ['en-NZ', 'New Zealand (NZ)'], ['en-IE', 'Ireland (IE)'], ['en-SG', 'Singapore (SG)'], ['en-PH', 'Philippines (PH)'], ['en-NG', 'Nigeria (NG)'], ['en-KE', 'Kenya (KE)']],
+    es: [['es-ES', 'Tây Ban Nha (ES)'], ['es-MX', 'Mexico (MX)'], ['es-AR', 'Argentina (AR)'], ['es-CO', 'Colombia (CO)'], ['es-US', 'Mỹ (US)']],
+    pt: [['pt-BR', 'Brazil (BR)'], ['pt-PT', 'Bồ Đào Nha (PT)']],
+    fr: [['fr-FR', 'Pháp (FR)'], ['fr-CA', 'Canada (CA)'], ['fr-BE', 'Bỉ (BE)'], ['fr-CH', 'Thụy Sĩ (CH)']],
+    de: [['de-DE', 'Đức (DE)'], ['de-AT', 'Áo (AT)'], ['de-CH', 'Thụy Sĩ (CH)']],
+    ar: [['ar-SA', 'Ả Rập Xê Út (SA)'], ['ar-EG', 'Ai Cập (EG)'], ['ar-AE', 'UAE (AE)'], ['ar-MA', 'Ma-rốc (MA)']]
+  };
   const DEBOUNCE_MS = 450;
   const SILENCE_MS = 1800; // im lặng bao lâu thì tự kết thúc lượt nói
   const MAX_BYTES = 450; // MyMemory giới hạn ~500 byte/yêu cầu
@@ -36,7 +45,7 @@
     btnMic: $('btnMic'), icoMic: $('icoMic'), icoStop: $('icoStop'),
     ring1: $('ring1'), ring2: $('ring2'), recBadge: $('recBadge'), micHint: $('micHint'),
     chkAuto: $('chkAuto'), btnClear: $('btnClear'),
-    lblSrc: $('lblSrc'), lblTgt: $('lblTgt'), toast: $('toast'),
+    selSrcAcc: $('selSrcAcc'), selTgtVoice: $('selTgtVoice'), accRow: $('accRow'), lblSrc: $('lblSrc'), lblTgt: $('lblTgt'), toast: $('toast'),
     hist: $('history'), histWrap: $('histWrap'), btnClearHist: $('btnClearHist'),
     btnInstall: $('btnInstall'), iosHint: $('iosHint'), iosHintClose: $('iosHintClose'),
     btnExport: $('btnExport'), btnDonate: $('btnDonate'), sheetExport: $('sheetExport'), sheetDonate: $('sheetDonate'),
@@ -134,6 +143,36 @@
     store.set('src', state.src);
     store.set('tgt', state.tgt);
     syncDual();
+    syncAccentUI();
+  }
+
+  // Vùng nói của ngôn ngữ nguồn (nhận diện) và giọng đọc của ngôn ngữ đích
+  function sttLocale(k) {
+    const saved = store.get('stt_' + k, '');
+    return (REGIONS[k] || []).some(r => r[0] === saved) ? saved : LANGS[k].stt;
+  }
+  function syncAccentUI() {
+    const regs = REGIONS[state.src] || [];
+    const wrapS = el.selSrcAcc.parentElement;
+    wrapS.classList.toggle('hidden', regs.length < 2);
+    el.selSrcAcc.innerHTML = '';
+    for (const [code, name] of regs) {
+      const o = document.createElement('option');
+      o.value = code; o.textContent = name;
+      el.selSrcAcc.appendChild(o);
+    }
+    if (regs.length) el.selSrcAcc.value = sttLocale(state.src);
+    const list = typeof voicesFor === 'function' && 'speechSynthesis' in window ? voicesFor(state.tgt) : [];
+    const wrapT = el.selTgtVoice.parentElement;
+    wrapT.classList.toggle('hidden', !list.length);
+    el.selTgtVoice.innerHTML = '';
+    for (const v of list) {
+      const o = document.createElement('option');
+      o.value = v.name; o.textContent = `${v.name} (${v.lang.replace('_', '-')})`;
+      el.selTgtVoice.appendChild(o);
+    }
+    if (list.length) el.selTgtVoice.value = (list.find(v => v.name === store.get('voice_' + state.tgt, '')) || list[0]).name;
+    el.accRow.style.display = wrapS.classList.contains('hidden') && wrapT.classList.contains('hidden') ? 'none' : '';
   }
 
   function setLangs(s, t, swapText) {
@@ -450,7 +489,7 @@
   function loadVoices() { voices = window.speechSynthesis ? speechSynthesis.getVoices() : []; }
   if ('speechSynthesis' in window) {
     loadVoices();
-    speechSynthesis.onvoiceschanged = loadVoices;
+    speechSynthesis.onvoiceschanged = () => { loadVoices(); syncAccentUI(); };
   }
 
   function voicesFor(langKey) {
@@ -569,7 +608,7 @@
 
   function beginSession() {
     rec = new SR();
-    rec.lang = LANGS[state.src].stt;
+    rec.lang = sttLocale(state.src);
     rec.continuous = true;
     rec.interimResults = true;
     rec.maxAlternatives = 1;
@@ -1044,6 +1083,14 @@
     }
     el.selVoice.value = store.get('voice_' + k, '') || list[0].name;
   }
+  el.selSrcAcc.onchange = () => {
+    store.set('stt_' + state.src, el.selSrcAcc.value);
+    if (wantListening && rec) { try { rec.abort(); } catch (_) {} } // tự nghe lại với vùng nói mới
+  };
+  el.selTgtVoice.onchange = () => {
+    store.set('voice_' + state.tgt, el.selTgtVoice.value);
+    speak(TEST_TEXT[state.tgt] || TEST_TEXT.en, state.tgt);
+  };
   el.selVoiceLang.onchange = fillVoices;
   el.inRate.oninput = () => { el.lblRate.textContent = (+el.inRate.value).toFixed(2) + '×'; };
   el.inPitch.oninput = () => { el.lblPitch.textContent = (+el.inPitch.value).toFixed(2); };
