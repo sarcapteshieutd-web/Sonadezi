@@ -33,8 +33,8 @@
     de: [['de-DE', 'Đức (DE)'], ['de-AT', 'Áo (AT)'], ['de-CH', 'Thụy Sĩ (CH)']],
     ar: [['ar-SA', 'Ả Rập Xê Út (SA)'], ['ar-EG', 'Ai Cập (EG)'], ['ar-AE', 'UAE (AE)'], ['ar-MA', 'Ma-rốc (MA)']]
   };
-  const DEBOUNCE_MS = 450;
-  const SILENCE_MS = 1800; // im lặng bao lâu thì tự kết thúc lượt nói
+  const DEBOUNCE_MS = 300;
+  const SILENCE_MS = 1200; // im lặng bao lâu thì tự kết thúc lượt nói (trước đây 1800)
   const MAX_BYTES = 450; // MyMemory giới hạn ~500 byte/yêu cầu
 
   const $ = id => document.getElementById(id);
