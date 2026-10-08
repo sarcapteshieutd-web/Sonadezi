@@ -88,7 +88,7 @@ window.APP_CONFIG = {
   },
   room: {
     ttlHours: 24,           // phòng tự hết hạn sau số giờ này (1 đến 24)
-    liveIntervalMs: 500,    // chu kỳ tối thiểu (ms) khi đẩy bản "đang nói" lên phòng; nhỏ hơn = mượt hơn nhưng tốn lượt ghi
+    liveIntervalMs: 650,    // chu kỳ tối thiểu (ms) khi đẩy bản "đang nói" lên phòng; nhỏ hơn = mượt hơn nhưng tốn lượt ghi
     maxExtraLanguages: 3    // số ngôn ngữ phụ tối đa được dịch thêm cho người xem (mỗi ngôn ngữ phụ tốn thêm chi phí dịch)
   },
 };
