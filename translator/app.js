@@ -686,6 +686,7 @@
   let utt = newUtt();
   function resetUtt() { clearTimeout(utt.timer); clearTimeout(utt.tail.timer); utt = newUtt(); }
 
+  const TWO_CUT_MS = 1500; // thời gian im lặng để chốt câu khi chạy chế độ hai máy mà chưa chọn "Tự chốt câu"
   const MIN_WORDS = 4, TAIL_WORDS = 3, MIN_CJK = 8, TAIL_CJK = 4;
   // Tìm vị trí cắt "ổn định": giữ lại vài từ cuối vì trình duyệt còn có thể sửa
   function stableCut(rest, lang) {
@@ -828,7 +829,8 @@
       if (interim !== utt.lastText) { utt.lastText = interim; utt.tLast = Date.now(); }
       if (state.incr) incrementalStep(interim);
       clearTimeout(utt.timer);
-      if (state.cutMs > 0) utt.timer = setTimeout(forceCommit, state.cutMs);
+      const cut = state.cutMs || (state.twoMode ? TWO_CUT_MS : 0); // hai máy: luôn tự chốt câu, không phụ thuộc trình duyệt báo kết thúc
+      if (cut > 0) utt.timer = setTimeout(forceCommit, cut);
     }
     // Hai bên nói luân phiên: sau mỗi câu chốt, chuyển sang ngôn ngữ còn lại
     if (gotFinal && state.autoTurn) setLangs(state.tgt, state.src, false);
