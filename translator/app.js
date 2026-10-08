@@ -54,7 +54,7 @@
     btnMeeting: $('btnMeeting'), btnConf: $('btnConf'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
     chkMeetingSpeak: $('chkMeetingSpeak'), chkConf: $('chkConf'), meetingSpeaking: $('meetingSpeaking'),
     chkAutoTurn: $('chkAutoTurn'), meetingLang: $('meetingLang'),
-    app: $('app'), btnBig: $('btnBig'), btnDual: $('btnDual'), btnFontMinus: $('btnFontMinus'), btnFontPlus: $('btnFontPlus'),
+    app: $('app'), btnBig: $('btnBig'), btnBigExit: $('btnBigExit'), btnDual: $('btnDual'), btnFontMinus: $('btnFontMinus'), btnFontPlus: $('btnFontPlus'),
     dualHeadL: $('dualHeadL'), dualHeadR: $('dualHeadR'), liveDual: $('liveDual'),
     ldLLbl: $('ldLLbl'), ldLTxt: $('ldLTxt'), ldLRec: $('ldLRec'), ldRLbl: $('ldRLbl'), ldRTxt: $('ldRTxt'), ldRRec: $('ldRRec'), btnRoom: $('btnRoom'), roomDot: $('roomDot'),
     sheetRoom: $('sheetRoom'), roomBody: $('roomBody'),
@@ -554,13 +554,13 @@
   const MIN_CONF = typeof RCFG.minConfidence === 'number' ? RCFG.minConfidence : 0;
   const escRe = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const GLOSSARY = (RCFG.glossary || []).flatMap(g =>
-    (g.variants || []).filter(Boolean).map(v => ({ re: new RegExp('(^|[^\\p{L}\\p{N}])' + escRe(v.trim()).replace(/\s+/g, '\\s+') + '(?![\\p{L}\\p{N}])', 'giu'), to: g.to }))
+    (g.variants || []).filter(Boolean).map(v => ({ re: new RegExp('(^|[^\\p{L}\\p{N}])' + escRe(v.trim()).replace(/\s+/g, '\\s+') + '(?![\\p{L}\\p{N}])', 'giu'), to: g.to, alt: g.en }))
   ).sort((a, b) => b.re.source.length - a.re.source.length);
 
   // Thay các cách nghe sai bằng từ đúng (theo config.js)
   function applyGlossary(text) {
     let out = text;
-    for (const g of GLOSSARY) out = out.replace(g.re, (_, pre) => pre + g.to);
+    for (const g of GLOSSARY) out = out.replace(g.re, (_, pre) => pre + (state.src === 'en' && g.alt ? g.alt : g.to)); // nói tiếng Anh: dùng tên không dấu
     return out;
   }
   // Bỏ câu đã chốt mà trình duyệt chấm độ tin cậy quá thấp (0 = trình duyệt không báo, giữ lại)
@@ -999,6 +999,8 @@
     el.btnBig.title = on ? 'Thoát màn hình lớn' : 'Màn hình lớn';
     updateCounter();
   }
+  el.btnBigExit.onclick = () => el.btnBig.onclick();
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && el.app.classList.contains('big')) el.btnBig.onclick(); }); // máy không có chế độ toàn màn hình thật
   el.btnBig.onclick = () => {
     const on = !el.app.classList.contains('big');
     setBig(on);

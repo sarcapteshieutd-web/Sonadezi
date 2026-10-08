@@ -26,10 +26,10 @@ window.APP_CONFIG = {
     // Từ điển sửa lỗi: gặp "variants" thì thay bằng "to". Không phân biệt hoa/thường, cần khớp nguyên cụm từ.
     // Các cách nghe sai dưới đây chỉ là ví dụ dự đoán; hãy bổ sung theo kết quả bạn thực sự thấy khi nói.
     glossary: [
-      { to: 'Sonadezi', variants: ['so na đê di', 'sô na đê di', 'sô na đề di', 'so na de di', 'sona dezi', 'sona đê di', 'sonadesi', 'sonadezy'] },
+      { to: 'Sonadezi', variants: ['suna daisy', 'so na đê di', 'sô na đê di', 'sô na đề di', 'so na de di', 'sona dezi', 'sona đê di', 'sonadesi', 'sonadezy'] },
       { to: 'KCN', variants: ['ka xê en', 'ca xê en', 'ka c n'] },
-      { to: 'Sonadezi Long Thành', variants: ['sonadezi long thanh'] },
-      { to: 'Sonadezi Châu Đức', variants: ['sonadezi chau duc', 'sonadezi châu đức'] },
+      { to: 'Sonadezi Long Thành', en: 'Sonadezi Long Thanh', variants: ['sonadezi long thanh', 'suna daisy long thing'] },
+      { to: 'Sonadezi Châu Đức', en: 'Sonadezi Chau Duc', variants: ['sonadezi chau duc', 'sonadezi châu đức'] },
       { to: 'Tổng công ty Sonadezi', variants: ['tong cong ty sonadezi'] }
     ]
   },
