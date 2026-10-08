@@ -39,6 +39,9 @@
     body:not(.dual) #liveDual { display: none !important; }
     .dual #liveDual:not(.hidden) { display: grid; }
     .big #chatBar { display: none; }
+    /* Nút thoát màn hình lớn: chỉ hiện ở chế độ này (điện thoại không có phím ESC) */
+    #btnBigExit { display: none; position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px); right: 10px; z-index: 60; align-items: center; gap: 6px; border: 0; border-radius: 9999px; background: rgba(15, 23, 42, .75); color: #fff; padding: 9px 14px; font-size: 14px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+    .big #btnBigExit { display: inline-flex; }
     .big #inputRow, .big #langBar, .big #viewerBar { display: none; }
     /* Chế độ người xem: chỉ đọc */
     .viewer #btnDonate, .viewer #btnExport, .viewer #btnClearHist, .viewer #btnSettings, .viewer #btnInstall,
@@ -137,6 +140,8 @@
       </div>
       <div class="text-[0.6875rem] text-red-600/80">Đổi người nói: bấm ⇄ hoặc phím Space.</div>
     </div>
+
+    <button id="btnBigExit" type="button" aria-label="Thoát màn hình lớn">✕ Thu nhỏ</button>
 
     <!-- Thanh công cụ khung chat -->
     <div id="chatBar" class="mt-2 flex shrink-0 items-center justify-end gap-1.5 lg:ml-auto lg:mt-0">

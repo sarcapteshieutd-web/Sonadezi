@@ -54,7 +54,7 @@
     btnMeeting: $('btnMeeting'), btnConf: $('btnConf'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
     chkMeetingSpeak: $('chkMeetingSpeak'), chkConf: $('chkConf'), meetingSpeaking: $('meetingSpeaking'),
     chkAutoTurn: $('chkAutoTurn'), meetingLang: $('meetingLang'),
-    app: $('app'), btnBig: $('btnBig'), btnDual: $('btnDual'), btnFontMinus: $('btnFontMinus'), btnFontPlus: $('btnFontPlus'),
+    app: $('app'), btnBig: $('btnBig'), btnBigExit: $('btnBigExit'), btnDual: $('btnDual'), btnFontMinus: $('btnFontMinus'), btnFontPlus: $('btnFontPlus'),
     dualHeadL: $('dualHeadL'), dualHeadR: $('dualHeadR'), liveDual: $('liveDual'),
     ldLLbl: $('ldLLbl'), ldLTxt: $('ldLTxt'), ldLRec: $('ldLRec'), ldRLbl: $('ldRLbl'), ldRTxt: $('ldRTxt'), ldRRec: $('ldRRec'), btnRoom: $('btnRoom'), roomDot: $('roomDot'),
     sheetRoom: $('sheetRoom'), roomBody: $('roomBody'),
@@ -999,6 +999,8 @@
     el.btnBig.title = on ? 'Thoát màn hình lớn' : 'Màn hình lớn';
     updateCounter();
   }
+  el.btnBigExit.onclick = () => el.btnBig.onclick();
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && el.app.classList.contains('big')) el.btnBig.onclick(); }); // máy không có chế độ toàn màn hình thật
   el.btnBig.onclick = () => {
     const on = !el.app.classList.contains('big');
     setBig(on);
