@@ -554,13 +554,13 @@
   const MIN_CONF = typeof RCFG.minConfidence === 'number' ? RCFG.minConfidence : 0;
   const escRe = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const GLOSSARY = (RCFG.glossary || []).flatMap(g =>
-    (g.variants || []).filter(Boolean).map(v => ({ re: new RegExp('(^|[^\\p{L}\\p{N}])' + escRe(v.trim()).replace(/\s+/g, '\\s+') + '(?![\\p{L}\\p{N}])', 'giu'), to: g.to }))
+    (g.variants || []).filter(Boolean).map(v => ({ re: new RegExp('(^|[^\\p{L}\\p{N}])' + escRe(v.trim()).replace(/\s+/g, '\\s+') + '(?![\\p{L}\\p{N}])', 'giu'), to: g.to, alt: g.en }))
   ).sort((a, b) => b.re.source.length - a.re.source.length);
 
   // Thay các cách nghe sai bằng từ đúng (theo config.js)
   function applyGlossary(text) {
     let out = text;
-    for (const g of GLOSSARY) out = out.replace(g.re, (_, pre) => pre + g.to);
+    for (const g of GLOSSARY) out = out.replace(g.re, (_, pre) => pre + (state.src === 'en' && g.alt ? g.alt : g.to)); // nói tiếng Anh: dùng tên không dấu
     return out;
   }
   // Bỏ câu đã chốt mà trình duyệt chấm độ tin cậy quá thấp (0 = trình duyệt không báo, giữ lại)
