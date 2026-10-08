@@ -28,7 +28,9 @@ window.APP_CONFIG = {
     glossary: [
       { to: 'Sonadezi', variants: ['so na đê di', 'sô na đê di', 'sô na đề di', 'so na de di', 'sona dezi', 'sona đê di', 'sonadesi', 'sonadezy'] },
       { to: 'KCN', variants: ['ka xê en', 'ca xê en', 'ka c n'] },
-      { to: 'Sonadezi Long Thành', variants: ['sonadezi long thanh'] }
+      { to: 'Sonadezi Long Thành', variants: ['sonadezi long thanh'] },
+      { to: 'Sonadezi Châu Đức', variants: ['sonadezi chau duc', 'sonadezi châu đức'] },
+      { to: 'Tổng công ty Sonadezi', variants: ['tong cong ty sonadezi'] }
     ]
   },
   // Bảng thuật ngữ dịch: khi câu nói chứa cụm ở ngôn ngữ nguồn, bản dịch dùng đúng cụm ở ngôn ngữ đích.
@@ -37,6 +39,10 @@ window.APP_CONFIG = {
   // Hãy để phòng Pháp chế / phiên dịch kiểm tra và sửa trước khi dùng cho thương thảo hợp đồng.
   // Tên tiếng Trung chính thức của các khu công nghiệp để trống, hãy điền tên công ty đang sử dụng.
   terms: [
+    // Tên công ty (do người dùng cung cấp)
+    { vi: 'Tổng công ty Sonadezi', en: 'Sonadezi Company', zh: '' },
+    { vi: 'Sonadezi Châu Đức', en: 'Sonadezi Chau Duc', zh: '' },
+    { vi: 'Sonadezi Long Thành', en: 'Sonadezi Long Thanh', zh: '' },
     // Dự án
     { vi: 'Khu công nghiệp Long Thành', en: 'Long Thanh Industrial Park', zh: '' },
     { vi: 'Khu công nghiệp Châu Đức', en: 'Chau Duc Industrial Park', zh: '' },
