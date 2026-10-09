@@ -82,6 +82,8 @@ Mặc định dùng **MyMemory** (miễn phí, không cần khóa; khoảng 5.00
 3. Hạn chế khóa: *Application restrictions = Websites*, thêm tên miền của bạn; *API restrictions* = Cloud Translation API.
 4. Trong ứng dụng: biểu tượng bánh răng → *Google Cloud Translation* → dán khóa → *Lưu*.
 
+Bộ đếm ký tự: khi dùng Google, ứng dụng đếm số ký tự đã gửi dịch trong ngày và hiện dưới thanh ngôn ngữ (ví dụ "Google hôm nay: 12.345 / 200.000 ký tự"). Đặt giới hạn trong *Cài đặt* (0 = không giới hạn); đạt giới hạn thì tự chuyển sang MyMemory hoặc tạm dừng dịch tùy lựa chọn. Bộ đếm tính riêng trên từng thiết bị, chỉ mang tính tham khảo, không thay số liệu tính phí của Google; nên đặt thêm ngân sách cảnh báo trong Google Cloud (Billing → Budgets & alerts).
+
 Cảnh báo bảo mật: khóa nhập trên trình duyệt chỉ lưu tại thiết bị đó, nhưng nếu dùng chung cho nhiều người thì nên đặt qua máy chủ trung gian (Netlify/Vercel Functions) để không lộ khóa.
 
 ## 7. Giới hạn cần biết

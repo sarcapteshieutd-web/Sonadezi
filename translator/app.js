@@ -24,8 +24,17 @@
     id:  L('Tiếng Indonesia', 'Indonesia', 'id', 'id-ID'),
     ms:  L('Tiếng Mã Lai', 'Mã Lai', 'ms', 'ms-MY')
   };
-  const DEBOUNCE_MS = 450;
-  const SILENCE_MS = 1800; // im lặng bao lâu thì tự kết thúc lượt nói
+  // Giọng/vùng nói cho nhận diện (đầu vào). Mã vùng do trình duyệt quyết định có hỗ trợ hay không.
+  const REGIONS = {
+    en: [['en-US', 'Mỹ (US)'], ['en-GB', 'Anh (UK)'], ['en-AU', 'Úc (AU)'], ['en-ZA', 'Nam Phi (ZA)'], ['en-IN', 'Ấn Độ (IN)'], ['en-CA', 'Canada (CA)'], ['en-NZ', 'New Zealand (NZ)'], ['en-IE', 'Ireland (IE)'], ['en-SG', 'Singapore (SG)'], ['en-PH', 'Philippines (PH)'], ['en-NG', 'Nigeria (NG)'], ['en-KE', 'Kenya (KE)']],
+    es: [['es-ES', 'Tây Ban Nha (ES)'], ['es-MX', 'Mexico (MX)'], ['es-AR', 'Argentina (AR)'], ['es-CO', 'Colombia (CO)'], ['es-US', 'Mỹ (US)']],
+    pt: [['pt-BR', 'Brazil (BR)'], ['pt-PT', 'Bồ Đào Nha (PT)']],
+    fr: [['fr-FR', 'Pháp (FR)'], ['fr-CA', 'Canada (CA)'], ['fr-BE', 'Bỉ (BE)'], ['fr-CH', 'Thụy Sĩ (CH)']],
+    de: [['de-DE', 'Đức (DE)'], ['de-AT', 'Áo (AT)'], ['de-CH', 'Thụy Sĩ (CH)']],
+    ar: [['ar-SA', 'Ả Rập Xê Út (SA)'], ['ar-EG', 'Ai Cập (EG)'], ['ar-AE', 'UAE (AE)'], ['ar-MA', 'Ma-rốc (MA)']]
+  };
+  const DEBOUNCE_MS = 300;
+  const SILENCE_MS = 1200; // im lặng bao lâu thì tự kết thúc lượt nói (trước đây 1800)
   const MAX_BYTES = 450; // MyMemory giới hạn ~500 byte/yêu cầu
 
   const $ = id => document.getElementById(id);
@@ -36,7 +45,7 @@
     btnMic: $('btnMic'), icoMic: $('icoMic'), icoStop: $('icoStop'),
     ring1: $('ring1'), ring2: $('ring2'), recBadge: $('recBadge'), micHint: $('micHint'),
     chkAuto: $('chkAuto'), btnClear: $('btnClear'),
-    lblSrc: $('lblSrc'), lblTgt: $('lblTgt'), toast: $('toast'),
+    selSrcAcc: $('selSrcAcc'), selTgtVoice: $('selTgtVoice'), accRow: $('accRow'), lblSrc: $('lblSrc'), lblTgt: $('lblTgt'), toast: $('toast'),
     hist: $('history'), histWrap: $('histWrap'), btnClearHist: $('btnClearHist'),
     btnInstall: $('btnInstall'), iosHint: $('iosHint'), iosHintClose: $('iosHintClose'),
     btnExport: $('btnExport'), btnDonate: $('btnDonate'), sheetExport: $('sheetExport'), sheetDonate: $('sheetDonate'),
@@ -45,7 +54,7 @@
     btnMeeting: $('btnMeeting'), btnConf: $('btnConf'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
     chkMeetingSpeak: $('chkMeetingSpeak'), chkConf: $('chkConf'), meetingSpeaking: $('meetingSpeaking'),
     chkAutoTurn: $('chkAutoTurn'), meetingLang: $('meetingLang'),
-    app: $('app'), btnBig: $('btnBig'), btnDual: $('btnDual'), btnFontMinus: $('btnFontMinus'), btnFontPlus: $('btnFontPlus'),
+    app: $('app'), btnBig: $('btnBig'), btnBigExit: $('btnBigExit'), btnDual: $('btnDual'), btnFontMinus: $('btnFontMinus'), btnFontPlus: $('btnFontPlus'),
     dualHeadL: $('dualHeadL'), dualHeadR: $('dualHeadR'), liveDual: $('liveDual'),
     ldLLbl: $('ldLLbl'), ldLTxt: $('ldLTxt'), ldLRec: $('ldLRec'), ldRLbl: $('ldRLbl'), ldRTxt: $('ldRTxt'), ldRRec: $('ldRRec'), btnRoom: $('btnRoom'), roomDot: $('roomDot'),
     sheetRoom: $('sheetRoom'), roomBody: $('roomBody'),
@@ -54,7 +63,7 @@
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
     selEngine: $('selEngine'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
     inRate: $('inRate'), inPitch: $('inPitch'), lblRate: $('lblRate'), lblPitch: $('lblPitch'), btnTest: $('btnTest'), inEmail: $('inEmail'), inKey: $('inKey'),
-    boxMM: $('boxMM'), boxGG: $('boxGG'), btnSave: $('btnSave')
+    boxMM: $('boxMM'), boxGG: $('boxGG'), gUsage: $('gUsage'), gUsageBox: $('gUsageBox'), inGLimit: $('inGLimit'), chkGFallback: $('chkGFallback'), btnGReset: $('btnGReset'), btnSave: $('btnSave')
   };
 
   // ---------- Lưu trữ cục bộ ----------
@@ -69,6 +78,8 @@
     engine: store.get('engine', 'mymemory'),
     email: store.get('email', ''),
     gkey: store.get('gkey', ''),
+    gLimit: Math.max(0, parseInt(store.get('gLimit', '200000'), 10) || 0), // giới hạn ký tự Google mỗi ngày (0 = không giới hạn)
+    gFallback: store.get('gFallback', '1') === '1', // đạt giới hạn: tự chuyển sang MyMemory
     auto: store.get('auto', '1') === '1',
     listening: false,
     translated: '',
@@ -134,6 +145,36 @@
     store.set('src', state.src);
     store.set('tgt', state.tgt);
     syncDual();
+    syncAccentUI();
+  }
+
+  // Vùng nói của ngôn ngữ nguồn (nhận diện) và giọng đọc của ngôn ngữ đích
+  function sttLocale(k) {
+    const saved = store.get('stt_' + k, '');
+    return (REGIONS[k] || []).some(r => r[0] === saved) ? saved : LANGS[k].stt;
+  }
+  function syncAccentUI() {
+    const regs = REGIONS[state.src] || [];
+    const wrapS = el.selSrcAcc.parentElement;
+    wrapS.classList.toggle('hidden', regs.length < 2);
+    el.selSrcAcc.innerHTML = '';
+    for (const [code, name] of regs) {
+      const o = document.createElement('option');
+      o.value = code; o.textContent = name;
+      el.selSrcAcc.appendChild(o);
+    }
+    if (regs.length) el.selSrcAcc.value = sttLocale(state.src);
+    const list = 'speechSynthesis' in window ? voicesFor(state.tgt) : [];
+    const wrapT = el.selTgtVoice.parentElement;
+    wrapT.classList.toggle('hidden', !list.length);
+    el.selTgtVoice.innerHTML = '';
+    for (const v of list) {
+      const o = document.createElement('option');
+      o.value = v.name; o.textContent = `${v.name} (${v.lang.replace('_', '-')})`;
+      el.selTgtVoice.appendChild(o);
+    }
+    if (list.length) el.selTgtVoice.value = (list.find(v => v.name === store.get('voice_' + state.tgt, '')) || list[0]).name;
+    el.accRow.style.display = wrapS.classList.contains('hidden') && wrapT.classList.contains('hidden') ? 'none' : '';
   }
 
   function setLangs(s, t, swapText) {
@@ -330,9 +371,48 @@
     return chunks;
   }
 
+  // ----- Bộ đếm ký tự Google (theo ngày, lưu trên thiết bị này; chỉ mang tính tham khảo) -----
+  const todayKey = () => new Date().toLocaleDateString('sv-SE');
+  function gUsed() {
+    try { const u = JSON.parse(store.get('gUsage', 'null')); if (u && u.d === todayKey()) return u; } catch (_) {}
+    return { d: todayKey(), n: 0, warned: false };
+  }
+  const fmtN = n => n.toLocaleString('vi-VN');
+  function renderGUsage() {
+    const on = state.engine === 'google' && !!state.gkey;
+    const u = gUsed(), lim = state.gLimit;
+    const pct = lim > 0 ? Math.min(100, Math.round(u.n * 100 / lim)) : 0;
+    const over = lim > 0 && (u.n >= lim || !!u.over);
+    let txt = `Google hôm nay: ${fmtN(u.n)}${lim > 0 ? ' / ' + fmtN(lim) + ' ký tự (' + pct + '%)' : ' ký tự (không giới hạn)'}`;
+    if (over) txt += state.gFallback ? ' · đã đạt giới hạn, đang dùng MyMemory' : ' · đã đạt giới hạn, tạm dừng dịch';
+    for (const node of [el.gUsage, el.gUsageBox]) {
+      node.textContent = txt;
+      node.classList.toggle('text-red-600', over);
+      node.classList.toggle('text-amber-600', !over && pct >= 80);
+      node.classList.toggle('text-slate-500', !over && pct < 80);
+    }
+    el.gUsage.classList.toggle('hidden', !on);
+  }
+  // true: được gọi Google (đã cộng vào bộ đếm); false: đã đạt giới hạn, dùng MyMemory; ném lỗi nếu không cho chuyển
+  function gCharge(text) {
+    const u = gUsed();
+    const lim = state.gLimit;
+    if (lim > 0 && u.n + text.length > lim) {
+      u.over = true; store.set('gUsage', JSON.stringify(u));
+      renderGUsage();
+      if (state.gFallback) return false;
+      throw new Error('Đã đạt giới hạn ký tự Google hôm nay (' + fmtN(lim) + ')');
+    }
+    u.n += text.length;
+    if (lim > 0 && !u.warned && u.n >= lim * 0.8) { u.warned = true; toast('Đã dùng 80% giới hạn ký tự Google hôm nay'); }
+    store.set('gUsage', JSON.stringify(u));
+    renderGUsage();
+    return true;
+  }
+
   async function requestTranslate(text, signal, from, to) {
     let result;
-    if (state.engine === 'google' && state.gkey) {
+    if (state.engine === 'google' && state.gkey && gCharge(text)) {
       const url = 'https://translation.googleapis.com/language/translate/v2?key=' + encodeURIComponent(state.gkey);
       const res = await fetch(url, {
         method: 'POST', signal,
@@ -450,7 +530,7 @@
   function loadVoices() { voices = window.speechSynthesis ? speechSynthesis.getVoices() : []; }
   if ('speechSynthesis' in window) {
     loadVoices();
-    speechSynthesis.onvoiceschanged = loadVoices;
+    speechSynthesis.onvoiceschanged = () => { loadVoices(); syncAccentUI(); };
   }
 
   function voicesFor(langKey) {
@@ -515,13 +595,13 @@
   const MIN_CONF = typeof RCFG.minConfidence === 'number' ? RCFG.minConfidence : 0;
   const escRe = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const GLOSSARY = (RCFG.glossary || []).flatMap(g =>
-    (g.variants || []).filter(Boolean).map(v => ({ re: new RegExp('(^|[^\\p{L}\\p{N}])' + escRe(v.trim()).replace(/\s+/g, '\\s+') + '(?![\\p{L}\\p{N}])', 'giu'), to: g.to }))
+    (g.variants || []).filter(Boolean).map(v => ({ re: new RegExp('(^|[^\\p{L}\\p{N}])' + escRe(v.trim()).replace(/\s+/g, '\\s+') + '(?![\\p{L}\\p{N}])', 'giu'), to: g.to, alt: g.en }))
   ).sort((a, b) => b.re.source.length - a.re.source.length);
 
   // Thay các cách nghe sai bằng từ đúng (theo config.js)
   function applyGlossary(text) {
     let out = text;
-    for (const g of GLOSSARY) out = out.replace(g.re, (_, pre) => pre + g.to);
+    for (const g of GLOSSARY) out = out.replace(g.re, (_, pre) => pre + (state.src === 'en' && g.alt ? g.alt : g.to)); // nói tiếng Anh: dùng tên không dấu
     return out;
   }
   // Bỏ câu đã chốt mà trình duyệt chấm độ tin cậy quá thấp (0 = trình duyệt không báo, giữ lại)
@@ -569,7 +649,7 @@
 
   function beginSession() {
     rec = new SR();
-    rec.lang = LANGS[state.src].stt;
+    rec.lang = sttLocale(state.src);
     rec.continuous = true;
     rec.interimResults = true;
     rec.maxAlternatives = 1;
@@ -686,6 +766,7 @@
   let utt = newUtt();
   function resetUtt() { clearTimeout(utt.timer); clearTimeout(utt.tail.timer); utt = newUtt(); }
 
+  const TWO_CUT_MS = 1500; // thời gian im lặng để chốt câu khi chạy chế độ hai máy mà chưa chọn "Tự chốt câu"
   const MIN_WORDS = 4, TAIL_WORDS = 3, MIN_CJK = 8, TAIL_CJK = 4;
   // Tìm vị trí cắt "ổn định": giữ lại vài từ cuối vì trình duyệt còn có thể sửa
   function stableCut(rest, lang) {
@@ -828,7 +909,8 @@
       if (interim !== utt.lastText) { utt.lastText = interim; utt.tLast = Date.now(); }
       if (state.incr) incrementalStep(interim);
       clearTimeout(utt.timer);
-      if (state.cutMs > 0) utt.timer = setTimeout(forceCommit, state.cutMs);
+      const cut = state.cutMs || (state.twoMode ? TWO_CUT_MS : 0); // hai máy: luôn tự chốt câu, không phụ thuộc trình duyệt báo kết thúc
+      if (cut > 0) utt.timer = setTimeout(forceCommit, cut);
     }
     // Hai bên nói luân phiên: sau mỗi câu chốt, chuyển sang ngôn ngữ còn lại
     if (gotFinal && state.autoTurn) setLangs(state.tgt, state.src, false);
@@ -958,6 +1040,8 @@
     el.btnBig.title = on ? 'Thoát màn hình lớn' : 'Màn hình lớn';
     updateCounter();
   }
+  el.btnBigExit.onclick = () => el.btnBig.onclick();
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && el.app.classList.contains('big')) el.btnBig.onclick(); }); // máy không có chế độ toàn màn hình thật
   el.btnBig.onclick = () => {
     const on = !el.app.classList.contains('big');
     setBig(on);
@@ -1042,6 +1126,14 @@
     }
     el.selVoice.value = store.get('voice_' + k, '') || list[0].name;
   }
+  el.selSrcAcc.onchange = () => {
+    store.set('stt_' + state.src, el.selSrcAcc.value);
+    if (wantListening && rec) { try { rec.abort(); } catch (_) {} } // tự nghe lại với vùng nói mới
+  };
+  el.selTgtVoice.onchange = () => {
+    store.set('voice_' + state.tgt, el.selTgtVoice.value);
+    speak(TEST_TEXT[state.tgt] || TEST_TEXT.en, state.tgt);
+  };
   el.selVoiceLang.onchange = fillVoices;
   el.inRate.oninput = () => { el.lblRate.textContent = (+el.inRate.value).toFixed(2) + '×'; };
   el.inPitch.oninput = () => { el.lblPitch.textContent = (+el.inPitch.value).toFixed(2); };
@@ -1061,6 +1153,7 @@
     el.selEngine.value = state.engine;
     el.inEmail.value = state.email;
     el.inKey.value = state.gkey;
+    el.inGLimit.value = String(state.gLimit); el.chkGFallback.checked = state.gFallback; renderGUsage();
     syncEngineBoxes();
     el.sheet.classList.remove('hidden'); el.sheet.classList.add('flex');
   };
@@ -1068,18 +1161,21 @@
   el.btnSheetClose.onclick = closeSheet;
   el.sheet.onclick = e => { if (e.target === el.sheet) closeSheet(); };
   el.selEngine.onchange = syncEngineBoxes;
+  el.btnGReset.onclick = () => { store.set('gUsage', JSON.stringify({ d: todayKey(), n: 0, warned: false })); renderGUsage(); };
   el.btnSave.onclick = () => {
     state.engine = el.selEngine.value;
     state.email = el.inEmail.value.trim();
     state.gkey = el.inKey.value.trim();
     if (state.engine === 'google' && !state.gkey) { toast('Vui lòng nhập API key'); return; }
+    state.gLimit = Math.max(0, parseInt(el.inGLimit.value, 10) || 0); state.gFallback = el.chkGFallback.checked;
+    store.set('gLimit', String(state.gLimit)); store.set('gFallback', state.gFallback ? '1' : '0');
     store.set('voice_' + el.selVoiceLang.value, el.selVoice.value);
     state.rate = +el.inRate.value; state.pitch = +el.inPitch.value;
     store.set('rate', String(state.rate)); store.set('pitch', String(state.pitch));
     state.incr = el.chkIncr.checked; state.cutMs = parseInt(el.selCut.value, 10) || 0; state.showLat = el.chkLat.checked;
     store.set('incr', state.incr ? '1' : '0'); store.set('cutMs', String(state.cutMs)); store.set('showLat', state.showLat ? '1' : '0');
     store.set('engine', state.engine); store.set('email', state.email); store.set('gkey', state.gkey);
-    cache.clear();
+    cache.clear(); renderGUsage();
     closeSheet(); toast('Đã lưu cài đặt'); translateNow();
   };
 
@@ -1686,6 +1782,7 @@
   fillSelect(el.selSrc, state.src);
   fillSelect(el.selTgt, state.tgt);
   syncLangUI();
+  renderGUsage();
   updateCounter();
   if (!SR) el.micHint.textContent = 'Trình duyệt chưa hỗ trợ nhận diện giọng nói - bạn vẫn có thể gõ văn bản';
   const coCode = new URLSearchParams(location.search).get('co');
