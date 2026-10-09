@@ -63,6 +63,8 @@
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
     selEngine: $('selEngine'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
     selTtsMode: $('selTtsMode'), boxDevVoice: $('boxDevVoice'), boxCloudVoice: $('boxCloudVoice'), inTtsKey: $('inTtsKey'), selCloudVoice: $('selCloudVoice'),
+    gate: $('gate'), gateFree: $('gateFree'), gateForm: $('gateForm'), gateUser: $('gateUser'), gatePass: $('gatePass'), gateErr: $('gateErr'), gateLogin: $('gateLogin'), gatePlan: $('gatePlan'),
+    acctName: $('acctName'), btnSwitchAcct: $('btnSwitchAcct'), freeNote: $('freeNote'),
     ttsDayN: $('ttsDayN'), ttsDayC: $('ttsDayC'), ttsMonN: $('ttsMonN'), ttsMonC: $('ttsMonC'), ttsFree: $('ttsFree'), ttsCost: $('ttsCost'), inTtsLimit: $('inTtsLimit'), ttsStatus: $('ttsStatus'), btnTtsReset: $('btnTtsReset'),
     inRate: $('inRate'), inPitch: $('inPitch'), lblRate: $('lblRate'), lblPitch: $('lblPitch'), btnTest: $('btnTest'), inEmail: $('inEmail'), inKey: $('inKey'),
     boxMM: $('boxMM'), boxGG: $('boxGG'), gUsage: $('gUsage'), gUsageBox: $('gUsageBox'), inGLimit: $('inGLimit'), chkGFallback: $('chkGFallback'), btnGReset: $('btnGReset'), btnSave: $('btnSave')
@@ -74,12 +76,32 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
   };
 
+  // ---------- Tài khoản: Miễn phí / VIP ----------
+  // Cổng phân quyền "mềm" chạy trên trình duyệt (xem cảnh báo trong config.js): không thay thế được kiểm soát phía máy chủ.
+  const VCFG = (window.APP_CONFIG && window.APP_CONFIG.vip) || {};
+  const vipAccounts = (VCFG.accounts || []).filter(a => a && a.user && a.hash);
+  const vipKey = VCFG.googleKey || '';
+  // VIP chỉ còn hiệu lực khi tài khoản vẫn nằm trong config.js: xóa khỏi config là thu hồi
+  function storedAcct() {
+    const t = store.get('acct', '');
+    if (t === 'free') return { type: 'free', user: '' };
+    if (t === 'vip') {
+      const u = store.get('acctUser', ''), tok = store.get('acctTok', '').toLowerCase();
+      if (vipAccounts.some(a => a.user.toLowerCase() === u.toLowerCase() && a.hash.toLowerCase() === tok)) return { type: 'vip', user: u };
+    }
+    return null;
+  }
+  const acct0 = storedAcct();
+  const acct0Vip = !!acct0 && acct0.type === 'vip';
+
   const state = {
+    acct: acct0 ? acct0.type : null, // 'free' | 'vip' | null (chưa chọn)
+    acctUser: acct0 ? acct0.user : '',
     src: store.get('src', 'en'),
     tgt: store.get('tgt', 'vi'),
     engine: store.get('engine', 'mymemory'),
     email: store.get('email', ''),
-    gkey: store.get('gkey', ''),
+    gkey: store.get('gkey', '') || (acct0Vip ? vipKey : ''), // VIP: khóa riêng nếu có, không thì khóa dùng chung trong config.js
     ttsMode: store.get('ttsMode', 'device'), // nguồn giọng đọc: 'device' (miễn phí) hoặc 'cloud' (Google WaveNet)
     ttsKey: store.get('ttskey', ''),
     ttsLimit: Math.max(0, parseInt(store.get('ttsLimit', '4000000'), 10) || 0), // giới hạn ký tự giọng Google mỗi tháng (0 = không giới hạn)
@@ -100,7 +122,7 @@
     meetingSpeak: store.get('meetingSpeak', '0') === '1',
     speaking: false,
     autoTurn: store.get('autoTurn', '1') === '1',
-    conf: store.get('conf', '0') === '1', // chế độ hội nghị: nghe bản dịch qua tai nghe/loa, micro luôn mở
+    conf: acct0Vip && store.get('conf', '0') === '1', // chế độ hội nghị: nghe bản dịch qua tai nghe/loa, micro luôn mở
     twoMode: false, // chế độ hai máy laptop dùng chung phòng
     mine: null, // ngôn ngữ của người dùng: lời của bên này hiện bên phải
     reqId: 0
@@ -109,8 +131,17 @@
   if (!LANGS[state.tgt] || state.tgt === state.src) state.tgt = state.src === 'vi' ? 'en' : 'vi';
 
   state.mine = state.src;
-  try { state.log = JSON.parse(store.get('chat', '[]')).filter(i => LANGS[i.from] && LANGS[i.to]); } catch (_) { state.log = []; }
-  const saveLog = () => store.set('chat', JSON.stringify(state.log.slice(-300)));
+  const isVip = () => state.acct === 'vip';
+  // Chỉ tài khoản VIP lưu đoạn chat trên thiết bị; tài khoản Miễn phí chỉ giữ trong phiên đang mở
+  function loadLog() {
+    try { return JSON.parse(store.get('chat', '[]')).filter(i => LANGS[i.from] && LANGS[i.to]); } catch (_) { return []; }
+  }
+  if (acct0Vip) state.log = loadLog();
+  const saveLog = () => { if (isVip()) store.set('chat', JSON.stringify(state.log.slice(-300))); };
+  async function sha256Hex(str) {
+    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+  }
 
   // ---------- Tiện ích ----------
   let toastTimer;
@@ -394,7 +425,7 @@
   }
   const fmtN = n => n.toLocaleString('vi-VN');
   function renderGUsage() {
-    const on = state.engine === 'google' && !!state.gkey;
+    const on = isVip() && state.engine === 'google' && !!state.gkey;
     const u = gUsed(), lim = state.gLimit;
     const pct = lim > 0 ? Math.min(100, Math.round(u.n * 100 / lim)) : 0;
     const over = lim > 0 && (u.n >= lim || !!u.over);
@@ -427,7 +458,7 @@
 
   async function requestTranslate(text, signal, from, to) {
     let result;
-    if (state.engine === 'google' && state.gkey && gCharge(text)) {
+    if (isVip() && state.engine === 'google' && state.gkey && gCharge(text)) {
       const url = 'https://translation.googleapis.com/language/translate/v2?key=' + encodeURIComponent(state.gkey);
       const res = await fetch(url, {
         method: 'POST', signal,
@@ -583,7 +614,7 @@
   const GENDER_VI = { FEMALE: 'nữ', MALE: 'nam' };
   const cloudLoc = k => CLOUD_LOC[k] || LANGS[k].tts;
   const cloudKey = () => state.ttsKey || state.gkey;
-  const cloudOn = () => state.ttsMode === 'cloud' && !!cloudKey();
+  const cloudOn = () => isVip() && state.ttsMode === 'cloud' && !!cloudKey();
 
   async function ttsFetch(path, opts, key) {
     const res = await fetch(TTS_API + path + (path.includes('?') ? '&' : '?') + 'key=' + encodeURIComponent(key), opts);
@@ -1189,12 +1220,13 @@
     el.chkConf.checked = state.conf;
     syncConfBtn();
   }
-  el.chkConf.onchange = () => { state.conf = el.chkConf.checked; store.set('conf', state.conf ? '1' : '0'); syncConf(); };
+  el.chkConf.onchange = () => { if (!isVip()) { el.chkConf.checked = false; vipOnly(); return; } state.conf = el.chkConf.checked; store.set('conf', state.conf ? '1' : '0'); syncConf(); };
   el.chkAutoTurn.checked = state.autoTurn;
   syncConf();
   el.chkAutoTurn.onchange = () => { state.autoTurn = el.chkAutoTurn.checked; store.set('autoTurn', state.autoTurn ? '1' : '0'); };
   // Nút ngoài: bật nhanh chế độ hội nghị (ngôn ngữ cố định, nghe bằng tai nghe, micro không tắt)
   el.btnConf.onclick = () => {
+    if (!isVip()) { vipOnly(); return; }
     if (state.meeting && state.conf) { stopMeeting(); return; }
     state.conf = true; store.set('conf', '1'); syncConf();
     if (!state.meeting) startMeeting();
@@ -1392,7 +1424,7 @@
     el.inPitch.value = state.pitch; el.inPitch.oninput();
     el.selEngine.value = state.engine;
     el.inEmail.value = state.email;
-    el.inKey.value = state.gkey;
+    el.inKey.value = vipKey && state.gkey === vipKey ? '' : state.gkey; // không hiện lại khóa dùng chung
     el.inGLimit.value = String(state.gLimit); el.chkGFallback.checked = state.gFallback; renderGUsage();
     syncEngineBoxes();
     syncTtsBoxes();
@@ -1407,9 +1439,11 @@
   el.btnSave.onclick = () => {
     state.engine = el.selEngine.value;
     state.email = el.inEmail.value.trim();
-    state.gkey = el.inKey.value.trim();
+    const typedKey = el.inKey.value.trim();
+    state.gkey = typedKey || (isVip() ? vipKey : '');
+    if (!isVip()) state.engine = 'mymemory'; // Miễn phí: chỉ MyMemory
     if (state.engine === 'google' && !state.gkey) { toast('Vui lòng nhập API key'); return; }
-    state.ttsMode = el.selTtsMode.value; state.ttsKey = el.inTtsKey.value.trim();
+    state.ttsMode = isVip() ? el.selTtsMode.value : 'device'; state.ttsKey = el.inTtsKey.value.trim();
     if (state.ttsMode === 'cloud' && !state.ttsKey && !state.gkey) { toast('Vui lòng nhập API key Text-to-Speech (hoặc khóa Translation)'); return; }
     store.set('ttsMode', state.ttsMode); store.set('ttskey', state.ttsKey);
     state.ttsLimit = Math.max(0, parseInt(el.inTtsLimit.value, 10) || 0); store.set('ttsLimit', String(state.ttsLimit));
@@ -1421,7 +1455,7 @@
     store.set('rate', String(state.rate)); store.set('pitch', String(state.pitch));
     state.incr = el.chkIncr.checked; state.cutMs = parseInt(el.selCut.value, 10) || 0; state.showLat = el.chkLat.checked;
     store.set('incr', state.incr ? '1' : '0'); store.set('cutMs', String(state.cutMs)); store.set('showLat', state.showLat ? '1' : '0');
-    store.set('engine', state.engine); store.set('email', state.email); store.set('gkey', state.gkey);
+    store.set('engine', state.engine); store.set('email', state.email); store.set('gkey', typedKey);
     cache.clear(); renderGUsage();
     Object.keys(cloudTried).forEach(k => delete cloudTried[k]); syncAccentUI(); // giọng đọc ngoài màn hình khớp với Cài đặt
     closeSheet(); toast('Đã lưu cài đặt'); translateNow();
@@ -1490,6 +1524,7 @@
   document.querySelectorAll('[data-close]').forEach(b => { b.onclick = () => closeModal(b.closest('[data-modal]')); });
 
   el.btnExport.onclick = () => {
+    if (!isVip()) { vipOnly(); return; }
     el.expInfo.textContent = state.log.length
       ? `Có ${state.log.length} lượt hội thoại được lưu trên thiết bị này.`
       : 'Chưa có đoạn hội thoại nào để lưu.';
@@ -2033,6 +2068,77 @@
   renderGUsage();
   updateCounter();
   if (!SR) el.micHint.textContent = 'Trình duyệt chưa hỗ trợ nhận diện giọng nói - bạn vẫn có thể gõ văn bản';
+  // ----- Áp dụng quyền theo loại tài khoản và màn hình chọn tài khoản -----
+  const vipOnly = () => toast('Tính năng dành cho tài khoản VIP. Vào Cài đặt → Đổi tài khoản để đăng nhập VIP.');
+  function applyAcct() {
+    const vip = isVip();
+    if (!vip) { state.engine = 'mymemory'; state.ttsMode = 'device'; state.conf = false; }
+    el.btnExport.classList.toggle('hidden', !vip);
+    el.btnConf.classList.toggle('hidden', !vip);
+    el.chkConf.closest('label').classList.toggle('hidden', !vip);
+    el.chkConf.checked = state.conf;
+    el.selEngine.querySelector('option[value="google"]').disabled = !vip;
+    el.selTtsMode.querySelector('option[value="cloud"]').disabled = !vip;
+    el.acctName.textContent = vip ? 'VIP' + (state.acctUser ? ' (' + state.acctUser + ')' : '') : (state.acct === 'free' ? 'Miễn phí' : 'Chưa chọn');
+    el.freeNote.classList.toggle('hidden', vip);
+    renderGUsage(); syncAccentUI(); syncConfBtn();
+  }
+  function setAcct(type, user, tok) {
+    state.acct = type; state.acctUser = user || '';
+    store.set('acct', type); store.set('acctUser', user || ''); store.set('acctTok', tok || '');
+    if (type === 'vip') { // mặc định VIP: Google Cloud Translation + giọng WaveNet
+      state.engine = 'google'; state.ttsMode = 'cloud';
+      store.set('engine', 'google'); store.set('ttsMode', 'cloud');
+      state.gkey = store.get('gkey', '') || vipKey;
+      state.conf = store.get('conf', '0') === '1';
+      state.log = loadLog();
+      cache.clear();
+    } else { // mặc định Miễn phí: MyMemory + giọng thiết bị
+      state.log = [];
+    }
+    applyAcct(); renderAll();
+    el.gate.hidden = true;
+    toast(type === 'vip'
+      ? (state.gkey ? 'Đã đăng nhập tài khoản VIP' : 'Đã đăng nhập VIP. Vào Cài đặt để nhập Google API key')
+      : 'Đang dùng tài khoản Miễn phí');
+  }
+  el.gateFree.onclick = () => setAcct('free');
+  let gateFails = 0, gateLockUntil = 0;
+  el.gateForm.onsubmit = async e => {
+    e.preventDefault();
+    const err = t => { el.gateErr.textContent = t; };
+    err('');
+    const wait = gateLockUntil - Date.now();
+    if (wait > 0) { err('Nhập sai nhiều lần, vui lòng chờ ' + Math.ceil(wait / 1000) + ' giây'); return; }
+    const user = el.gateUser.value.trim(), pass = el.gatePass.value;
+    if (!user || !pass) { err('Vui lòng nhập tên đăng nhập và mật khẩu'); return; }
+    if (!vipAccounts.length) { err('Chưa có tài khoản VIP nào được cấp. Vui lòng liên hệ quản trị viên.'); return; }
+    if (!(window.crypto && crypto.subtle)) { err('Cần mở ứng dụng qua HTTPS để đăng nhập'); return; }
+    el.gateLogin.disabled = true;
+    try {
+      const h = await sha256Hex(`${VCFG.salt || ''}|${user.toLowerCase()}|${pass}`);
+      const ok = vipAccounts.find(a => a.user.toLowerCase() === user.toLowerCase() && a.hash.toLowerCase() === h);
+      el.gatePass.value = '';
+      if (!ok) {
+        if (++gateFails >= 5) { gateFails = 0; gateLockUntil = Date.now() + 30000; }
+        err('Sai tên đăng nhập hoặc mật khẩu');
+        return;
+      }
+      gateFails = 0;
+      setAcct('vip', ok.user, ok.hash);
+    } finally { el.gateLogin.disabled = false; }
+  };
+  el.btnSwitchAcct.onclick = () => {
+    ['acct', 'acctUser', 'acctTok'].forEach(k => store.set(k, ''));
+    location.reload();
+  };
+  {
+    const plan = ((window.APP_CONFIG && window.APP_CONFIG.plans) || []).find(p => p && p.name);
+    el.gatePlan.textContent = plan ? `Gói VIP: ${plan.name}${plan.price ? ' · ' + plan.price : ''}. Liên hệ để được cấp tài khoản.` : '';
+  }
+  applyAcct();
+  if (!state.acct && !(viewerRoomId && !new URLSearchParams(location.search).get('co'))) el.gate.hidden = false; // người xem qua QR không cần chọn tài khoản
+
   const coCode = new URLSearchParams(location.search).get('co');
   if (viewerRoomId && coCode) startCohost(viewerRoomId, coCode);
   else if (viewerRoomId) startViewer(viewerRoomId);

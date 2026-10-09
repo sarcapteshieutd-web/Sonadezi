@@ -96,6 +96,31 @@ Bộ đếm ký tự: khi dùng Google, ứng dụng đếm số ký tự đã g
 
 Cảnh báo bảo mật: khóa nhập trên trình duyệt chỉ lưu tại thiết bị đó, nhưng nếu dùng chung cho nhiều người thì nên đặt qua máy chủ trung gian (Netlify/Vercel Functions) để không lộ khóa.
 
+## 6b. Tài khoản Miễn phí và VIP
+Khi mở ứng dụng lần đầu (hoặc sau khi chọn *Cài đặt → Đổi tài khoản*), ứng dụng hiện màn hình chọn loại tài khoản. Lựa chọn được nhớ trên thiết bị.
+
+| | Miễn phí | VIP |
+|---|---|---|
+| Nguồn dịch | MyMemory (cố định) | Google Cloud Translation (mặc định) |
+| Giọng đọc | Giọng của thiết bị (cố định) | Google Cloud WaveNet (mặc định) |
+| Lưu và xuất đoạn chat | Không (chỉ giữ trong phiên đang mở) | Có |
+| Chế độ hội nghị | Không | Có |
+
+Người xem phòng họp qua mã QR không phải chọn tài khoản.
+
+**Cấp tài khoản VIP** (do quản trị viên thực hiện):
+1. Mở `translator/config.js`, đổi `vip.salt` thành một chuỗi ngẫu nhiên của riêng bạn (làm trước khi tạo tài khoản; đổi sau sẽ làm mọi tài khoản cũ mất hiệu lực).
+2. Mở tệp `translator/tao-tai-khoan.html` trực tiếp trên máy của bạn, nhập đúng `salt`, tên đăng nhập và mật khẩu, bấm *Tạo dòng khai báo*. Trang chạy trên máy, không gửi dữ liệu đi đâu.
+3. Dán dòng kết quả vào `vip.accounts` trong `config.js`, rồi đăng bản mới lên. Gửi tên đăng nhập và mật khẩu cho người dùng qua kênh riêng.
+4. Thu hồi: xóa dòng tài khoản khỏi `config.js` và đăng bản mới; lần mở tiếp theo thiết bị đó sẽ bị đưa về màn hình chọn tài khoản.
+5. Tùy chọn `vip.googleKey`: khóa Google dùng chung cho mọi tài khoản VIP. Để trống thì mỗi người tự nhập khóa trong Cài đặt.
+
+**Cảnh báo quan trọng về an toàn:**
+- Ứng dụng chạy hoàn toàn trên trình duyệt, nên phân quyền ở đây chỉ là cổng "mềm". Người rành kỹ thuật có thể đọc `config.js` hoặc chỉnh mã để vượt qua. Đừng coi đây là bảo mật thật.
+- Mã băm SHA-256 không có cơ chế làm chậm: nếu `config.js` bị xem, mật khẩu ngắn có thể bị dò. Hãy đặt mật khẩu dài (từ 12 ký tự), khó đoán.
+- Khóa đặt ở `vip.googleKey` nằm công khai trong mã trang web. Chỉ dùng khi đã giới hạn khóa theo tên miền (HTTP referrer), chỉ cho phép Cloud Translation và Cloud Text-to-Speech, và đã đặt ngân sách cảnh báo. Nếu cần bảo vệ khóa thật sự, nên dùng máy chủ trung gian giữ khóa và kiểm tra đăng nhập (ví dụ Firebase Authentication + Cloud Functions).
+- Nhập sai 5 lần sẽ bị khóa 30 giây ngay trên trình duyệt đó; đây chỉ là biện pháp làm khó, không ngăn được kẻ tấn công chủ động.
+
 ## 7. Giới hạn cần biết
 - **Nhận diện giọng nói** phụ thuộc trình duyệt: Chrome Android hoạt động tốt; Safari iOS (14.5 trở lên) hỗ trợ nhưng ổn định kém hơn, có thể ngắt sau thời gian im lặng. Firefox không hỗ trợ.
 - Trong ứng dụng đã cài trên iOS (chế độ standalone), nhận diện giọng nói có thể không khả dụng tùy phiên bản iOS; khi đó hãy dùng Safari. Tôi chưa kiểm thử trên thiết bị iOS thực tế nên không thể khẳng định.
