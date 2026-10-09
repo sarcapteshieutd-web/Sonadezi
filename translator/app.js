@@ -63,6 +63,7 @@
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
     selEngine: $('selEngine'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
     selTtsMode: $('selTtsMode'), boxDevVoice: $('boxDevVoice'), boxCloudVoice: $('boxCloudVoice'), inTtsKey: $('inTtsKey'), selCloudVoice: $('selCloudVoice'),
+    ttsDayN: $('ttsDayN'), ttsDayC: $('ttsDayC'), ttsMonN: $('ttsMonN'), ttsMonC: $('ttsMonC'), ttsFree: $('ttsFree'), ttsCost: $('ttsCost'), inTtsLimit: $('inTtsLimit'), ttsStatus: $('ttsStatus'), btnTtsReset: $('btnTtsReset'),
     inRate: $('inRate'), inPitch: $('inPitch'), lblRate: $('lblRate'), lblPitch: $('lblPitch'), btnTest: $('btnTest'), inEmail: $('inEmail'), inKey: $('inKey'),
     boxMM: $('boxMM'), boxGG: $('boxGG'), gUsage: $('gUsage'), gUsageBox: $('gUsageBox'), inGLimit: $('inGLimit'), chkGFallback: $('chkGFallback'), btnGReset: $('btnGReset'), btnSave: $('btnSave')
   };
@@ -81,6 +82,7 @@
     gkey: store.get('gkey', ''),
     ttsMode: store.get('ttsMode', 'device'), // nguồn giọng đọc: 'device' (miễn phí) hoặc 'cloud' (Google WaveNet)
     ttsKey: store.get('ttskey', ''),
+    ttsLimit: Math.max(0, parseInt(store.get('ttsLimit', '4000000'), 10) || 0), // giới hạn ký tự giọng Google mỗi tháng (0 = không giới hạn)
     gLimit: Math.max(0, parseInt(store.get('gLimit', '200000'), 10) || 0), // giới hạn ký tự Google mỗi ngày (0 = không giới hạn)
     gFallback: store.get('gFallback', '1') === '1', // đạt giới hạn: tự chuyển sang MyMemory
     auto: store.get('auto', '1') === '1',
@@ -167,16 +169,26 @@
       el.selSrcAcc.appendChild(o);
     }
     if (regs.length) el.selSrcAcc.value = sttLocale(state.src);
-    const list = 'speechSynthesis' in window ? voicesFor(state.tgt) : [];
+    // Giọng Google Cloud (khi bật) hoặc giọng thiết bị: cùng nguồn và cùng nơi lưu với phần Cài đặt
+    let list = 'speechSynthesis' in window ? voicesFor(state.tgt) : [], cloud = false, pending = false;
+    if (cloudOn()) {
+      const cl = cloudVoicesCached(state.tgt);
+      if (cl) { list = cl; cloud = true; }
+      else if (!cloudTried[state.tgt]) { // chưa có danh sách: tải một lần rồi vẽ lại; lỗi thì dùng giọng thiết bị
+        cloudTried[state.tgt] = true; pending = true;
+        cloudVoices(state.tgt).then(r => { if (r.length) syncAccentUI(); }).catch(() => {});
+      }
+    }
     const wrapT = el.selTgtVoice.parentElement;
-    wrapT.classList.toggle('hidden', !list.length);
+    wrapT.classList.toggle('hidden', pending || !list.length);
     el.selTgtVoice.innerHTML = '';
     for (const v of list) {
       const o = document.createElement('option');
-      o.value = v.name; o.textContent = `${v.name} (${v.lang.replace('_', '-')})`;
+      o.value = v.name;
+      o.textContent = cloud ? `${v.name} (${GENDER_VI[v.gender] || 'không rõ'})` : `${v.name} (${v.lang.replace('_', '-')})`;
       el.selTgtVoice.appendChild(o);
     }
-    if (list.length) el.selTgtVoice.value = (list.find(v => v.name === store.get('voice_' + state.tgt, '')) || list[0]).name;
+    if (list.length) el.selTgtVoice.value = (list.find(v => v.name === store.get((cloud ? 'cvoice_' : 'voice_') + state.tgt, '')) || list[0]).name;
     el.accRow.style.display = wrapS.classList.contains('hidden') && wrapT.classList.contains('hidden') ? 'none' : '';
   }
 
@@ -595,11 +607,46 @@
     if (list.length) { cloudVoiceCache[langKey] = list; store.set('cvl_' + langKey, JSON.stringify(list)); }
     return list;
   }
+  const cloudTried = {}; // ngôn ngữ đã thử tải danh sách giọng trong phiên này
+  function cloudVoicesCached(langKey) {
+    if (cloudVoiceCache[langKey]) return cloudVoiceCache[langKey];
+    try { const c = JSON.parse(store.get('cvl_' + langKey, 'null')); if (c && c.length) return (cloudVoiceCache[langKey] = c); } catch (_) {}
+    return null;
+  }
   async function cloudVoiceName(langKey) {
     const list = await cloudVoices(langKey);
     if (!list.length) return '';
     const saved = store.get('cvoice_' + langKey, '');
     return (list.find(v => v.name === saved) || list[0]).name;
+  }
+
+  // ----- Bảng đo giọng đọc Google (theo ngày và theo tháng, lưu trên thiết bị này; chỉ mang tính tham khảo) -----
+  const TTS_FREE_MONTH = 4000000; // hạn mức miễn phí WaveNet mỗi tháng theo bảng giá đã tra cứu, cần đối chiếu lại với Google
+  const TTS_USD_PER_M = 4;        // đơn giá WaveNet sau hạn mức miễn phí (USD cho 1 triệu ký tự)
+  function ttsUse() {
+    let u = null;
+    try { u = JSON.parse(store.get('ttsUsage', 'null')); } catch (_) {}
+    if (!u || typeof u !== 'object') u = {};
+    const d = todayKey(), m = d.slice(0, 7);
+    if (u.d !== d) { u.d = d; u.dn = 0; u.dc = 0; }
+    if (u.m !== m) { u.m = m; u.mn = 0; u.mc = 0; u.warned = false; }
+    return u;
+  }
+  function renderTtsUsage() {
+    if (!el.ttsMonN) return;
+    const u = ttsUse(), lim = state.ttsLimit;
+    const over = Math.max(0, u.mn - TTS_FREE_MONTH);
+    const cost = over * TTS_USD_PER_M / 1e6;
+    el.ttsDayN.textContent = fmtN(u.dn); el.ttsDayC.textContent = fmtN(u.dc);
+    el.ttsMonN.textContent = fmtN(u.mn); el.ttsMonC.textContent = fmtN(u.mc);
+    el.ttsFree.textContent = `${fmtN(Math.min(u.mn, TTS_FREE_MONTH))} / ${fmtN(TTS_FREE_MONTH)} (${Math.round(Math.min(u.mn, TTS_FREE_MONTH) * 100 / TTS_FREE_MONTH)}%)`;
+    el.ttsCost.textContent = over > 0 ? `khoảng ${cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD` : '0 USD (còn trong hạn mức miễn phí)';
+    const pct = lim > 0 ? Math.round(u.mn * 100 / lim) : 0;
+    const full = lim > 0 && u.mn >= lim;
+    el.ttsStatus.textContent = lim > 0 ? `Giới hạn tháng: ${fmtN(u.mn)} / ${fmtN(lim)} ký tự (${pct}%)${full ? ' · đã đạt giới hạn, đang dùng giọng thiết bị' : ''}` : 'Không đặt giới hạn tháng';
+    el.ttsStatus.classList.toggle('text-red-600', full);
+    el.ttsStatus.classList.toggle('text-amber-600', !full && pct >= 80);
+    el.ttsStatus.classList.toggle('text-slate-500', !full && pct < 80);
   }
 
   // Bộ nhớ đệm âm thanh (cùng câu, cùng giọng, cùng tốc độ thì không tính phí lần nữa)
@@ -609,6 +656,8 @@
     const pitch = Math.max(-20, Math.min(20, (state.pitch - 1) * 10));
     const ck = [voice, rate.toFixed(2), pitch.toFixed(1), text].join('|');
     if (audioCache.has(ck)) return audioCache.get(ck);
+    const lim = state.ttsLimit;
+    if (lim > 0 && ttsUse().mn + text.length > lim) { renderTtsUsage(); throw new Error('Đã đạt giới hạn ' + fmtN(lim) + ' ký tự giọng Google trong tháng'); }
     const body = {
       input: { text },
       voice: { languageCode: cloudLoc(langKey), name: voice },
@@ -616,6 +665,11 @@
     };
     const data = await ttsFetch('text:synthesize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, cloudKey());
     if (!data.audioContent) throw new Error('Không nhận được âm thanh');
+    const u = ttsUse(); // chỉ cộng khi Google trả kết quả thành công
+    u.dn += text.length; u.dc++; u.mn += text.length; u.mc++;
+    if (state.ttsLimit > 0 && !u.warned && u.mn >= state.ttsLimit * 0.8) { u.warned = true; toast('Đã dùng 80% giới hạn ký tự giọng Google trong tháng'); }
+    store.set('ttsUsage', JSON.stringify(u));
+    renderTtsUsage();
     const bin = atob(data.audioContent), bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
@@ -1307,7 +1361,7 @@
     if (wantListening && rec) { try { rec.abort(); } catch (_) {} } // tự nghe lại với vùng nói mới
   };
   el.selTgtVoice.onchange = () => {
-    store.set('voice_' + state.tgt, el.selTgtVoice.value);
+    store.set((cloudOn() && /-Wavenet-/i.test(el.selTgtVoice.value) ? 'cvoice_' : 'voice_') + state.tgt, el.selTgtVoice.value);
     speak(TEST_TEXT[state.tgt] || TEST_TEXT.en, state.tgt);
   };
   el.inRate.oninput = () => { el.lblRate.textContent = (+el.inRate.value).toFixed(2) + '×'; };
@@ -1331,7 +1385,9 @@
     el.selVoiceLang.value = state.tgt;
     fillVoices();
     el.selTtsMode.value = state.ttsMode;
+    el.selCloudVoice.innerHTML = '';
     el.inTtsKey.value = state.ttsKey; lastTtsKey = state.ttsKey;
+    el.inTtsLimit.value = String(state.ttsLimit); renderTtsUsage();
     el.inRate.value = state.rate; el.inRate.oninput();
     el.inPitch.value = state.pitch; el.inPitch.oninput();
     el.selEngine.value = state.engine;
@@ -1346,6 +1402,7 @@
   el.btnSheetClose.onclick = closeSheet;
   el.sheet.onclick = e => { if (e.target === el.sheet) closeSheet(); };
   el.selEngine.onchange = syncEngineBoxes;
+  el.btnTtsReset.onclick = () => { store.set('ttsUsage', 'null'); renderTtsUsage(); };
   el.btnGReset.onclick = () => { store.set('gUsage', JSON.stringify({ d: todayKey(), n: 0, warned: false })); renderGUsage(); };
   el.btnSave.onclick = () => {
     state.engine = el.selEngine.value;
@@ -1355,6 +1412,7 @@
     state.ttsMode = el.selTtsMode.value; state.ttsKey = el.inTtsKey.value.trim();
     if (state.ttsMode === 'cloud' && !state.ttsKey && !state.gkey) { toast('Vui lòng nhập API key Text-to-Speech (hoặc khóa Translation)'); return; }
     store.set('ttsMode', state.ttsMode); store.set('ttskey', state.ttsKey);
+    state.ttsLimit = Math.max(0, parseInt(el.inTtsLimit.value, 10) || 0); store.set('ttsLimit', String(state.ttsLimit));
     if (state.ttsMode === 'cloud' && /-Wavenet-/i.test(el.selCloudVoice.value)) store.set('cvoice_' + el.selVoiceLang.value, el.selCloudVoice.value);
     state.gLimit = Math.max(0, parseInt(el.inGLimit.value, 10) || 0); state.gFallback = el.chkGFallback.checked;
     store.set('gLimit', String(state.gLimit)); store.set('gFallback', state.gFallback ? '1' : '0');
@@ -1365,6 +1423,7 @@
     store.set('incr', state.incr ? '1' : '0'); store.set('cutMs', String(state.cutMs)); store.set('showLat', state.showLat ? '1' : '0');
     store.set('engine', state.engine); store.set('email', state.email); store.set('gkey', state.gkey);
     cache.clear(); renderGUsage();
+    Object.keys(cloudTried).forEach(k => delete cloudTried[k]); syncAccentUI(); // giọng đọc ngoài màn hình khớp với Cài đặt
     closeSheet(); toast('Đã lưu cài đặt'); translateNow();
   };
 
