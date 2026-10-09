@@ -66,6 +66,8 @@ Lưu ý: kho mã hiện có sẵn một ứng dụng khác ở thư mục gốc.
 - **iPhone (Safari):** mở link bằng **Safari** → nút **Chia sẻ** → **Thêm vào Màn hình chính**. iOS không có popup tự động nên ứng dụng hiển thị khung hướng dẫn.
 
 ## 5. Cách sử dụng
+- Khi mở ứng dụng có màn hình chờ khoảng 3 giây (vòng quỹ đạo xoay quanh logo Sonadezi Long Thành), chạm vào màn hình để vào ngay.
+- Người xem quét QR: bật "Đọc bản dịch bằng tai nghe" sẽ hiện mục *Giọng đọc* (thu gọn mặc định) để chọn giọng, tốc độ, độ cao và nghe thử.
 - Chọn cặp ngôn ngữ ở thanh trên hoặc bấm nhanh các nhãn *Anh → Việt*, *Trung → Việt*…; nút ⇄ đảo chiều và chuyển luôn bản dịch sang ô gốc.
 - Gõ văn bản: bản dịch cập nhật sau khoảng 0,45 giây kể từ lần gõ cuối.
 - Bấm micro lớn ở giữa để nói; vừa nói vừa dịch; bấm lần nữa để dừng, ứng dụng tự đọc bản dịch (tắt được bằng ô *Tự động đọc bản dịch*).
@@ -88,6 +90,8 @@ Mặc định ứng dụng đọc bằng giọng có sẵn trên thiết bị (m
 4. Chi phí theo bảng giá Google tại thời điểm tra cứu: WaveNet miễn phí 4 triệu ký tự/tháng, sau đó khoảng 4 USD cho 1 triệu ký tự. Vui lòng đối chiếu lại bảng giá hiện hành và đặt cảnh báo ngân sách (Budget alert) trong Google Cloud.
 5. Câu đã đọc được lưu tạm trong phiên làm việc để không bị tính phí lại khi bấm *Đọc lại*. Nếu gọi Google lỗi (mạng, khóa, hạn mức), ứng dụng báo lỗi và tự dùng giọng thiết bị.
 6. Danh sách giọng được lấy trực tiếp từ Google theo từng ngôn ngữ; nếu Google chưa có giọng WaveNet cho ngôn ngữ nào thì ngôn ngữ đó dùng giọng thiết bị.
+
+Bộ đếm ký tự: khi dùng Google, ứng dụng đếm số ký tự đã gửi dịch trong ngày và hiện dưới thanh ngôn ngữ (ví dụ "Google hôm nay: 12.345 / 200.000 ký tự"). Đặt giới hạn trong *Cài đặt* (0 = không giới hạn); đạt giới hạn thì tự chuyển sang MyMemory hoặc tạm dừng dịch tùy lựa chọn. Bộ đếm tính riêng trên từng thiết bị, chỉ mang tính tham khảo, không thay số liệu tính phí của Google; nên đặt thêm ngân sách cảnh báo trong Google Cloud (Billing → Budgets & alerts).
 
 Cảnh báo bảo mật: khóa nhập trên trình duyệt chỉ lưu tại thiết bị đó, nhưng nếu dùng chung cho nhiều người thì nên đặt qua máy chủ trung gian (Netlify/Vercel Functions) để không lộ khóa.
 

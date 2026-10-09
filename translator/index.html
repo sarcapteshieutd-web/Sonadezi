@@ -39,15 +39,55 @@
     body:not(.dual) #liveDual { display: none !important; }
     .dual #liveDual:not(.hidden) { display: grid; }
     .big #chatBar { display: none; }
+    /* Nút thoát màn hình lớn: chỉ hiện ở chế độ này (điện thoại không có phím ESC) */
+    #btnBigExit { display: none; position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px); right: 10px; z-index: 60; align-items: center; gap: 6px; border: 0; border-radius: 9999px; background: rgba(15, 23, 42, .75); color: #fff; padding: 9px 14px; font-size: 14px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+    .big #btnBigExit { display: inline-flex; }
     .big #inputRow, .big #langBar, .big #viewerBar { display: none; }
     /* Chế độ người xem: chỉ đọc */
     .viewer #btnDonate, .viewer #btnExport, .viewer #btnClearHist, .viewer #btnSettings, .viewer #btnInstall,
     .viewer #langBar, .viewer #dock, .viewer #meetingBar, .viewer #btnRoom { display: none !important; }
+    /* Màn hình chờ đầu phiên: vòng quỹ đạo xoay quanh logo khoảng 3 giây rồi mờ dần vào màn chính */
+    #splash { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: #fff; transition: opacity .35s ease-in; }
+    #splash.out { opacity: 0; pointer-events: none; }
+    #splash .sp-box { position: relative; width: 300px; height: 300px; display: flex; align-items: center; justify-content: center; }
+    #splash .sp-ring { position: absolute; inset: 0; width: 100%; height: 100%; }
+    #splash .sp-ring.a { animation: sp-orbit 1.1s linear infinite; }
+    #splash .sp-ring.b { animation: sp-orbit 1.7s linear infinite reverse; }
+    #splash .sp-logo { width: 190px; height: auto; animation: sp-in .45s ease-out both; }
+    #splash .sp-name { position: absolute; left: 0; right: 0; bottom: 64px; text-align: center; font-size: 13px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: #64748b; animation: sp-in .45s ease-out both; }
+    @keyframes sp-orbit { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes sp-in { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: scale(1); } }
+    @media (prefers-reduced-motion: reduce) { #splash .sp-ring, #splash .sp-logo, #splash .sp-name { animation: none; } }
     .rec-blink { animation: blink 1s ease-in-out infinite; }
   </style>
 </head>
 
 <body class="overflow-hidden bg-[#f3f6fb] text-slate-900">
+  <!-- Màn hình chờ -->
+  <div id="splash" role="img" aria-label="Sonadezi Long Thành">
+    <div class="sp-box">
+      <svg class="sp-ring a" viewBox="0 0 300 300" aria-hidden="true">
+        <circle cx="150" cy="150" r="140" fill="none" stroke="#dbe7f8" stroke-width="2"/>
+        <circle cx="150" cy="150" r="140" fill="none" stroke="#0d4792" stroke-width="4" stroke-linecap="round" stroke-dasharray="130 750"/>
+        <circle cx="150" cy="10" r="7" fill="#0d4792"/>
+      </svg>
+      <svg class="sp-ring b" viewBox="0 0 300 300" aria-hidden="true">
+        <circle cx="150" cy="150" r="122" fill="none" stroke="#8fb0e3" stroke-width="2" stroke-linecap="round" stroke-dasharray="60 700"/>
+        <circle cx="150" cy="28" r="4" fill="#8fb0e3"/>
+      </svg>
+      <img class="sp-logo" src="icons/logo-full.png" alt="" width="190" height="224" />
+    </div>
+    <div class="sp-name">Phiên dịch trực tuyến</div>
+  </div>
+  <script>
+    (function () {
+      var sp = document.getElementById('splash');
+      var gone = false;
+      function hide() { if (gone) return; gone = true; sp.classList.add('out'); setTimeout(function () { sp.remove(); }, 450); }
+      setTimeout(hide, 3000);
+      sp.addEventListener('click', hide);
+    })();
+  </script>
   <div id="app" class="mx-auto flex h-[100dvh] max-w-xl flex-col px-4 pt-[env(safe-area-inset-top)] lg:max-w-none lg:px-8">
 
     <!-- Thanh thương hiệu -->
@@ -99,6 +139,22 @@
         <input id="chkEar" type="checkbox" class="h-4 w-4 rounded border-slate-300">
         <span>Đọc bản dịch bằng tai nghe (chỉ đọc khi người nói dùng ngôn ngữ khác)</span>
       </label>
+      <div id="viewerVoice" class="hidden">
+        <button id="btnVoiceToggle" type="button" aria-expanded="false" class="mt-2 flex w-full items-center justify-between border-t border-slate-200 pt-2 text-sm font-semibold text-brand-700">
+          <span>Giọng đọc <span id="voiceSummary" class="font-normal text-slate-500"></span></span>
+          <svg id="voiceChevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transition: transform .15s"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div id="voiceBox" class="hidden">
+          <label for="selViewerVoice" class="mt-2 block text-sm text-slate-600">Giọng</label>
+          <select id="selViewerVoice" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2"></select>
+          <label class="mt-3 flex justify-between text-sm"><span>Tốc độ đọc</span><span id="lblVRate"></span></label>
+          <input id="inVRate" type="range" min="0.6" max="1.3" step="0.05" class="w-full accent-brand-600">
+          <label class="mt-2 flex justify-between text-sm"><span>Độ cao giọng</span><span id="lblVPitch"></span></label>
+          <input id="inVPitch" type="range" min="0.7" max="1.4" step="0.05" class="w-full accent-brand-600">
+          <button id="btnVTest" type="button" class="mt-3 w-full rounded-xl border border-brand-600 py-2 text-sm font-medium text-brand-600">Nghe thử</button>
+          <p class="mt-1 text-xs text-slate-500">Danh sách giọng phụ thuộc thiết bị.</p>
+        </div>
+      </div>
       <p id="viewerStatus" class="mt-1.5 text-xs text-slate-500"></p>
     </div>
 
@@ -111,6 +167,13 @@
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>
         </button>
         <select id="selTgt" aria-label="Ngôn ngữ đích" class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 text-center text-[0.9375rem] font-semibold text-brand-700"></select>
+      </div>
+      <p id="gUsage" class="mt-1.5 hidden text-center text-[0.6875rem] text-slate-500" aria-live="polite"></p>
+      <div id="accRow" class="mt-2 grid grid-cols-2 gap-2 text-xs">
+        <label class="min-w-0"><span class="block px-1 text-slate-500">Giọng nói vào</span>
+          <select id="selSrcAcc" aria-label="Giọng nói đầu vào" class="mt-0.5 w-full rounded-lg border border-slate-200 bg-slate-50 px-1 py-2 text-brand-700"></select></label>
+        <label class="min-w-0"><span class="block px-1 text-slate-500">Giọng đọc ra</span>
+          <select id="selTgtVoice" aria-label="Giọng đọc đầu ra" class="mt-0.5 w-full rounded-lg border border-slate-200 bg-slate-50 px-1 py-2 text-brand-700"></select></label>
       </div>
     </section>
 
@@ -131,6 +194,8 @@
       </div>
       <div class="text-[0.6875rem] text-red-600/80">Đổi người nói: bấm ⇄ hoặc phím Space.</div>
     </div>
+
+    <button id="btnBigExit" type="button" aria-label="Thoát màn hình lớn">✕ Thu nhỏ</button>
 
     <!-- Thanh công cụ khung chat -->
     <div id="chatBar" class="mt-2 flex shrink-0 items-center justify-end gap-1.5 lg:ml-auto lg:mt-0">
@@ -239,6 +304,11 @@
       <div id="boxGG" class="mt-3 hidden">
         <label class="block text-sm font-medium">Google Cloud Translation API key</label>
         <input id="inKey" type="password" autocomplete="off" placeholder="AIza…" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2" />
+        <label class="mt-3 block text-sm font-medium">Giới hạn ký tự Google mỗi ngày</label>
+        <input id="inGLimit" type="number" min="0" step="1000" inputmode="numeric" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2" />
+        <p class="mt-1 text-xs text-slate-500">Nhập 0 để không giới hạn. Bộ đếm tính theo ngày trên thiết bị này, chỉ mang tính tham khảo, không thay số liệu tính phí của Google.</p>
+        <label class="mt-2 flex items-center gap-2 text-sm"><input id="chkGFallback" type="checkbox" class="h-4 w-4 accent-brand-600" />Đạt giới hạn thì tự chuyển sang MyMemory (miễn phí)</label>
+        <div class="mt-2 flex items-center justify-between gap-2"><span id="gUsageBox" class="text-xs"></span><button id="btnGReset" type="button" class="shrink-0 rounded-lg border border-slate-300 px-2 py-1 text-xs">Đặt lại bộ đếm</button></div>
         <p class="mt-1 text-xs text-slate-500">Khóa chỉ lưu trên thiết bị này. Nên giới hạn khóa theo tên miền (HTTP referrer) trong Google Cloud Console.</p>
       </div>
       <div class="mt-5 border-t border-slate-200 pt-4">

@@ -9,7 +9,7 @@ window.APP_CONFIG = {
     // Ảnh mã QR chuyển khoản (ví dụ VietQR), đặt tệp trong thư mục translator/ rồi ghi đường dẫn, ví dụ 'donate-qr.png'
     qrImage: 'donate-qr.jpg',
     // Thông tin tài khoản nhận (hiển thị dạng chữ, có nút sao chép)
-    bank: { bankName: '', accountNumber: '', accountName: 'NGUYEN NGOC HIEU', note: 'Quét mã QR bằng ứng dụng ngân hàng hoặc ví điện tử (VietQR)' },
+    bank: { bankName: 'Vietcombank', accountNumber: '0481000844134', accountName: 'NGUYEN NGOC HIEU', note: 'Quét mã QR bằng ứng dụng ngân hàng hoặc ví điện tử (VietQR)' },
     // Liên kết thanh toán trực tuyến (PayPal.me, Buy Me a Coffee, liên kết thanh toán PayOS/Stripe, v.v.). Chỉ chấp nhận https://
     links: [
       // { label: 'Ủng hộ qua PayPal', url: 'https://paypal.me/...' }
@@ -18,6 +18,7 @@ window.APP_CONFIG = {
   // Gói sử dụng hiển thị cho người dùng chọn mua; url là trang thanh toán của từng gói
   plans: [
     // { name: 'Gói tháng', price: '99.000đ / tháng', description: 'Dịch không giới hạn', url: 'https://...' }
+    { name: 'VIP 1', price: '150.000đ / tháng', description: 'Gói VIP giúp bạn dịch mượt mà hơn và chất lượng dịch tốt hơn' }
   ],
   // Cải thiện nhận diện giọng nói
   recognition: {
@@ -26,9 +27,11 @@ window.APP_CONFIG = {
     // Từ điển sửa lỗi: gặp "variants" thì thay bằng "to". Không phân biệt hoa/thường, cần khớp nguyên cụm từ.
     // Các cách nghe sai dưới đây chỉ là ví dụ dự đoán; hãy bổ sung theo kết quả bạn thực sự thấy khi nói.
     glossary: [
-      { to: 'Sonadezi', variants: ['so na đê di', 'sô na đê di', 'sô na đề di', 'so na de di', 'sona dezi', 'sona đê di', 'sonadesi', 'sonadezy'] },
+      { to: 'Sonadezi', variants: ['suna daisy', 'so na đê di', 'sô na đê di', 'sô na đề di', 'so na de di', 'sona dezi', 'sona đê di', 'sonadesi', 'sonadezy'] },
       { to: 'KCN', variants: ['ka xê en', 'ca xê en', 'ka c n'] },
-      { to: 'Sonadezi Long Thành', variants: ['sonadezi long thanh'] }
+      { to: 'Sonadezi Long Thành', en: 'Sonadezi Long Thanh', variants: ['sonadezi long thanh', 'suna daisy long thing'] },
+      { to: 'Sonadezi Châu Đức', en: 'Sonadezi Chau Duc', variants: ['sonadezi chau duc', 'sonadezi châu đức'] },
+      { to: 'Tổng công ty Sonadezi', variants: ['tong cong ty sonadezi'] }
     ]
   },
   // Bảng thuật ngữ dịch: khi câu nói chứa cụm ở ngôn ngữ nguồn, bản dịch dùng đúng cụm ở ngôn ngữ đích.
@@ -37,6 +40,10 @@ window.APP_CONFIG = {
   // Hãy để phòng Pháp chế / phiên dịch kiểm tra và sửa trước khi dùng cho thương thảo hợp đồng.
   // Tên tiếng Trung chính thức của các khu công nghiệp để trống, hãy điền tên công ty đang sử dụng.
   terms: [
+    // Tên công ty (do người dùng cung cấp)
+    { vi: 'Tổng công ty Sonadezi', en: 'Sonadezi Company', zh: '' },
+    { vi: 'Sonadezi Châu Đức', en: 'Sonadezi Chau Duc', zh: '' },
+    { vi: 'Sonadezi Long Thành', en: 'Sonadezi Long Thanh', zh: '' },
     // Dự án
     { vi: 'Khu công nghiệp Long Thành', en: 'Long Thanh Industrial Park', zh: '' },
     { vi: 'Khu công nghiệp Châu Đức', en: 'Chau Duc Industrial Park', zh: '' },
@@ -82,7 +89,7 @@ window.APP_CONFIG = {
   },
   room: {
     ttlHours: 24,           // phòng tự hết hạn sau số giờ này (1 đến 24)
-    liveIntervalMs: 800,    // chu kỳ tối thiểu (ms) khi đẩy bản "đang nói" lên phòng; nhỏ hơn = mượt hơn nhưng tốn lượt ghi
+    liveIntervalMs: 650,    // chu kỳ tối thiểu (ms) khi đẩy bản "đang nói" lên phòng; nhỏ hơn = mượt hơn nhưng tốn lượt ghi
     maxExtraLanguages: 3    // số ngôn ngữ phụ tối đa được dịch thêm cho người xem (mỗi ngôn ngữ phụ tốn thêm chi phí dịch)
   },
 };
