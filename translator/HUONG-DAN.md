@@ -105,21 +105,30 @@ Khi mở ứng dụng lần đầu (hoặc sau khi chọn *Cài đặt → Đổ
 | Giọng đọc | Giọng của thiết bị (cố định) | Google Cloud WaveNet (mặc định) |
 | Lưu và xuất đoạn chat | Không (chỉ giữ trong phiên đang mở) | Có |
 | Chế độ hội nghị | Không | Có |
+| Thời gian dùng | Không giới hạn | Theo tháng, quản trị viên cấp và gia hạn |
 
 Người xem phòng họp qua mã QR không phải chọn tài khoản.
 
-**Cấp tài khoản VIP** (do quản trị viên thực hiện):
-1. Mở `translator/config.js`, đổi `vip.salt` thành một chuỗi ngẫu nhiên của riêng bạn (làm trước khi tạo tài khoản; đổi sau sẽ làm mọi tài khoản cũ mất hiệu lực).
-2. Mở tệp `translator/tao-tai-khoan.html` trực tiếp trên máy của bạn, nhập đúng `salt`, tên đăng nhập và mật khẩu, bấm *Tạo dòng khai báo*. Trang chạy trên máy, không gửi dữ liệu đi đâu.
-3. Dán dòng kết quả vào `vip.accounts` trong `config.js`, rồi đăng bản mới lên. Gửi tên đăng nhập và mật khẩu cho người dùng qua kênh riêng.
-4. Thu hồi: xóa dòng tài khoản khỏi `config.js` và đăng bản mới; lần mở tiếp theo thiết bị đó sẽ bị đưa về màn hình chọn tài khoản.
-5. Tùy chọn `vip.googleKey`: khóa Google dùng chung cho mọi tài khoản VIP. Để trống thì mỗi người tự nhập khóa trong Cài đặt.
+### Dành cho người dùng VIP
+1. Ở màn hình chọn tài khoản, chọn **Đăng ký tài khoản VIP**, nhập họ tên, email và mật khẩu (tối thiểu 8 ký tự).
+2. Màn hình **chờ duyệt** hiện thông tin thanh toán (gói, ngân hàng, mã QR, nội dung chuyển khoản là email của bạn). Chuyển khoản theo hướng dẫn rồi chờ quản trị viên cấp quyền.
+3. Khi quản trị viên duyệt, màn hình tự cập nhật và bạn vào luôn bản VIP. Có thể bấm **Dùng bản Miễn phí tạm thời** trong lúc chờ.
+4. *Cài đặt* hiển thị **số ngày còn lại** của gói, ngày hết hạn và mức bạn đã dùng trong tháng. Còn 3 ngày trở xuống, ứng dụng nhắc gia hạn.
+5. Hết hạn hoặc bị khóa: ứng dụng tự chuyển về bản Miễn phí. Gia hạn bằng cách thanh toán và báo quản trị viên; được gia hạn là tự lên lại VIP, không cần đăng nhập lại.
+6. Quên mật khẩu: nhập email vào ô đăng nhập rồi bấm **Quên mật khẩu** để nhận thư đặt lại.
 
-**Cảnh báo quan trọng về an toàn:**
-- Ứng dụng chạy hoàn toàn trên trình duyệt, nên phân quyền ở đây chỉ là cổng "mềm". Người rành kỹ thuật có thể đọc `config.js` hoặc chỉnh mã để vượt qua. Đừng coi đây là bảo mật thật.
-- Mã băm SHA-256 không có cơ chế làm chậm: nếu `config.js` bị xem, mật khẩu ngắn có thể bị dò. Hãy đặt mật khẩu dài (từ 12 ký tự), khó đoán.
-- Khóa đặt ở `vip.googleKey` nằm công khai trong mã trang web. Chỉ dùng khi đã giới hạn khóa theo tên miền (HTTP referrer), chỉ cho phép Cloud Translation và Cloud Text-to-Speech, và đã đặt ngân sách cảnh báo. Nếu cần bảo vệ khóa thật sự, nên dùng máy chủ trung gian giữ khóa và kiểm tra đăng nhập (ví dụ Firebase Authentication + Cloud Functions).
-- Nhập sai 5 lần sẽ bị khóa 30 giây ngay trên trình duyệt đó; đây chỉ là biện pháp làm khó, không ngăn được kẻ tấn công chủ động.
+### Dành cho quản trị viên
+Thiết lập một lần (chi tiết ở `docs/FIREBASE-SETUP.md`, mục "Tài khoản VIP và quản trị"): bật đăng nhập Email/Mật khẩu, dán lại quy tắc bảo mật, rồi cấp quyền quản trị cho tài khoản của bạn bằng **mã tài khoản (UID)** hiển thị trong ứng dụng.
+
+Sau đó, trong *Cài đặt → Quản trị tài khoản và hạn mức*:
+- **Duyệt 1 tháng** cho người chờ duyệt; **Gia hạn +1 tháng** (cộng thêm từ ngày hết hạn nếu còn hạn, hoặc từ hôm nay nếu đã hết hạn); **Khóa / Mở khóa**; **Xóa** hồ sơ.
+- **Hạn mức Google tháng này:** tổng số ký tự dịch và đọc do các thiết bị VIP báo về, so với hạn mức bạn đặt. Số liệu do thiết bị tự báo nên chỉ mang tính tham khảo; số liệu và chi phí chính xác xem tại Google Cloud Console (Billing, APIs & Services → Quotas).
+- **Khóa Google dùng chung:** nhập một lần, VIP còn hạn tự nhận khóa này (khóa chỉ được máy chủ trả cho VIP còn hạn và quản trị viên). VIP vẫn có thể tự nhập khóa riêng trong Cài đặt.
+
+**Giới hạn cần biết về an toàn:**
+- Việc **cấp khóa Google** được máy chủ kiểm soát thật sự theo trạng thái và hạn dùng, nhưng khi VIP đã nhận khóa thì khóa nằm trong trình duyệt của họ, nên người có kỹ thuật vẫn có thể lấy ra. Hãy giới hạn khóa theo tên miền và theo API, đặt ngân sách cảnh báo, và **đổi khóa định kỳ** (đặc biệt khi có người hết hạn).
+- Các tính năng cục bộ (xuất chat, chế độ hội nghị) được khóa ở giao diện và trong mã ứng dụng, nhưng chạy trên trình duyệt nên người rành kỹ thuật có thể vượt qua; chúng không tốn chi phí Google.
+- Số liệu sử dụng và nhật ký hồ sơ (email, họ tên, hạn dùng) được lưu trên Firebase; hãy đối chiếu quy định bảo mật dữ liệu của công ty.
 
 ## 7. Giới hạn cần biết
 - **Nhận diện giọng nói** phụ thuộc trình duyệt: Chrome Android hoạt động tốt; Safari iOS (14.5 trở lên) hỗ trợ nhưng ổn định kém hơn, có thể ngắt sau thời gian im lặng. Firefox không hỗ trợ.

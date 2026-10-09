@@ -79,6 +79,15 @@
     #gate .gt-btn:disabled { opacity: .6; cursor: default; }
     #gate .gt-err { margin: .5rem 0 0; min-height: 1.1em; font-size: .8125rem; color: #dc2626; }
     #gate .gt-plan { margin-top: 1rem; font-size: .75rem; color: #64748b; }
+    #gate form[hidden], #gate #gateStatus[hidden] { display: none; }
+    #gate .gt-links { margin: .6rem 0 0; font-size: .8125rem; color: #64748b; text-align: center; }
+    #gate .gt-link { background: none; border: 0; padding: 0; font: inherit; color: #0d4792; text-decoration: underline; cursor: pointer; }
+    #gate .gt-btn2 { background: #fff; color: #0d4792; border: 1px solid #0d4792; }
+    #gate .gs-title { margin: .75rem 0 .25rem; font-weight: 700; color: #0f172a; }
+    #gate .gs-text { margin: 0; font-size: .8125rem; color: #334155; }
+    #gate .gs-pay { margin-top: .75rem; padding: .75rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .75rem; font-size: .8125rem; color: #334155; }
+    #gate .gs-pay img { display: block; width: 11rem; max-width: 100%; height: auto; margin: .5rem auto 0; border-radius: .5rem; }
+    #gate .gs-pay code { word-break: break-all; }
     .rec-blink { animation: blink 1s ease-in-out infinite; }
   </style>
 </head>
@@ -123,13 +132,31 @@
       <div class="gt-card vip">
         <b>Tài khoản VIP</b>
         <span class="gt-line">Google Cloud Translation · Giọng Google WaveNet</span>
-        <span class="gt-small">Lưu và xuất được đoạn chat · Có chế độ hội nghị</span>
+        <span class="gt-small">Lưu và xuất được đoạn chat · Có chế độ hội nghị · Dùng theo tháng, quản trị viên cấp quyền sau khi thanh toán</span>
         <form id="gateForm" autocomplete="on">
-          <input id="gateUser" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Tên đăng nhập" aria-label="Tên đăng nhập" />
+          <input id="gateEmail" name="email" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Email" aria-label="Email" />
           <input id="gatePass" name="password" type="password" autocomplete="current-password" placeholder="Mật khẩu" aria-label="Mật khẩu" />
           <p id="gateErr" class="gt-err" role="alert"></p>
           <button id="gateLogin" type="submit" class="gt-btn">Đăng nhập VIP</button>
+          <p class="gt-links"><button type="button" id="gateToReg" class="gt-link">Đăng ký tài khoản VIP</button> · <button type="button" id="gateForgot" class="gt-link">Quên mật khẩu</button></p>
         </form>
+        <form id="regForm" hidden autocomplete="on">
+          <input id="regName" name="name" autocomplete="name" placeholder="Họ và tên" aria-label="Họ và tên" />
+          <input id="regEmail" name="email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="Email" aria-label="Email" />
+          <input id="regPass" name="password" type="password" autocomplete="new-password" placeholder="Mật khẩu (tối thiểu 8 ký tự)" aria-label="Mật khẩu" />
+          <input id="regPass2" name="password2" type="password" autocomplete="new-password" placeholder="Nhập lại mật khẩu" aria-label="Nhập lại mật khẩu" />
+          <p id="regErr" class="gt-err" role="alert"></p>
+          <button id="regSubmit" type="submit" class="gt-btn">Đăng ký</button>
+          <p class="gt-links"><button type="button" id="regToLogin" class="gt-link">Đã có tài khoản? Đăng nhập</button></p>
+        </form>
+        <div id="gateStatus" hidden>
+          <p id="gsTitle" class="gs-title"></p>
+          <p id="gsText" class="gs-text"></p>
+          <div id="gsPay" class="gs-pay"></div>
+          <button id="gsRecheck" type="button" class="gt-btn">Kiểm tra lại</button>
+          <button id="gsFree" type="button" class="gt-btn gt-btn2">Dùng bản Miễn phí tạm thời</button>
+          <p class="gt-links"><button type="button" id="gsLogout" class="gt-link">Đăng xuất</button></p>
+        </div>
       </div>
       <p id="gatePlan" class="gt-plan"></p>
     </div>
@@ -343,6 +370,12 @@
           <span class="text-sm">Tài khoản: <b id="acctName"></b></span>
           <button id="btnSwitchAcct" type="button" class="shrink-0 rounded-lg border border-slate-300 px-2 py-1 text-xs">Đổi tài khoản</button>
         </div>
+        <p id="acctMeta" class="mt-1 hidden text-xs text-slate-600"></p>
+        <div id="acctUidRow" class="mt-1 hidden items-center justify-between gap-2 text-xs text-slate-500">
+          <span>Mã tài khoản: <code id="acctUid" class="break-all"></code></span>
+          <button id="btnCopyUid" type="button" class="shrink-0 rounded border border-slate-300 px-1.5 py-0.5">Sao chép</button>
+        </div>
+        <button id="btnAdmin" type="button" class="mt-2 hidden w-full rounded-lg border border-brand-600 py-1.5 text-sm font-medium text-brand-600">Quản trị tài khoản và hạn mức</button>
         <p id="freeNote" class="mt-1 hidden text-xs text-slate-500">Tài khoản Miễn phí dùng MyMemory và giọng của thiết bị, không lưu/xuất đoạn chat, không có chế độ hội nghị. Chọn "Đổi tài khoản" để đăng nhập VIP.</p>
       </div>
       <label class="block text-sm font-medium">Nguồn dịch</label>
@@ -438,6 +471,17 @@
       <button id="expTxt" class="w-full rounded-xl bg-brand-600 py-2.5 font-medium text-white">Tải tệp văn bản (.txt)</button>
       <button id="expCsv" class="mt-2 w-full rounded-xl border border-brand-600 py-2.5 font-medium text-brand-600">Tải tệp Excel (.csv)</button>
       <button id="expShare" class="mt-2 hidden w-full rounded-xl border border-slate-300 py-2.5 font-medium text-slate-700">Chia sẻ…</button>
+    </div>
+  </div>
+
+  <!-- Quản trị tài khoản và hạn mức Google -->
+  <div id="sheetAdmin" data-modal class="fixed inset-0 z-20 hidden items-end bg-black/40 sm:items-center sm:justify-center">
+    <div class="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl bg-white p-5 pb-[max(env(safe-area-inset-bottom),1.25rem)] sm:rounded-2xl">
+      <div class="mb-2 flex items-center justify-between">
+        <h2 class="text-base font-semibold">Quản trị tài khoản và hạn mức</h2>
+        <button data-close class="px-2 text-2xl leading-none" aria-label="Đóng">×</button>
+      </div>
+      <div id="adminBody"></div>
     </div>
   </div>
 
