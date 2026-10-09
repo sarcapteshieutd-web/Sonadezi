@@ -164,7 +164,7 @@
       el.selSrcAcc.appendChild(o);
     }
     if (regs.length) el.selSrcAcc.value = sttLocale(state.src);
-    const list = typeof voicesFor === 'function' && 'speechSynthesis' in window ? voicesFor(state.tgt) : [];
+    const list = 'speechSynthesis' in window ? voicesFor(state.tgt) : [];
     const wrapT = el.selTgtVoice.parentElement;
     wrapT.classList.toggle('hidden', !list.length);
     el.selTgtVoice.innerHTML = '';
