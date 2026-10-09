@@ -58,6 +58,27 @@
     @keyframes sp-orbit { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     @keyframes sp-in { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: scale(1); } }
     @media (prefers-reduced-motion: reduce) { #splash .sp-ring, #splash .sp-logo, #splash .sp-name { animation: none; } }
+    /* Màn hình chọn loại tài khoản (hiện sau màn hình chờ) */
+    #gate { position: fixed; inset: 0; z-index: 40; display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; background: #f3f6fb; padding: max(env(safe-area-inset-top), 1rem) 1rem 2rem; }
+    #gate[hidden] { display: none; }
+    #gate .gt-box { width: 100%; max-width: 30rem; margin: auto; text-align: center; }
+    #gate .gt-logo { height: 84px; width: auto; margin: .5rem auto 0; }
+    #gate h2 { margin: .75rem 0 .25rem; font-size: 1.15rem; font-weight: 700; color: #0d4792; }
+    #gate .gt-sub { margin: 0 0 1rem; font-size: .8125rem; color: #64748b; }
+    #gate .gt-card { display: block; width: 100%; margin-top: .75rem; padding: 1rem; text-align: left; background: #fff; border: 1px solid #dbe3ef; border-radius: 1rem; box-shadow: 0 1px 2px rgba(15,23,42,.05); color: #0f172a; font: inherit; }
+    #gate button.gt-card { cursor: pointer; }
+    #gate button.gt-card:hover, #gate button.gt-card:focus-visible { border-color: #0d4792; outline: none; box-shadow: 0 0 0 3px rgba(13,71,146,.15); }
+    #gate .gt-card.vip { border-color: #0d4792; background: linear-gradient(180deg, #f5f9ff, #fff); }
+    #gate .gt-card b { display: block; font-size: 1rem; color: #0d4792; }
+    #gate .gt-card .gt-line { display: block; margin-top: .3rem; font-size: .8125rem; color: #334155; }
+    #gate .gt-card .gt-small { display: block; margin-top: .15rem; font-size: .75rem; color: #64748b; }
+    #gate form { margin-top: .75rem; }
+    #gate input { display: block; width: 100%; box-sizing: border-box; margin-top: .5rem; padding: .6rem .75rem; border: 1px solid #cbd5e1; border-radius: .6rem; font: inherit; font-size: 1rem; background: #fff; }
+    #gate input:focus { outline: none; border-color: #0d4792; box-shadow: 0 0 0 3px rgba(13,71,146,.15); }
+    #gate .gt-btn { display: block; width: 100%; margin-top: .75rem; padding: .7rem; border: 0; border-radius: .7rem; background: #0d4792; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+    #gate .gt-btn:disabled { opacity: .6; cursor: default; }
+    #gate .gt-err { margin: .5rem 0 0; min-height: 1.1em; font-size: .8125rem; color: #dc2626; }
+    #gate .gt-plan { margin-top: 1rem; font-size: .75rem; color: #64748b; }
     .rec-blink { animation: blink 1s ease-in-out infinite; }
   </style>
 </head>
@@ -88,6 +109,32 @@
       sp.addEventListener('click', hide);
     })();
   </script>
+  <!-- Chọn loại tài khoản -->
+  <div id="gate" hidden role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+    <div class="gt-box">
+      <img class="gt-logo" src="icons/logo-full.png" alt="Sonadezi Long Thành" width="72" height="84" />
+      <h2 id="gateTitle">Chọn loại tài khoản</h2>
+      <p class="gt-sub">Phiên dịch trực tuyến Sonadezi Long Thành</p>
+      <button type="button" id="gateFree" class="gt-card">
+        <b>Tài khoản Miễn phí</b>
+        <span class="gt-line">Dịch bằng MyMemory · Giọng đọc của thiết bị</span>
+        <span class="gt-small">Không lưu và không xuất được đoạn chat · Không có chế độ hội nghị</span>
+      </button>
+      <div class="gt-card vip">
+        <b>Tài khoản VIP</b>
+        <span class="gt-line">Google Cloud Translation · Giọng Google WaveNet</span>
+        <span class="gt-small">Lưu và xuất được đoạn chat · Có chế độ hội nghị</span>
+        <form id="gateForm" autocomplete="on">
+          <input id="gateUser" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Tên đăng nhập" aria-label="Tên đăng nhập" />
+          <input id="gatePass" name="password" type="password" autocomplete="current-password" placeholder="Mật khẩu" aria-label="Mật khẩu" />
+          <p id="gateErr" class="gt-err" role="alert"></p>
+          <button id="gateLogin" type="submit" class="gt-btn">Đăng nhập VIP</button>
+        </form>
+      </div>
+      <p id="gatePlan" class="gt-plan"></p>
+    </div>
+  </div>
+
   <div id="app" class="mx-auto flex h-[100dvh] max-w-xl flex-col px-4 pt-[env(safe-area-inset-top)] lg:max-w-none lg:px-8">
 
     <!-- Thanh thương hiệu -->
@@ -290,6 +337,13 @@
       <div class="mb-3 flex items-center justify-between">
         <h2 class="text-base font-semibold">Cài đặt dịch thuật</h2>
         <button id="btnSheetClose" class="px-2 text-2xl leading-none" aria-label="Đóng">×</button>
+      </div>
+      <div class="mb-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-sm">Tài khoản: <b id="acctName"></b></span>
+          <button id="btnSwitchAcct" type="button" class="shrink-0 rounded-lg border border-slate-300 px-2 py-1 text-xs">Đổi tài khoản</button>
+        </div>
+        <p id="freeNote" class="mt-1 hidden text-xs text-slate-500">Tài khoản Miễn phí dùng MyMemory và giọng của thiết bị, không lưu/xuất đoạn chat, không có chế độ hội nghị. Chọn "Đổi tài khoản" để đăng nhập VIP.</p>
       </div>
       <label class="block text-sm font-medium">Nguồn dịch</label>
       <select id="selEngine" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2">
