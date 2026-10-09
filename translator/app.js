@@ -169,16 +169,26 @@
       el.selSrcAcc.appendChild(o);
     }
     if (regs.length) el.selSrcAcc.value = sttLocale(state.src);
-    const list = 'speechSynthesis' in window ? voicesFor(state.tgt) : [];
+    // Giọng Google Cloud (khi bật) hoặc giọng thiết bị: cùng nguồn và cùng nơi lưu với phần Cài đặt
+    let list = 'speechSynthesis' in window ? voicesFor(state.tgt) : [], cloud = false, pending = false;
+    if (cloudOn()) {
+      const cl = cloudVoicesCached(state.tgt);
+      if (cl) { list = cl; cloud = true; }
+      else if (!cloudTried[state.tgt]) { // chưa có danh sách: tải một lần rồi vẽ lại; lỗi thì dùng giọng thiết bị
+        cloudTried[state.tgt] = true; pending = true;
+        cloudVoices(state.tgt).then(r => { if (r.length) syncAccentUI(); }).catch(() => {});
+      }
+    }
     const wrapT = el.selTgtVoice.parentElement;
-    wrapT.classList.toggle('hidden', !list.length);
+    wrapT.classList.toggle('hidden', pending || !list.length);
     el.selTgtVoice.innerHTML = '';
     for (const v of list) {
       const o = document.createElement('option');
-      o.value = v.name; o.textContent = `${v.name} (${v.lang.replace('_', '-')})`;
+      o.value = v.name;
+      o.textContent = cloud ? `${v.name} (${GENDER_VI[v.gender] || 'không rõ'})` : `${v.name} (${v.lang.replace('_', '-')})`;
       el.selTgtVoice.appendChild(o);
     }
-    if (list.length) el.selTgtVoice.value = (list.find(v => v.name === store.get('voice_' + state.tgt, '')) || list[0]).name;
+    if (list.length) el.selTgtVoice.value = (list.find(v => v.name === store.get((cloud ? 'cvoice_' : 'voice_') + state.tgt, '')) || list[0]).name;
     el.accRow.style.display = wrapS.classList.contains('hidden') && wrapT.classList.contains('hidden') ? 'none' : '';
   }
 
@@ -596,6 +606,12 @@
       .sort((a, b) => a.name.localeCompare(b.name));
     if (list.length) { cloudVoiceCache[langKey] = list; store.set('cvl_' + langKey, JSON.stringify(list)); }
     return list;
+  }
+  const cloudTried = {}; // ngôn ngữ đã thử tải danh sách giọng trong phiên này
+  function cloudVoicesCached(langKey) {
+    if (cloudVoiceCache[langKey]) return cloudVoiceCache[langKey];
+    try { const c = JSON.parse(store.get('cvl_' + langKey, 'null')); if (c && c.length) return (cloudVoiceCache[langKey] = c); } catch (_) {}
+    return null;
   }
   async function cloudVoiceName(langKey) {
     const list = await cloudVoices(langKey);
@@ -1345,7 +1361,7 @@
     if (wantListening && rec) { try { rec.abort(); } catch (_) {} } // tự nghe lại với vùng nói mới
   };
   el.selTgtVoice.onchange = () => {
-    store.set('voice_' + state.tgt, el.selTgtVoice.value);
+    store.set((cloudOn() && /-Wavenet-/i.test(el.selTgtVoice.value) ? 'cvoice_' : 'voice_') + state.tgt, el.selTgtVoice.value);
     speak(TEST_TEXT[state.tgt] || TEST_TEXT.en, state.tgt);
   };
   el.inRate.oninput = () => { el.lblRate.textContent = (+el.inRate.value).toFixed(2) + '×'; };
@@ -1369,6 +1385,7 @@
     el.selVoiceLang.value = state.tgt;
     fillVoices();
     el.selTtsMode.value = state.ttsMode;
+    el.selCloudVoice.innerHTML = '';
     el.inTtsKey.value = state.ttsKey; lastTtsKey = state.ttsKey;
     el.inTtsLimit.value = String(state.ttsLimit); renderTtsUsage();
     el.inRate.value = state.rate; el.inRate.oninput();
@@ -1406,6 +1423,7 @@
     store.set('incr', state.incr ? '1' : '0'); store.set('cutMs', String(state.cutMs)); store.set('showLat', state.showLat ? '1' : '0');
     store.set('engine', state.engine); store.set('email', state.email); store.set('gkey', state.gkey);
     cache.clear(); renderGUsage();
+    Object.keys(cloudTried).forEach(k => delete cloudTried[k]); syncAccentUI(); // giọng đọc ngoài màn hình khớp với Cài đặt
     closeSheet(); toast('Đã lưu cài đặt'); translateNow();
   };
 
