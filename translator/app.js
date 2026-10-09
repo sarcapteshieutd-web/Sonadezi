@@ -62,6 +62,7 @@
     chkIncr: $('chkIncr'), selCut: $('selCut'), chkLat: $('chkLat'),
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
     selEngine: $('selEngine'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
+    selTtsMode: $('selTtsMode'), boxDevVoice: $('boxDevVoice'), boxCloudVoice: $('boxCloudVoice'), inTtsKey: $('inTtsKey'), selCloudVoice: $('selCloudVoice'),
     inRate: $('inRate'), inPitch: $('inPitch'), lblRate: $('lblRate'), lblPitch: $('lblPitch'), btnTest: $('btnTest'), inEmail: $('inEmail'), inKey: $('inKey'),
     boxMM: $('boxMM'), boxGG: $('boxGG'), gUsage: $('gUsage'), gUsageBox: $('gUsageBox'), inGLimit: $('inGLimit'), chkGFallback: $('chkGFallback'), btnGReset: $('btnGReset'), btnSave: $('btnSave')
   };
@@ -78,6 +79,8 @@
     engine: store.get('engine', 'mymemory'),
     email: store.get('email', ''),
     gkey: store.get('gkey', ''),
+    ttsMode: store.get('ttsMode', 'device'), // nguồn giọng đọc: 'device' (miễn phí) hoặc 'cloud' (Google WaveNet)
+    ttsKey: store.get('ttskey', ''),
     gLimit: Math.max(0, parseInt(store.get('gLimit', '200000'), 10) || 0), // giới hạn ký tự Google mỗi ngày (0 = không giới hạn)
     gFallback: store.get('gFallback', '1') === '1', // đạt giới hạn: tự chuyển sang MyMemory
     auto: store.get('auto', '1') === '1',
@@ -561,15 +564,130 @@
     return out;
   }
 
-  function speak(text, langKey) {
+  // ---------- Giọng đọc Google Cloud Text-to-Speech (WaveNet) ----------
+  // Chỉ dùng khi người dùng bật trong Cài đặt. Lỗi bất kỳ (mạng, khóa, hạn mức) thì tự quay về giọng thiết bị.
+  const TTS_API = 'https://texttospeech.googleapis.com/v1/';
+  const CLOUD_LOC = { zh: 'cmn-CN', zht: 'cmn-TW' }; // Google gọi tiếng Quan Thoại là cmn
+  const GENDER_VI = { FEMALE: 'nữ', MALE: 'nam' };
+  const cloudLoc = k => CLOUD_LOC[k] || LANGS[k].tts;
+  const cloudKey = () => state.ttsKey || state.gkey;
+  const cloudOn = () => state.ttsMode === 'cloud' && !!cloudKey();
+
+  async function ttsFetch(path, opts, key) {
+    const res = await fetch(TTS_API + path + (path.includes('?') ? '&' : '?') + 'key=' + encodeURIComponent(key), opts);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data.error && data.error.message) || ('HTTP ' + res.status));
+    return data;
+  }
+
+  // Danh sách giọng WaveNet của một ngôn ngữ (miễn phí khi gọi danh sách). Nhớ lại trên thiết bị để không gọi lại.
+  const cloudVoiceCache = {};
+  async function cloudVoices(langKey, keyOverride) {
+    if (cloudVoiceCache[langKey]) return cloudVoiceCache[langKey];
+    try { const c = JSON.parse(store.get('cvl_' + langKey, 'null')); if (c && c.length) return (cloudVoiceCache[langKey] = c); } catch (_) {}
+    const key = keyOverride || cloudKey();
+    if (!key) return [];
+    const data = await ttsFetch('voices?languageCode=' + encodeURIComponent(cloudLoc(langKey)), {}, key);
+    const list = (data.voices || [])
+      .filter(v => /-Wavenet-/i.test(v.name))
+      .map(v => ({ name: v.name, gender: v.ssmlGender }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    if (list.length) { cloudVoiceCache[langKey] = list; store.set('cvl_' + langKey, JSON.stringify(list)); }
+    return list;
+  }
+  async function cloudVoiceName(langKey) {
+    const list = await cloudVoices(langKey);
+    if (!list.length) return '';
+    const saved = store.get('cvoice_' + langKey, '');
+    return (list.find(v => v.name === saved) || list[0]).name;
+  }
+
+  // Bộ nhớ đệm âm thanh (cùng câu, cùng giọng, cùng tốc độ thì không tính phí lần nữa)
+  const audioCache = new Map();
+  async function cloudAudioUrl(text, langKey, voice) {
+    const rate = Math.min(2, state.rate * speechBoost);
+    const pitch = Math.max(-20, Math.min(20, (state.pitch - 1) * 10));
+    const ck = [voice, rate.toFixed(2), pitch.toFixed(1), text].join('|');
+    if (audioCache.has(ck)) return audioCache.get(ck);
+    const body = {
+      input: { text },
+      voice: { languageCode: cloudLoc(langKey), name: voice },
+      audioConfig: { audioEncoding: 'MP3', speakingRate: rate, pitch }
+    };
+    const data = await ttsFetch('text:synthesize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, cloudKey());
+    if (!data.audioContent) throw new Error('Không nhận được âm thanh');
+    const bin = atob(data.audioContent), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
+    audioCache.set(ck, url);
+    if (audioCache.size > 40) { const old = audioCache.keys().next().value; URL.revokeObjectURL(audioCache.get(old)); audioCache.delete(old); }
+    return url;
+  }
+
+  // Một thẻ audio dùng chung (iOS chỉ cho phát khi thẻ đã được mở khóa bằng thao tác chạm)
+  const audioEl = new Audio();
+  let audioDone = null, speechToken = 0, cloudWarnAt = 0;
+  function playUrl(url) {
+    return new Promise((resolve, reject) => {
+      const clear = () => { audioEl.onended = audioEl.onerror = null; audioDone = null; };
+      audioDone = () => { clear(); resolve(); };
+      audioEl.onended = audioDone;
+      audioEl.onerror = () => { clear(); reject(new Error('Không phát được âm thanh')); };
+      audioEl.src = url;
+      audioEl.play().catch(e => { clear(); reject(e); });
+    });
+  }
+  // Dừng mọi giọng đang đọc (cả giọng thiết bị lẫn Google Cloud)
+  function cancelSpeech() {
+    speechToken++;
+    try { audioEl.pause(); } catch (_) {}
+    if (audioDone) audioDone();
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+  }
+
+  async function speakCloud(text, langKey) {
+    const my = speechToken;
+    const voice = await cloudVoiceName(langKey);
+    if (!voice) throw new Error('Chưa có giọng WaveNet cho ' + LANGS[langKey].name);
+    // Chia theo câu, gom thành đoạn ≤ 600 ký tự; tải song song rồi phát lần lượt
+    const sentences = text.match(/[^.!?。！？\n]+[.!?。！？]*/g) || [text];
+    const chunks = [];
+    let cur = '';
+    for (const s of sentences) {
+      if (cur && (cur + s).length > 600) { chunks.push(cur); cur = ''; }
+      cur += s;
+    }
+    if (cur.trim()) chunks.push(cur);
+    const urls = chunks.map(c => cloudAudioUrl(c.trim(), langKey, voice));
+    urls.forEach(p => p.catch(() => {})); // lỗi sẽ được bắt khi await bên dưới
+    for (const p of urls) {
+      const url = await p;
+      if (my !== speechToken) return; // đã bị dừng hoặc thay bằng câu khác
+      await playUrl(url);
+      if (my !== speechToken) return;
+    }
+  }
+  function cloudFailed(e) {
+    const now = Date.now();
+    if (now - cloudWarnAt > 30000) { cloudWarnAt = now; toast('Giọng Google Cloud lỗi (' + (e && e.message ? e.message : 'không rõ') + '), dùng giọng thiết bị'); }
+  }
+
+  function speakDevice(text, langKey) {
     if (!('speechSynthesis' in window)) { toast('Thiết bị không hỗ trợ đọc văn bản'); return; }
-    if (!text) return;
     speechSynthesis.cancel();
     buildUtterances(text, langKey).forEach(u => speechSynthesis.speak(u));
   }
 
+  function speak(text, langKey) {
+    if (!text) return;
+    cancelSpeech();
+    if (!cloudOn()) { speakDevice(text, langKey); return; }
+    const my = speechToken;
+    speakCloud(text, langKey).catch(e => { cloudFailed(e); if (my === speechToken) speakDevice(text, langKey); });
+  }
+
   // Đọc xong mới trả về (không cắt câu đang đọc). Có thời gian chờ tối đa phòng khi trình duyệt không báo kết thúc.
-  function speakAndWait(text, langKey) {
+  function speakAndWaitDevice(text, langKey) {
     return new Promise(resolve => {
       if (!('speechSynthesis' in window) || !text) { resolve(); return; }
       const us = buildUtterances(text, langKey);
@@ -581,9 +699,26 @@
       us.forEach(u => speechSynthesis.speak(u));
     });
   }
+  async function speakAndWait(text, langKey) {
+    if (!text) return;
+    if (!cloudOn()) return speakAndWaitDevice(text, langKey);
+    const my = speechToken;
+    let timer;
+    const limit = new Promise(resolve => { timer = setTimeout(resolve, Math.max(20000, text.length * 200)); });
+    try {
+      await Promise.race([speakCloud(text, langKey), limit]);
+    } catch (e) {
+      cloudFailed(e);
+      if (my === speechToken) await speakAndWaitDevice(text, langKey);
+    } finally { clearTimeout(timer); }
+  }
 
   // iOS/Safari yêu cầu phát âm đầu tiên phải từ thao tác chạm của người dùng
+  const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=';
   function unlockTTS() {
+    if (cloudOn()) {
+      try { if (!audioEl.src) { audioEl.src = SILENT_WAV; audioEl.play().catch(() => {}); } } catch (_) {}
+    }
     if (!('speechSynthesis' in window)) return;
     const u = new SpeechSynthesisUtterance(' ');
     u.volume = 0;
@@ -641,7 +776,7 @@
       return;
     }
     unlockTTS();
-    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    cancelSpeech();
     wantListening = true;
     archiveTurn(); // mỗi lần bấm micro là một lượt nói mới
     beginSession();
@@ -961,7 +1096,7 @@
     wantListening = false;
     resetUtt();
     speechQueue.length = 0;
-    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    cancelSpeech();
     setSpeakingUI(false);
     clearInterval(meetingTimer);
     if (rec) { rec.onend = null; try { rec.stop(); } catch (_) {} }
@@ -986,7 +1121,7 @@
   el.chkMeetingSpeak.onchange = () => {
     state.meetingSpeak = el.chkMeetingSpeak.checked;
     store.set('meetingSpeak', state.meetingSpeak ? '1' : '0');
-    if (!state.meetingSpeak) { speechQueue.length = 0; if ('speechSynthesis' in window) speechSynthesis.cancel(); }
+    if (!state.meetingSpeak) { speechQueue.length = 0; cancelSpeech(); }
   };
   function syncConfBtn() {
     const on = state.meeting && state.conf;
@@ -1126,6 +1261,47 @@
     }
     el.selVoice.value = store.get('voice_' + k, '') || list[0].name;
   }
+  // Giọng Google Cloud: lấy danh sách theo khóa đang nhập (chưa cần lưu)
+  async function fillCloudVoices() {
+    const k = el.selVoiceLang.value;
+    const key = el.inTtsKey.value.trim() || el.inKey.value.trim() || state.ttsKey || state.gkey;
+    const keep = /-Wavenet-/i.test(el.selCloudVoice.value) ? el.selCloudVoice.value : ''; // giữ lựa chọn người dùng vừa chọn
+    el.selCloudVoice.innerHTML = '';
+    const msg = t => { const o = document.createElement('option'); o.textContent = t; el.selCloudVoice.appendChild(o); };
+    if (!key) { msg('Nhập API key để tải danh sách giọng'); return; }
+    msg('Đang tải danh sách giọng…');
+    try {
+      const list = await cloudVoices(k, key);
+      if (el.selVoiceLang.value !== k) return; // người dùng đã đổi ngôn ngữ
+      el.selCloudVoice.innerHTML = '';
+      if (!list.length) { msg('Google chưa có giọng WaveNet cho ngôn ngữ này'); return; }
+      for (const v of list) {
+        const o = document.createElement('option');
+        o.value = v.name; o.textContent = `${v.name} (${GENDER_VI[v.gender] || 'không rõ'})`;
+        el.selCloudVoice.appendChild(o);
+      }
+      const want = keep || store.get('cvoice_' + k, '');
+      el.selCloudVoice.value = list.some(v => v.name === want) ? want : list[0].name;
+    } catch (e) {
+      el.selCloudVoice.innerHTML = '';
+      msg('Không tải được: ' + (e && e.message ? e.message : 'lỗi không rõ'));
+    }
+  }
+  function syncTtsBoxes() {
+    const c = el.selTtsMode.value === 'cloud';
+    el.boxDevVoice.classList.toggle('hidden', c);
+    el.boxCloudVoice.classList.toggle('hidden', !c);
+    if (c) fillCloudVoices();
+  }
+  el.selTtsMode.onchange = syncTtsBoxes;
+  let lastTtsKey = null; // chỉ tải lại danh sách giọng khi khóa thực sự đổi
+  el.inTtsKey.onchange = () => {
+    const v = el.inTtsKey.value.trim();
+    if (lastTtsKey !== null && v !== lastTtsKey) Object.keys(cloudVoiceCache).forEach(k => { delete cloudVoiceCache[k]; store.set('cvl_' + k, 'null'); });
+    lastTtsKey = v;
+    fillCloudVoices();
+  };
+  el.selVoiceLang.onchange = () => { fillVoices(); if (el.selTtsMode.value === 'cloud') fillCloudVoices(); };
   el.selSrcAcc.onchange = () => {
     store.set('stt_' + state.src, el.selSrcAcc.value);
     if (wantListening && rec) { try { rec.abort(); } catch (_) {} } // tự nghe lại với vùng nói mới
@@ -1134,13 +1310,19 @@
     store.set('voice_' + state.tgt, el.selTgtVoice.value);
     speak(TEST_TEXT[state.tgt] || TEST_TEXT.en, state.tgt);
   };
-  el.selVoiceLang.onchange = fillVoices;
   el.inRate.oninput = () => { el.lblRate.textContent = (+el.inRate.value).toFixed(2) + '×'; };
   el.inPitch.oninput = () => { el.lblPitch.textContent = (+el.inPitch.value).toFixed(2); };
   el.btnTest.onclick = () => {
     const k = el.selVoiceLang.value;
     store.set('voice_' + k, el.selVoice.value);
     state.rate = +el.inRate.value; state.pitch = +el.inPitch.value;
+    state.ttsMode = el.selTtsMode.value; state.ttsKey = el.inTtsKey.value.trim(); // thử ngay, chưa cần bấm Lưu
+    if (state.ttsMode === 'cloud') {
+      if (!cloudKey() && !el.inKey.value.trim()) { toast('Vui lòng nhập API key'); return; }
+      if (!state.ttsKey && !state.gkey) state.gkey = el.inKey.value.trim();
+      if (/-Wavenet-/i.test(el.selCloudVoice.value)) store.set('cvoice_' + k, el.selCloudVoice.value);
+      unlockTTS();
+    }
     speak(TEST_TEXT[k] || TEST_TEXT.en, k);
   };
   el.btnSettings.onclick = () => {
@@ -1148,6 +1330,8 @@
     el.chkIncr.checked = state.incr; el.selCut.value = String(state.cutMs); el.chkLat.checked = state.showLat;
     el.selVoiceLang.value = state.tgt;
     fillVoices();
+    el.selTtsMode.value = state.ttsMode;
+    el.inTtsKey.value = state.ttsKey; lastTtsKey = state.ttsKey;
     el.inRate.value = state.rate; el.inRate.oninput();
     el.inPitch.value = state.pitch; el.inPitch.oninput();
     el.selEngine.value = state.engine;
@@ -1155,6 +1339,7 @@
     el.inKey.value = state.gkey;
     el.inGLimit.value = String(state.gLimit); el.chkGFallback.checked = state.gFallback; renderGUsage();
     syncEngineBoxes();
+    syncTtsBoxes();
     el.sheet.classList.remove('hidden'); el.sheet.classList.add('flex');
   };
   const closeSheet = () => { el.sheet.classList.add('hidden'); el.sheet.classList.remove('flex'); };
@@ -1167,6 +1352,10 @@
     state.email = el.inEmail.value.trim();
     state.gkey = el.inKey.value.trim();
     if (state.engine === 'google' && !state.gkey) { toast('Vui lòng nhập API key'); return; }
+    state.ttsMode = el.selTtsMode.value; state.ttsKey = el.inTtsKey.value.trim();
+    if (state.ttsMode === 'cloud' && !state.ttsKey && !state.gkey) { toast('Vui lòng nhập API key Text-to-Speech (hoặc khóa Translation)'); return; }
+    store.set('ttsMode', state.ttsMode); store.set('ttskey', state.ttsKey);
+    if (state.ttsMode === 'cloud' && /-Wavenet-/i.test(el.selCloudVoice.value)) store.set('cvoice_' + el.selVoiceLang.value, el.selCloudVoice.value);
     state.gLimit = Math.max(0, parseInt(el.inGLimit.value, 10) || 0); state.gFallback = el.chkGFallback.checked;
     store.set('gLimit', String(state.gLimit)); store.set('gFallback', state.gFallback ? '1' : '0');
     store.set('voice_' + el.selVoiceLang.value, el.selVoice.value);
@@ -1714,7 +1903,7 @@
       vBox.classList.toggle('hidden', !el.chkEar.checked);
       earOn = el.chkEar.checked;
       if (earOn) { unlockTTS(); earQ.length = 0; if (earSeen) msgs.forEach(m => earSeen.add(m.id)); }
-      else { earQ.length = 0; if ('speechSynthesis' in window) speechSynthesis.cancel(); }
+      else { earQ.length = 0; cancelSpeech(); }
     };
     function earText(m) {
       if (lang === m.from) return '';
