@@ -9,7 +9,7 @@ window.APP_CONFIG = {
     // Ảnh mã QR chuyển khoản (ví dụ VietQR), đặt tệp trong thư mục translator/ rồi ghi đường dẫn, ví dụ 'donate-qr.png'
     qrImage: 'donate-qr.jpg',
     // Thông tin tài khoản nhận (hiển thị dạng chữ, có nút sao chép)
-    bank: { bankName: '', accountNumber: '', accountName: 'NGUYEN NGOC HIEU', note: 'Quét mã QR bằng ứng dụng ngân hàng hoặc ví điện tử (VietQR)' },
+    bank: { bankName: 'Vietcombank', accountNumber: '0481000844134', accountName: 'NGUYEN NGOC HIEU', note: 'Quét mã QR bằng ứng dụng ngân hàng hoặc ví điện tử (VietQR)' },
     // Liên kết thanh toán trực tuyến (PayPal.me, Buy Me a Coffee, liên kết thanh toán PayOS/Stripe, v.v.). Chỉ chấp nhận https://
     links: [
       // { label: 'Ủng hộ qua PayPal', url: 'https://paypal.me/...' }
@@ -18,6 +18,7 @@ window.APP_CONFIG = {
   // Gói sử dụng hiển thị cho người dùng chọn mua; url là trang thanh toán của từng gói
   plans: [
     // { name: 'Gói tháng', price: '99.000đ / tháng', description: 'Dịch không giới hạn', url: 'https://...' }
+    { name: 'VIP 1', price: '150.000đ / tháng', description: 'Gói VIP giúp bạn dịch mượt mà hơn và chất lượng dịch tốt hơn' }
   ],
   // Cải thiện nhận diện giọng nói
   recognition: {

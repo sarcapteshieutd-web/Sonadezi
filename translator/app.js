@@ -1526,7 +1526,7 @@
     } catch (e) { el.viewerStatus.textContent = 'Không kết nối được: ' + (e.code || e.message); return; }
     if (!info || info.expiresAtMs < Date.now()) { el.viewerStatus.textContent = 'Phòng không tồn tại hoặc đã hết hạn'; return; }
     const join = () => kit.joinAsViewer(id, info.expiresAtMs, lang).catch(() => {});
-    el.selViewerLang.onchange = () => { lang = el.selViewerLang.value; store.set('viewerLang', lang); join(); render(); };
+    el.selViewerLang.onchange = () => { lang = el.selViewerLang.value; store.set('viewerLang', lang); join(); render(); fillViewerVoices(); };
     await join();
     let msgs = [];
     const pick = m => {
@@ -1584,7 +1584,38 @@
     let earOn = false, earSeen = null, earBusy = false;
     const earQ = [];
     el.chkEar.checked = false; // luôn tắt khi mở lại: iOS yêu cầu phát âm đầu tiên phải từ thao tác chạm
+    // Giọng đọc của người xem (thu gọn mặc định): chọn giọng, tốc độ, độ cao; dùng cho phần đọc bằng tai nghe
+    const vBox = $('viewerVoice'), vPanel = $('voiceBox'), vSel = $('selViewerVoice');
+    const vRate = $('inVRate'), vPitch = $('inVPitch');
+    const vTwoDec = n => (+n).toFixed(2).replace('.', ',');
+    function updateVoiceSummary() {
+      const cur = vSel.selectedOptions[0];
+      const name = cur && cur.value ? cur.textContent.replace(/\s*\(.*\)\s*$/, '') : 'Mặc định';
+      $('voiceSummary').textContent = '· ' + name + ', ' + vTwoDec(state.rate) + '×';
+    }
+    function fillViewerVoices() {
+      const list = voicesFor(lang);
+      vSel.innerHTML = '';
+      if (!list.length) { const o = document.createElement('option'); o.value = ''; o.textContent = 'Mặc định của thiết bị'; vSel.appendChild(o); }
+      for (const v of list) { const o = document.createElement('option'); o.value = v.name; o.textContent = v.name; vSel.appendChild(o); }
+      if (list.length) vSel.value = store.get('voice_' + lang, '') || list[0].name;
+      updateVoiceSummary();
+    }
+    vRate.value = state.rate; vPitch.value = state.pitch;
+    $('lblVRate').textContent = vTwoDec(state.rate) + '×'; $('lblVPitch').textContent = vTwoDec(state.pitch);
+    vSel.onchange = () => { store.set('voice_' + lang, vSel.value); updateVoiceSummary(); };
+    vRate.oninput = () => { state.rate = +vRate.value; store.set('rate', String(state.rate)); $('lblVRate').textContent = vTwoDec(state.rate) + '×'; updateVoiceSummary(); };
+    vPitch.oninput = () => { state.pitch = +vPitch.value; store.set('pitch', String(state.pitch)); $('lblVPitch').textContent = vTwoDec(state.pitch); };
+    $('btnVTest').onclick = () => { unlockTTS(); speak(TEST_TEXT[lang] || TEST_TEXT.en, lang); };
+    $('btnVoiceToggle').onclick = () => {
+      const open = vPanel.classList.toggle('hidden') === false;
+      $('btnVoiceToggle').setAttribute('aria-expanded', String(open));
+      $('voiceChevron').style.transform = open ? 'rotate(180deg)' : '';
+    };
+    if ('speechSynthesis' in window) speechSynthesis.addEventListener('voiceschanged', fillViewerVoices);
+    fillViewerVoices();
     el.chkEar.onchange = () => {
+      vBox.classList.toggle('hidden', !el.chkEar.checked);
       earOn = el.chkEar.checked;
       if (earOn) { unlockTTS(); earQ.length = 0; if (earSeen) msgs.forEach(m => earSeen.add(m.id)); }
       else { earQ.length = 0; if ('speechSynthesis' in window) speechSynthesis.cancel(); }

@@ -66,6 +66,8 @@ Lưu ý: kho mã hiện có sẵn một ứng dụng khác ở thư mục gốc.
 - **iPhone (Safari):** mở link bằng **Safari** → nút **Chia sẻ** → **Thêm vào Màn hình chính**. iOS không có popup tự động nên ứng dụng hiển thị khung hướng dẫn.
 
 ## 5. Cách sử dụng
+- Khi mở ứng dụng có màn hình chờ khoảng 2 giây (vòng quỹ đạo xoay quanh logo Sonadezi Long Thành), chạm vào màn hình để vào ngay.
+- Người xem quét QR: bật "Đọc bản dịch bằng tai nghe" sẽ hiện mục *Giọng đọc* (thu gọn mặc định) để chọn giọng, tốc độ, độ cao và nghe thử.
 - Chọn cặp ngôn ngữ ở thanh trên hoặc bấm nhanh các nhãn *Anh → Việt*, *Trung → Việt*…; nút ⇄ đảo chiều và chuyển luôn bản dịch sang ô gốc.
 - Gõ văn bản: bản dịch cập nhật sau khoảng 0,45 giây kể từ lần gõ cuối.
 - Bấm micro lớn ở giữa để nói; vừa nói vừa dịch; bấm lần nữa để dừng, ứng dụng tự đọc bản dịch (tắt được bằng ô *Tự động đọc bản dịch*).
