@@ -63,7 +63,7 @@
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
     selEngine: $('selEngine'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
     inRate: $('inRate'), inPitch: $('inPitch'), lblRate: $('lblRate'), lblPitch: $('lblPitch'), btnTest: $('btnTest'), inEmail: $('inEmail'), inKey: $('inKey'),
-    boxMM: $('boxMM'), boxGG: $('boxGG'), btnSave: $('btnSave')
+    boxMM: $('boxMM'), boxGG: $('boxGG'), gUsage: $('gUsage'), gUsageBox: $('gUsageBox'), inGLimit: $('inGLimit'), chkGFallback: $('chkGFallback'), btnGReset: $('btnGReset'), btnSave: $('btnSave')
   };
 
   // ---------- Lưu trữ cục bộ ----------
@@ -78,6 +78,8 @@
     engine: store.get('engine', 'mymemory'),
     email: store.get('email', ''),
     gkey: store.get('gkey', ''),
+    gLimit: Math.max(0, parseInt(store.get('gLimit', '200000'), 10) || 0), // giới hạn ký tự Google mỗi ngày (0 = không giới hạn)
+    gFallback: store.get('gFallback', '1') === '1', // đạt giới hạn: tự chuyển sang MyMemory
     auto: store.get('auto', '1') === '1',
     listening: false,
     translated: '',
@@ -369,9 +371,48 @@
     return chunks;
   }
 
+  // ----- Bộ đếm ký tự Google (theo ngày, lưu trên thiết bị này; chỉ mang tính tham khảo) -----
+  const todayKey = () => new Date().toLocaleDateString('sv-SE');
+  function gUsed() {
+    try { const u = JSON.parse(store.get('gUsage', 'null')); if (u && u.d === todayKey()) return u; } catch (_) {}
+    return { d: todayKey(), n: 0, warned: false };
+  }
+  const fmtN = n => n.toLocaleString('vi-VN');
+  function renderGUsage() {
+    const on = state.engine === 'google' && !!state.gkey;
+    const u = gUsed(), lim = state.gLimit;
+    const pct = lim > 0 ? Math.min(100, Math.round(u.n * 100 / lim)) : 0;
+    const over = lim > 0 && (u.n >= lim || !!u.over);
+    let txt = `Google hôm nay: ${fmtN(u.n)}${lim > 0 ? ' / ' + fmtN(lim) + ' ký tự (' + pct + '%)' : ' ký tự (không giới hạn)'}`;
+    if (over) txt += state.gFallback ? ' · đã đạt giới hạn, đang dùng MyMemory' : ' · đã đạt giới hạn, tạm dừng dịch';
+    for (const node of [el.gUsage, el.gUsageBox]) {
+      node.textContent = txt;
+      node.classList.toggle('text-red-600', over);
+      node.classList.toggle('text-amber-600', !over && pct >= 80);
+      node.classList.toggle('text-slate-500', !over && pct < 80);
+    }
+    el.gUsage.classList.toggle('hidden', !on);
+  }
+  // true: được gọi Google (đã cộng vào bộ đếm); false: đã đạt giới hạn, dùng MyMemory; ném lỗi nếu không cho chuyển
+  function gCharge(text) {
+    const u = gUsed();
+    const lim = state.gLimit;
+    if (lim > 0 && u.n + text.length > lim) {
+      u.over = true; store.set('gUsage', JSON.stringify(u));
+      renderGUsage();
+      if (state.gFallback) return false;
+      throw new Error('Đã đạt giới hạn ký tự Google hôm nay (' + fmtN(lim) + ')');
+    }
+    u.n += text.length;
+    if (lim > 0 && !u.warned && u.n >= lim * 0.8) { u.warned = true; toast('Đã dùng 80% giới hạn ký tự Google hôm nay'); }
+    store.set('gUsage', JSON.stringify(u));
+    renderGUsage();
+    return true;
+  }
+
   async function requestTranslate(text, signal, from, to) {
     let result;
-    if (state.engine === 'google' && state.gkey) {
+    if (state.engine === 'google' && state.gkey && gCharge(text)) {
       const url = 'https://translation.googleapis.com/language/translate/v2?key=' + encodeURIComponent(state.gkey);
       const res = await fetch(url, {
         method: 'POST', signal,
@@ -1112,6 +1153,7 @@
     el.selEngine.value = state.engine;
     el.inEmail.value = state.email;
     el.inKey.value = state.gkey;
+    el.inGLimit.value = String(state.gLimit); el.chkGFallback.checked = state.gFallback; renderGUsage();
     syncEngineBoxes();
     el.sheet.classList.remove('hidden'); el.sheet.classList.add('flex');
   };
@@ -1119,18 +1161,21 @@
   el.btnSheetClose.onclick = closeSheet;
   el.sheet.onclick = e => { if (e.target === el.sheet) closeSheet(); };
   el.selEngine.onchange = syncEngineBoxes;
+  el.btnGReset.onclick = () => { store.set('gUsage', JSON.stringify({ d: todayKey(), n: 0, warned: false })); renderGUsage(); };
   el.btnSave.onclick = () => {
     state.engine = el.selEngine.value;
     state.email = el.inEmail.value.trim();
     state.gkey = el.inKey.value.trim();
     if (state.engine === 'google' && !state.gkey) { toast('Vui lòng nhập API key'); return; }
+    state.gLimit = Math.max(0, parseInt(el.inGLimit.value, 10) || 0); state.gFallback = el.chkGFallback.checked;
+    store.set('gLimit', String(state.gLimit)); store.set('gFallback', state.gFallback ? '1' : '0');
     store.set('voice_' + el.selVoiceLang.value, el.selVoice.value);
     state.rate = +el.inRate.value; state.pitch = +el.inPitch.value;
     store.set('rate', String(state.rate)); store.set('pitch', String(state.pitch));
     state.incr = el.chkIncr.checked; state.cutMs = parseInt(el.selCut.value, 10) || 0; state.showLat = el.chkLat.checked;
     store.set('incr', state.incr ? '1' : '0'); store.set('cutMs', String(state.cutMs)); store.set('showLat', state.showLat ? '1' : '0');
     store.set('engine', state.engine); store.set('email', state.email); store.set('gkey', state.gkey);
-    cache.clear();
+    cache.clear(); renderGUsage();
     closeSheet(); toast('Đã lưu cài đặt'); translateNow();
   };
 
@@ -1706,6 +1751,7 @@
   fillSelect(el.selSrc, state.src);
   fillSelect(el.selTgt, state.tgt);
   syncLangUI();
+  renderGUsage();
   updateCounter();
   if (!SR) el.micHint.textContent = 'Trình duyệt chưa hỗ trợ nhận diện giọng nói - bạn vẫn có thể gõ văn bản';
   const coCode = new URLSearchParams(location.search).get('co');
