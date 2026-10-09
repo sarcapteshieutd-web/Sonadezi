@@ -63,8 +63,12 @@
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
     selEngine: $('selEngine'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
     selTtsMode: $('selTtsMode'), boxDevVoice: $('boxDevVoice'), boxCloudVoice: $('boxCloudVoice'), inTtsKey: $('inTtsKey'), selCloudVoice: $('selCloudVoice'),
-    gate: $('gate'), gateFree: $('gateFree'), gateForm: $('gateForm'), gateUser: $('gateUser'), gatePass: $('gatePass'), gateErr: $('gateErr'), gateLogin: $('gateLogin'), gatePlan: $('gatePlan'),
-    acctName: $('acctName'), btnSwitchAcct: $('btnSwitchAcct'), freeNote: $('freeNote'),
+    gate: $('gate'), gateFree: $('gateFree'), gateForm: $('gateForm'), gateEmail: $('gateEmail'), gatePass: $('gatePass'), gateErr: $('gateErr'), gateLogin: $('gateLogin'),
+    gateToReg: $('gateToReg'), gateForgot: $('gateForgot'), regForm: $('regForm'), regName: $('regName'), regEmail: $('regEmail'), regPass: $('regPass'), regPass2: $('regPass2'),
+    regErr: $('regErr'), regSubmit: $('regSubmit'), regToLogin: $('regToLogin'), gateStatus: $('gateStatus'), gsTitle: $('gsTitle'), gsText: $('gsText'), gsPay: $('gsPay'),
+    gsRecheck: $('gsRecheck'), gsFree: $('gsFree'), gsLogout: $('gsLogout'), gatePlan: $('gatePlan'),
+    acctName: $('acctName'), btnSwitchAcct: $('btnSwitchAcct'), freeNote: $('freeNote'), acctMeta: $('acctMeta'), acctUidRow: $('acctUidRow'), acctUid: $('acctUid'),
+    btnCopyUid: $('btnCopyUid'), btnAdmin: $('btnAdmin'), sheetAdmin: $('sheetAdmin'), adminBody: $('adminBody'),
     ttsDayN: $('ttsDayN'), ttsDayC: $('ttsDayC'), ttsMonN: $('ttsMonN'), ttsMonC: $('ttsMonC'), ttsFree: $('ttsFree'), ttsCost: $('ttsCost'), inTtsLimit: $('inTtsLimit'), ttsStatus: $('ttsStatus'), btnTtsReset: $('btnTtsReset'),
     inRate: $('inRate'), inPitch: $('inPitch'), lblRate: $('lblRate'), lblPitch: $('lblPitch'), btnTest: $('btnTest'), inEmail: $('inEmail'), inKey: $('inKey'),
     boxMM: $('boxMM'), boxGG: $('boxGG'), gUsage: $('gUsage'), gUsageBox: $('gUsageBox'), inGLimit: $('inGLimit'), chkGFallback: $('chkGFallback'), btnGReset: $('btnGReset'), btnSave: $('btnSave')
@@ -77,31 +81,27 @@
   };
 
   // ---------- Tài khoản: Miễn phí / VIP ----------
-  // Cổng phân quyền "mềm" chạy trên trình duyệt (xem cảnh báo trong config.js): không thay thế được kiểm soát phía máy chủ.
-  const VCFG = (window.APP_CONFIG && window.APP_CONFIG.vip) || {};
-  const vipAccounts = (VCFG.accounts || []).filter(a => a && a.user && a.hash);
-  const vipKey = VCFG.googleKey || '';
-  // VIP chỉ còn hiệu lực khi tài khoản vẫn nằm trong config.js: xóa khỏi config là thu hồi
-  function storedAcct() {
+  // VIP là tài khoản Firebase (email + mật khẩu) do quản trị viên duyệt và cấp hạn dùng. Hồ sơ và hạn dùng nằm trên Firestore;
+  // thiết bị chỉ giữ bản nhớ tạm ("acctInfo") để mở nhanh khi chưa có mạng. Khóa Google dùng chung chỉ được Firestore trả cho VIP còn hạn.
+  function cachedInfo() { try { return JSON.parse(store.get('acctInfo', 'null')); } catch (_) { return null; } }
+  const vipValid = i => !!i && (!!i.admin || (i.status === 'active' && i.expiresAtMs > Date.now()));
+  const acct0 = (() => {
     const t = store.get('acct', '');
-    if (t === 'free') return { type: 'free', user: '' };
-    if (t === 'vip') {
-      const u = store.get('acctUser', ''), tok = store.get('acctTok', '').toLowerCase();
-      if (vipAccounts.some(a => a.user.toLowerCase() === u.toLowerCase() && a.hash.toLowerCase() === tok)) return { type: 'vip', user: u };
-    }
+    if (t === 'free') return { type: 'free', info: cachedInfo() };
+    if (t === 'vip') { const i = cachedInfo(); return vipValid(i) ? { type: 'vip', info: i } : { type: 'free', info: i }; }
     return null;
-  }
-  const acct0 = storedAcct();
+  })();
   const acct0Vip = !!acct0 && acct0.type === 'vip';
 
   const state = {
     acct: acct0 ? acct0.type : null, // 'free' | 'vip' | null (chưa chọn)
-    acctUser: acct0 ? acct0.user : '',
+    acctInfo: acct0 ? acct0.info : null, // {uid, email, name, status, expiresAtMs, admin, usage}
+    sharedKey: '', // khóa Google dùng chung do quản trị viên cấp (chỉ giữ trong bộ nhớ, không lưu trên thiết bị)
     src: store.get('src', 'en'),
     tgt: store.get('tgt', 'vi'),
     engine: store.get('engine', 'mymemory'),
     email: store.get('email', ''),
-    gkey: store.get('gkey', '') || (acct0Vip ? vipKey : ''), // VIP: khóa riêng nếu có, không thì khóa dùng chung trong config.js
+    gkey: store.get('gkey', ''), // khóa tự nhập; VIP không nhập thì dùng khóa dùng chung (nạp sau khi đăng nhập)
     ttsMode: store.get('ttsMode', 'device'), // nguồn giọng đọc: 'device' (miễn phí) hoặc 'cloud' (Google WaveNet)
     ttsKey: store.get('ttskey', ''),
     ttsLimit: Math.max(0, parseInt(store.get('ttsLimit', '4000000'), 10) || 0), // giới hạn ký tự giọng Google mỗi tháng (0 = không giới hạn)
@@ -138,10 +138,6 @@
   }
   if (acct0Vip) state.log = loadLog();
   const saveLog = () => { if (isVip()) store.set('chat', JSON.stringify(state.log.slice(-300))); };
-  async function sha256Hex(str) {
-    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-    return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
-  }
 
   // ---------- Tiện ích ----------
   let toastTimer;
@@ -450,6 +446,7 @@
       throw new Error('Đã đạt giới hạn ký tự Google hôm nay (' + fmtN(lim) + ')');
     }
     u.n += text.length;
+    reportUsage('tr', text.length);
     if (lim > 0 && !u.warned && u.n >= lim * 0.8) { u.warned = true; toast('Đã dùng 80% giới hạn ký tự Google hôm nay'); }
     store.set('gUsage', JSON.stringify(u));
     renderGUsage();
@@ -698,6 +695,7 @@
     if (!data.audioContent) throw new Error('Không nhận được âm thanh');
     const u = ttsUse(); // chỉ cộng khi Google trả kết quả thành công
     u.dn += text.length; u.dc++; u.mn += text.length; u.mc++;
+    reportUsage('tts', text.length);
     if (state.ttsLimit > 0 && !u.warned && u.mn >= state.ttsLimit * 0.8) { u.warned = true; toast('Đã dùng 80% giới hạn ký tự giọng Google trong tháng'); }
     store.set('ttsUsage', JSON.stringify(u));
     renderTtsUsage();
@@ -1424,7 +1422,7 @@
     el.inPitch.value = state.pitch; el.inPitch.oninput();
     el.selEngine.value = state.engine;
     el.inEmail.value = state.email;
-    el.inKey.value = vipKey && state.gkey === vipKey ? '' : state.gkey; // không hiện lại khóa dùng chung
+    el.inKey.value = store.get('gkey', ''); // chỉ hiện khóa tự nhập, không hiện khóa dùng chung
     el.inGLimit.value = String(state.gLimit); el.chkGFallback.checked = state.gFallback; renderGUsage();
     syncEngineBoxes();
     syncTtsBoxes();
@@ -1440,7 +1438,7 @@
     state.engine = el.selEngine.value;
     state.email = el.inEmail.value.trim();
     const typedKey = el.inKey.value.trim();
-    state.gkey = typedKey || (isVip() ? vipKey : '');
+    state.gkey = typedKey || (isVip() ? state.sharedKey : '');
     if (!isVip()) state.engine = 'mymemory'; // Miễn phí: chỉ MyMemory
     if (state.engine === 'google' && !state.gkey) { toast('Vui lòng nhập API key'); return; }
     state.ttsMode = isVip() ? el.selTtsMode.value : 'device'; state.ttsKey = el.inTtsKey.value.trim();
@@ -1623,10 +1621,13 @@
       document.head.appendChild(sc);
     });
   }
-  async function getKit() {
-    if (room.kit) return room.kit;
-    await loadScript('room.bundle.js');
-    const kit = window.RoomKit.create(FB);
+  // anon=true: phòng họp (đăng nhập ẩn danh nếu chưa có phiên). anon=false: chỉ khôi phục phiên đã lưu (dùng cho tài khoản VIP).
+  let kitRawP = null;
+  const kitRaw = () => kitRawP || (kitRawP = (async () => { await loadScript('room.bundle.js'); return window.RoomKit.create(FB); })().catch(e => { kitRawP = null; throw e; }));
+  async function getKit(anon = true) {
+    if (anon && room.kit) return room.kit;
+    const kit = await kitRaw();
+    if (!anon) { await kit.ready(); return kit; }
     await kit.init();
     room.kit = kit;
     return kit;
@@ -2068,10 +2069,34 @@
   renderGUsage();
   updateCounter();
   if (!SR) el.micHint.textContent = 'Trình duyệt chưa hỗ trợ nhận diện giọng nói - bạn vẫn có thể gõ văn bản';
-  // ----- Áp dụng quyền theo loại tài khoản và màn hình chọn tài khoản -----
+  // ----- Tài khoản: áp dụng quyền, đăng nhập/đăng ký, theo dõi hồ sơ, báo sử dụng, quản trị -----
   const vipOnly = () => toast('Tính năng dành cho tài khoản VIP. Vào Cài đặt → Đổi tài khoản để đăng nhập VIP.');
+  const fmtDay = ms => new Date(ms).toLocaleDateString('vi-VN');
+  const daysLeft = ms => Math.max(0, Math.ceil((ms - Date.now()) / 86400000));
+  const monthKey = () => 'm' + todayKey().slice(0, 7).replace('-', '');
+  const setHint = v => store.set('acct', v);
+  const planName = () => { const p = (CFG.plans || []).find(x => x && x.name); return p ? p.name : 'VIP'; };
+  const noViewerGate = () => !!(viewerRoomId && !new URLSearchParams(location.search).get('co')); // người xem qua QR không cần chọn tài khoản
+
+  function fbErr(e) {
+    const c = String((e && e.code) || '');
+    const map = {
+      'auth/invalid-credential': 'Sai email hoặc mật khẩu', 'auth/wrong-password': 'Sai email hoặc mật khẩu', 'auth/user-not-found': 'Sai email hoặc mật khẩu',
+      'auth/invalid-email': 'Email không hợp lệ', 'auth/email-already-in-use': 'Email này đã được đăng ký, hãy đăng nhập',
+      'auth/weak-password': 'Mật khẩu quá yếu', 'auth/too-many-requests': 'Thử quá nhiều lần, vui lòng chờ ít phút rồi thử lại',
+      'auth/network-request-failed': 'Không kết nối được mạng', 'auth/user-disabled': 'Tài khoản đã bị vô hiệu hóa',
+      'auth/operation-not-allowed': 'Chưa bật đăng nhập Email/Mật khẩu trong Firebase (xem hướng dẫn thiết lập)',
+      'permission-denied': 'Không đủ quyền: quản trị viên cần cập nhật quy tắc Firestore theo hướng dẫn thiết lập',
+      'unavailable': 'Không kết nối được máy chủ'
+    };
+    return map[c] || (e && e.message) || 'Lỗi không rõ';
+  }
+
+  let profUnsub = null, usageTimer = 0, sharedWarned = false, lapsedToast = false;
+  const pendingUse = { tr: 0, tts: 0 };
+
   function applyAcct() {
-    const vip = isVip();
+    const vip = isVip(), info = state.acctInfo;
     if (!vip) { state.engine = 'mymemory'; state.ttsMode = 'device'; state.conf = false; }
     el.btnExport.classList.toggle('hidden', !vip);
     el.btnConf.classList.toggle('hidden', !vip);
@@ -2079,65 +2104,337 @@
     el.chkConf.checked = state.conf;
     el.selEngine.querySelector('option[value="google"]').disabled = !vip;
     el.selTtsMode.querySelector('option[value="cloud"]').disabled = !vip;
-    el.acctName.textContent = vip ? 'VIP' + (state.acctUser ? ' (' + state.acctUser + ')' : '') : (state.acct === 'free' ? 'Miễn phí' : 'Chưa chọn');
+    el.acctName.textContent = vip ? (info && info.admin ? 'Quản trị viên' : 'VIP') + (info && info.email ? ' (' + info.email + ')' : '') : (state.acct === 'free' ? 'Miễn phí' : 'Chưa chọn');
+    // Thời gian dùng VIP trong tháng và mức dùng của riêng tài khoản này
+    let meta = '', warn = false;
+    if (vip && info) {
+      if (info.admin) meta = 'Tài khoản quản trị: không giới hạn thời gian';
+      else if (info.expiresAtMs) { const n = daysLeft(info.expiresAtMs); meta = `Còn ${n} ngày dùng VIP (hết hạn ${fmtDay(info.expiresAtMs)})`; warn = n <= 3; }
+      const u = (info.usage || {})[monthKey()];
+      if (u) meta += `${meta ? ' · ' : ''}Tháng này: dịch ${fmtN(u.tr || 0)} ký tự, đọc ${fmtN(u.tts || 0)} ký tự`;
+    }
+    el.acctMeta.textContent = meta;
+    el.acctMeta.classList.toggle('hidden', !meta);
+    el.acctMeta.classList.toggle('text-amber-600', warn);
+    el.acctMeta.classList.toggle('text-slate-600', !warn);
+    const uid = info && info.uid ? info.uid : '';
+    el.acctUid.textContent = uid;
+    el.acctUidRow.classList.toggle('hidden', !uid);
+    el.acctUidRow.classList.toggle('flex', !!uid);
+    el.btnAdmin.classList.toggle('hidden', !(vip && info && info.admin));
     el.freeNote.classList.toggle('hidden', vip);
     renderGUsage(); syncAccentUI(); syncConfBtn();
   }
-  function setAcct(type, user, tok) {
-    state.acct = type; state.acctUser = user || '';
-    store.set('acct', type); store.set('acctUser', user || ''); store.set('acctTok', tok || '');
-    if (type === 'vip') { // mặc định VIP: Google Cloud Translation + giọng WaveNet
+
+  // Nâng lên VIP (đăng nhập lần đầu hoặc vừa được duyệt/gia hạn)
+  function becomeVip() {
+    const wasVip = isVip();
+    state.acct = 'vip'; setHint('vip');
+    if (!wasVip) { // mặc định VIP: Google Cloud Translation + giọng WaveNet
       state.engine = 'google'; state.ttsMode = 'cloud';
       store.set('engine', 'google'); store.set('ttsMode', 'cloud');
-      state.gkey = store.get('gkey', '') || vipKey;
       state.conf = store.get('conf', '0') === '1';
       state.log = loadLog();
       cache.clear();
-    } else { // mặc định Miễn phí: MyMemory + giọng thiết bị
-      state.log = [];
     }
-    applyAcct(); renderAll();
-    el.gate.hidden = true;
-    toast(type === 'vip'
-      ? (state.gkey ? 'Đã đăng nhập tài khoản VIP' : 'Đã đăng nhập VIP. Vào Cài đặt để nhập Google API key')
-      : 'Đang dùng tài khoản Miễn phí');
+    applyAcct(); renderAll(); closeGate();
   }
-  el.gateFree.onclick = () => setAcct('free');
-  let gateFails = 0, gateLockUntil = 0;
+  // keep=true: bị hạ quyền (hết hạn/bị khóa): vẫn theo dõi hồ sơ và giữ dấu "đã có tài khoản VIP" để tự lên lại khi được gia hạn
+  function becomeFree(msg, keep) {
+    state.acct = 'free';
+    if (!keep) { setHint('free'); if (profUnsub) { profUnsub(); profUnsub = null; } }
+    state.log = []; state.sharedKey = '';
+    if (!store.get('gkey', '')) state.gkey = '';
+    applyAcct(); renderAll(); closeGate();
+    if (msg) toast(msg);
+  }
+
+  // Khóa Google dùng chung: chỉ Firestore trả về cho VIP đang còn hạn (kiểm tra ở quy tắc bảo mật)
+  async function loadSharedKey(kit) {
+    try {
+      const g = await kit.acct.getGoogleConfig();
+      state.sharedKey = (g && g.key) || '';
+      if (!store.get('gkey', '')) state.gkey = state.sharedKey;
+      renderGUsage();
+      if (!state.gkey && !sharedWarned) { sharedWarned = true; toast('Chưa có khóa Google dùng chung. Vào Cài đặt để nhập API key, hoặc liên hệ quản trị viên'); }
+    } catch (_) { state.sharedKey = ''; } // chưa đủ quyền hoặc mất mạng: dịch bằng MyMemory
+  }
+
+  function reportUsage(kind, n) {
+    if (!isVip() || !state.acctInfo || !state.acctInfo.uid || !n) return;
+    pendingUse[kind] += n;
+    if (!usageTimer) usageTimer = setTimeout(flushUsage, 20000);
+  }
+  async function flushUsage() {
+    clearTimeout(usageTimer); usageTimer = 0;
+    const d = { tr: pendingUse.tr, tts: pendingUse.tts };
+    if (!d.tr && !d.tts) return;
+    pendingUse.tr = pendingUse.tts = 0;
+    try { const kit = await getKit(false); await kit.acct.reportUsage(monthKey(), d); }
+    catch (_) { pendingUse.tr += d.tr; pendingUse.tts += d.tts; }
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushUsage(); });
+
+  // Hồ sơ thay đổi (được duyệt, gia hạn, khóa, hết hạn): cập nhật ngay không cần đăng nhập lại
+  function onProfile(kit, u, p, admin) {
+    if (!p) { kit.acct.ensureProfile('').catch(() => {}); return; }
+    const info = { uid: u.uid, email: u.email, name: p.name, status: p.status, expiresAtMs: p.expiresAtMs, admin, usage: p.usage };
+    state.acctInfo = info;
+    store.set('acctInfo', JSON.stringify(info));
+    const valid = vipValid(info);
+    if (valid) {
+      const was = isVip();
+      becomeVip();
+      if (!was) toast(admin ? 'Đã đăng nhập tài khoản quản trị' : 'Tài khoản VIP đã được kích hoạt');
+      loadSharedKey(kit);
+      if (!admin && daysLeft(info.expiresAtMs) <= 3 && store.get('expWarn', '') !== todayKey()) { store.set('expWarn', todayKey()); toast(`Tài khoản VIP còn ${daysLeft(info.expiresAtMs)} ngày, vui lòng gia hạn`); }
+    } else {
+      if (isVip()) becomeFree(info.status === 'blocked' ? 'Tài khoản VIP đã bị khóa, đang dùng bản Miễn phí' : 'Tài khoản VIP đã hết hạn, đang dùng bản Miễn phí. Vui lòng gia hạn', true);
+      applyAcct();
+      if (!el.gate.hidden) renderGateStatus(info);
+      else if (!lapsedToast) { // mở lại ứng dụng khi VIP đã hết hạn / chưa được duyệt: báo lý do đang dùng bản Miễn phí
+        lapsedToast = true;
+        toast(info.status === 'blocked' ? 'Tài khoản VIP đang bị khóa, đang dùng bản Miễn phí' : info.status === 'active' ? 'Tài khoản VIP đã hết hạn, đang dùng bản Miễn phí. Vui lòng gia hạn' : 'Tài khoản VIP đang chờ quản trị viên cấp quyền, tạm dùng bản Miễn phí');
+      }
+    }
+  }
+  async function watchAccount() {
+    const kit = await getKit(false);
+    const u = kit.acct.user();
+    if (!u) { // phiên đăng nhập đã mất
+      setHint(''); store.set('acctInfo', ''); state.acctInfo = null;
+      if (isVip()) becomeFree();
+      state.acct = null; applyAcct();
+      if (!noViewerGate()) openGate('login');
+      return;
+    }
+    if (profUnsub) { profUnsub(); profUnsub = null; }
+    const admin = await kit.acct.isAdmin(u.uid);
+    profUnsub = kit.acct.subscribeProfile(u.uid, p => onProfile(kit, u, p, admin), e => { if (!el.gate.hidden) el.gateErr.textContent = fbErr(e); });
+  }
+
+  // ----- Màn hình chọn tài khoản -----
+  function showView(v) {
+    el.gateForm.hidden = v !== 'login'; el.regForm.hidden = v !== 'reg'; el.gateStatus.hidden = v !== 'status';
+    el.gateErr.textContent = ''; el.regErr.textContent = '';
+  }
+  function openGate(view) { el.gate.hidden = false; showView(view || 'login'); }
+  function closeGate() { el.gate.hidden = true; }
+
+  function renderGateStatus(info) {
+    showView('status');
+    const now = Date.now();
+    const blocked = info.status === 'blocked';
+    const expired = info.status === 'active' && info.expiresAtMs <= now;
+    el.gsTitle.textContent = blocked ? 'Tài khoản đang bị khóa' : expired ? 'Tài khoản VIP đã hết hạn' : 'Đang chờ quản trị viên cấp quyền';
+    el.gsText.textContent = blocked ? 'Vui lòng liên hệ quản trị viên để được mở khóa.'
+      : expired ? `Đã hết hạn ngày ${fmtDay(info.expiresAtMs)}. Vui lòng gia hạn và chờ quản trị viên cấp quyền.`
+      : `Tài khoản ${info.email} đã được đăng ký. Sau khi thanh toán, quản trị viên sẽ cấp quyền VIP (dùng theo tháng). Màn hình này tự cập nhật khi bạn được duyệt.`;
+    el.gsPay.textContent = '';
+    el.gsPay.hidden = blocked;
+    if (!blocked) {
+      const plan = (CFG.plans || []).find(x => x && x.name);
+      const d = CFG.donate || {}, b = d.bank || {};
+      const line = (label, val, code) => { if (!val) return; const p = node('div', 'mt-1'); p.appendChild(document.createTextNode(label + ': ')); p.appendChild(node(code ? 'code' : 'b', '', val)); el.gsPay.appendChild(p); };
+      el.gsPay.appendChild(node('b', '', 'Thanh toán gói VIP'));
+      if (plan) line('Gói', plan.name + (plan.price ? ' · ' + plan.price : ''));
+      line('Ngân hàng', b.bankName); line('Số tài khoản', b.accountNumber); line('Chủ tài khoản', b.accountName);
+      line('Nội dung chuyển khoản', info.email, true);
+      line('Mã tài khoản', info.uid, true);
+      if (d.qrImage) { const img = node('img'); img.src = d.qrImage; img.alt = 'Mã QR chuyển khoản'; el.gsPay.appendChild(img); }
+    }
+  }
+
+  el.gateFree.onclick = () => becomeFree('Đang dùng tài khoản Miễn phí');
+  el.gateToReg.onclick = () => showView('reg');
+  el.regToLogin.onclick = () => showView('login');
+  el.gsFree.onclick = () => becomeFree('Đang dùng tài khoản Miễn phí (tạm thời)');
+  el.gsLogout.onclick = async () => {
+    try { const kit = await getKit(false); await kit.acct.signOut(); } catch (_) {}
+    if (profUnsub) { profUnsub(); profUnsub = null; }
+    setHint(''); store.set('acctInfo', ''); state.acctInfo = null; state.acct = null; applyAcct(); showView('login');
+  };
+  el.gsRecheck.onclick = async () => {
+    try {
+      const kit = await getKit(false), u = kit.acct.user();
+      if (!u) { showView('login'); return; }
+      const p = await kit.acct.getProfile(u.uid);
+      onProfile(kit, u, p, await kit.acct.isAdmin(u.uid));
+      if (!isVip()) toast('Chưa được duyệt, vui lòng kiểm tra lại sau');
+    } catch (e) { toast(fbErr(e)); }
+  };
+
+  async function afterSignIn() { setHint('vip'); await watchAccount(); }
   el.gateForm.onsubmit = async e => {
     e.preventDefault();
-    const err = t => { el.gateErr.textContent = t; };
-    err('');
-    const wait = gateLockUntil - Date.now();
-    if (wait > 0) { err('Nhập sai nhiều lần, vui lòng chờ ' + Math.ceil(wait / 1000) + ' giây'); return; }
-    const user = el.gateUser.value.trim(), pass = el.gatePass.value;
-    if (!user || !pass) { err('Vui lòng nhập tên đăng nhập và mật khẩu'); return; }
-    if (!vipAccounts.length) { err('Chưa có tài khoản VIP nào được cấp. Vui lòng liên hệ quản trị viên.'); return; }
-    if (!(window.crypto && crypto.subtle)) { err('Cần mở ứng dụng qua HTTPS để đăng nhập'); return; }
+    const email = el.gateEmail.value.trim(), pass = el.gatePass.value;
+    el.gateErr.textContent = '';
+    if (!email || !pass) { el.gateErr.textContent = 'Vui lòng nhập email và mật khẩu'; return; }
     el.gateLogin.disabled = true;
     try {
-      const h = await sha256Hex(`${VCFG.salt || ''}|${user.toLowerCase()}|${pass}`);
-      const ok = vipAccounts.find(a => a.user.toLowerCase() === user.toLowerCase() && a.hash.toLowerCase() === h);
+      const kit = await getKit(false);
+      await kit.acct.signIn(email, pass);
       el.gatePass.value = '';
-      if (!ok) {
-        if (++gateFails >= 5) { gateFails = 0; gateLockUntil = Date.now() + 30000; }
-        err('Sai tên đăng nhập hoặc mật khẩu');
-        return;
-      }
-      gateFails = 0;
-      setAcct('vip', ok.user, ok.hash);
-    } finally { el.gateLogin.disabled = false; }
+      await afterSignIn();
+    } catch (err) { el.gateErr.textContent = fbErr(err); }
+    finally { el.gateLogin.disabled = false; }
   };
-  el.btnSwitchAcct.onclick = () => {
-    ['acct', 'acctUser', 'acctTok'].forEach(k => store.set(k, ''));
+  el.regForm.onsubmit = async e => {
+    e.preventDefault();
+    const name = el.regName.value.trim(), email = el.regEmail.value.trim(), p1 = el.regPass.value, p2 = el.regPass2.value;
+    const err = t => { el.regErr.textContent = t; };
+    err('');
+    if (!name) { err('Vui lòng nhập họ và tên'); return; }
+    if (!email) { err('Vui lòng nhập email'); return; }
+    if (p1.length < 8) { err('Mật khẩu tối thiểu 8 ký tự'); return; }
+    if (p1 !== p2) { err('Hai mật khẩu không khớp'); return; }
+    el.regSubmit.disabled = true;
+    try {
+      const kit = await getKit(false);
+      await kit.acct.signUp(email, p1, name);
+      el.regPass.value = el.regPass2.value = '';
+      await afterSignIn();
+    } catch (ex) { err(fbErr(ex)); }
+    finally { el.regSubmit.disabled = false; }
+  };
+  el.gateForgot.onclick = async () => {
+    const email = el.gateEmail.value.trim();
+    if (!email) { el.gateErr.textContent = 'Nhập email vào ô phía trên rồi bấm "Quên mật khẩu"'; return; }
+    try { const kit = await getKit(false); await kit.acct.resetPassword(email); el.gateErr.textContent = ''; toast('Nếu email đã đăng ký, hệ thống đã gửi thư đặt lại mật khẩu'); }
+    catch (ex) { el.gateErr.textContent = fbErr(ex); }
+  };
+
+  el.btnSwitchAcct.onclick = async () => {
+    try { if (state.acctInfo && state.acctInfo.uid) { const kit = await getKit(false); await kit.acct.signOut(); } } catch (_) {}
+    setHint(''); store.set('acctInfo', '');
     location.reload();
   };
+  el.btnCopyUid.onclick = async () => {
+    const t = el.acctUid.textContent;
+    try { await navigator.clipboard.writeText(t); toast('Đã sao chép mã tài khoản'); }
+    catch (_) { const r = document.createRange(); r.selectNodeContents(el.acctUid); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); toast('Hãy nhấn Ctrl+C để sao chép'); }
+  };
+
+  // ----- Quản trị: duyệt/gia hạn/khóa tài khoản và theo dõi hạn mức Google -----
+  const addMonth = ms => { const d = new Date(ms); d.setMonth(d.getMonth() + 1); return d.getTime(); };
+  const effStatus = p => p.status === 'blocked' ? 'blocked' : p.status === 'active' ? (p.expiresAtMs > Date.now() ? 'active' : 'expired') : 'pending';
+  const STATUS_VI = { pending: 'Chờ duyệt', active: 'Đang hoạt động', expired: 'Hết hạn', blocked: 'Bị khóa' };
+  const STATUS_COLOR = { pending: '#b45309', active: '#15803d', expired: '#b91c1c', blocked: '#475569' };
+  let adminFilter = '';
+
+  el.btnAdmin.onclick = () => { closeSheet(); openModal(el.sheetAdmin); loadAdmin(); };
+  async function loadAdmin() {
+    el.adminBody.textContent = 'Đang tải…';
+    try {
+      const kit = await getKit(false);
+      const [users, g] = await Promise.all([kit.acct.listUsers(), kit.acct.getGoogleConfig().catch(() => null)]);
+      renderAdmin(kit, users, g || {});
+    } catch (e) { el.adminBody.textContent = 'Không tải được dữ liệu: ' + fbErr(e); }
+  }
+  function meter(label, used, limit) {
+    const w = node('div', 'mt-2');
+    const pct = limit > 0 ? Math.min(100, Math.round(used * 100 / limit)) : 0;
+    const head = node('div', 'flex justify-between text-sm');
+    head.appendChild(node('span', '', label));
+    head.appendChild(node('span', 'tabular-nums', limit > 0 ? `${fmtN(used)} / ${fmtN(limit)} (${pct}%)` : `${fmtN(used)} (chưa đặt hạn mức)`));
+    w.appendChild(head);
+    const track = node('div', 'mt-1 h-2 w-full overflow-hidden rounded bg-slate-200');
+    const fill = node('div', 'h-2');
+    fill.style.width = pct + '%';
+    fill.style.background = pct >= 100 ? '#dc2626' : pct >= 80 ? '#d97706' : '#0d4792';
+    track.appendChild(fill); w.appendChild(track);
+    return w;
+  }
+  function renderAdmin(kit, users, g) {
+    const body = el.adminBody;
+    body.textContent = '';
+    const m = monthKey();
+    const sum = k => users.reduce((a, u) => a + ((u.usage && u.usage[m] && u.usage[m][k]) || 0), 0);
+
+    // 1) Hạn mức Google
+    body.appendChild(node('h3', 'mt-1 text-sm font-semibold', 'Hạn mức Google tháng này'));
+    body.appendChild(meter('Google Cloud Translation (ký tự)', sum('tr'), g.trLimit || 0));
+    body.appendChild(meter('Giọng Google WaveNet (ký tự)', sum('tts'), g.ttsLimit == null ? 4000000 : g.ttsLimit));
+    body.appendChild(node('p', 'mt-1 text-xs text-slate-500', 'Số liệu cộng từ các thiết bị VIP tự báo, chỉ mang tính tham khảo (thiết bị không báo được thì không tính). Số liệu chính xác và tiền thực tế xem tại Google Cloud Console → Billing và APIs & Services → Quotas. Ưu đãi miễn phí của Translation tính theo tín dụng hằng tháng, không phải số ký tự cố định, nên hạn mức dịch do bạn tự đặt.'));
+    const form = node('div', 'mt-2 rounded-lg border border-slate-200 p-3');
+    const mkInput = (label, type, val, ph) => {
+      form.appendChild(node('label', 'mt-2 block text-sm first:mt-0', label));
+      const i = node('input', 'mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2'); i.type = type; i.value = val; if (ph) i.placeholder = ph; i.autocomplete = 'off';
+      form.appendChild(i); return i;
+    };
+    const inTr = mkInput('Hạn mức dịch mỗi tháng (ký tự, 0 = chưa đặt)', 'number', String(g.trLimit || 0));
+    const inTts = mkInput('Hạn mức giọng đọc mỗi tháng (ký tự)', 'number', String(g.ttsLimit == null ? 4000000 : g.ttsLimit));
+    const inKey = mkInput('Khóa Google dùng chung cho VIP (Translation + Text-to-Speech)', 'password', '', g.key ? 'Đã lưu. Nhập khóa mới để thay thế' : 'Dán API key (AIza…)');
+    form.appendChild(node('p', 'mt-1 text-xs text-slate-500', 'Khóa chỉ được máy chủ trả cho quản trị viên và VIP còn hạn. Nên giới hạn khóa theo tên miền và theo API trong Google Cloud Console, và đổi khóa khi có người hết hạn.'));
+    const save = node('button', 'mt-3 w-full rounded-xl bg-brand-600 py-2 text-sm font-medium text-white', 'Lưu hạn mức và khóa');
+    save.type = 'button';
+    save.onclick = async () => {
+      save.disabled = true;
+      try {
+        await kit.acct.saveGoogleConfig({ key: inKey.value.trim() || g.key || '', trLimit: Math.max(0, parseInt(inTr.value, 10) || 0), ttsLimit: Math.max(0, parseInt(inTts.value, 10) || 0) });
+        toast('Đã lưu'); loadAdmin();
+      } catch (e) { toast(fbErr(e)); save.disabled = false; }
+    };
+    form.appendChild(save);
+    body.appendChild(form);
+
+    // 2) Danh sách tài khoản
+    const counts = { pending: 0, active: 0, expired: 0, blocked: 0 };
+    users.forEach(u => counts[effStatus(u)]++);
+    if (!adminFilter) adminFilter = counts.pending ? 'pending' : 'all';
+    body.appendChild(node('h3', 'mt-5 text-sm font-semibold', `Tài khoản (${users.length})`));
+    const bar = node('div', 'mt-2 flex flex-wrap gap-1.5');
+    const chips = [['pending', `Chờ duyệt (${counts.pending})`], ['active', `Đang hoạt động (${counts.active})`], ['expired', `Hết hạn (${counts.expired})`], ['blocked', `Bị khóa (${counts.blocked})`], ['all', 'Tất cả']];
+    for (const [k, label] of chips) {
+      const b = node('button', 'rounded-full border px-2.5 py-1 text-xs ' + (adminFilter === k ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 text-slate-700'), label);
+      b.type = 'button'; b.onclick = () => { adminFilter = k; renderAdmin(kit, users, g); };
+      bar.appendChild(b);
+    }
+    const reload = node('button', 'rounded-full border border-slate-300 px-2.5 py-1 text-xs text-slate-700', 'Tải lại'); reload.type = 'button'; reload.onclick = loadAdmin;
+    bar.appendChild(reload);
+    body.appendChild(bar);
+
+    const act = async (fn, okMsg) => { try { await fn(); toast(okMsg); loadAdmin(); } catch (e) { toast(fbErr(e)); } };
+    const list = users.filter(u => adminFilter === 'all' || effStatus(u) === adminFilter)
+      .sort((a, b) => (b.requestedAt || 0) - (a.requestedAt || 0));
+    if (!list.length) body.appendChild(node('p', 'mt-3 text-sm text-slate-500', 'Không có tài khoản nào trong mục này.'));
+    for (const u of list) {
+      const st = effStatus(u);
+      const card = node('div', 'mt-2 rounded-xl border border-slate-200 p-3');
+      const top = node('div', 'flex items-start justify-between gap-2');
+      const who = node('div', 'min-w-0');
+      who.appendChild(node('div', 'truncate text-sm font-semibold', u.name || '(chưa có tên)'));
+      who.appendChild(node('div', 'truncate text-xs text-slate-500', u.email));
+      top.appendChild(who);
+      const badge = node('span', 'shrink-0 text-xs font-medium', STATUS_VI[st]); badge.style.color = STATUS_COLOR[st];
+      top.appendChild(badge); card.appendChild(top);
+      const use = (u.usage && u.usage[m]) || {};
+      const lines = [];
+      if (u.expiresAtMs) lines.push(`Hạn: ${fmtDay(u.expiresAtMs)}${st === 'active' ? ` (còn ${daysLeft(u.expiresAtMs)} ngày)` : ''}`);
+      lines.push(`Tháng này: dịch ${fmtN(use.tr || 0)} · đọc ${fmtN(use.tts || 0)} ký tự`);
+      if (u.requestedAt) lines.push(`Đăng ký: ${fmtDay(u.requestedAt)}`);
+      if (u.lastSeen) lines.push(`Dùng gần nhất: ${fmtDay(u.lastSeen)}`);
+      card.appendChild(node('div', 'mt-1 text-xs text-slate-600', lines.join(' · ')));
+      const idr = node('div', 'mt-1 break-all text-[0.6875rem] text-slate-400', 'Mã: ' + u.uid); card.appendChild(idr);
+      const acts = node('div', 'mt-2 flex flex-wrap gap-1.5');
+      const btn = (label, primary, fn) => { const b = node('button', 'rounded-lg px-2.5 py-1 text-xs font-medium ' + (primary ? 'bg-brand-600 text-white' : 'border border-slate-300 text-slate-700'), label); b.type = 'button'; b.onclick = fn; acts.appendChild(b); };
+      if (st === 'pending') btn('Duyệt 1 tháng', true, () => act(() => kit.acct.setUser(u.uid, { status: 'active', expiresAtMs: addMonth(Date.now()), plan: planName() }), 'Đã duyệt 1 tháng'));
+      if (st === 'active' || st === 'expired') btn('Gia hạn +1 tháng', true, () => act(() => kit.acct.setUser(u.uid, { status: 'active', expiresAtMs: addMonth(Math.max(Date.now(), u.expiresAtMs || 0)), plan: planName() }), 'Đã gia hạn 1 tháng'));
+      if (st !== 'blocked') btn('Khóa', false, () => act(() => kit.acct.setUser(u.uid, { status: 'blocked' }), 'Đã khóa tài khoản'));
+      else btn('Mở khóa (về chờ duyệt)', false, () => act(() => kit.acct.setUser(u.uid, { status: 'pending' }), 'Đã mở khóa'));
+      btn('Xóa', false, () => { if (confirm(`Xóa hồ sơ của ${u.email}? Người này sẽ phải đăng ký lại.`)) act(() => kit.acct.deleteUser(u.uid), 'Đã xóa hồ sơ'); });
+      card.appendChild(acts);
+      body.appendChild(card);
+    }
+  }
+
   {
-    const plan = ((window.APP_CONFIG && window.APP_CONFIG.plans) || []).find(p => p && p.name);
-    el.gatePlan.textContent = plan ? `Gói VIP: ${plan.name}${plan.price ? ' · ' + plan.price : ''}. Liên hệ để được cấp tài khoản.` : '';
+    const plan = (CFG.plans || []).find(p => p && p.name);
+    el.gatePlan.textContent = plan ? `Gói VIP: ${plan.name}${plan.price ? ' · ' + plan.price : ''}. Đăng ký tài khoản, thanh toán và chờ quản trị viên cấp quyền.` : '';
   }
   applyAcct();
-  if (!state.acct && !(viewerRoomId && !new URLSearchParams(location.search).get('co'))) el.gate.hidden = false; // người xem qua QR không cần chọn tài khoản
+  if (store.get('acct', '') === 'vip' && !noViewerGate()) watchAccount().catch(() => {}); // khôi phục phiên VIP và theo dõi hồ sơ
+  if (!state.acct && !noViewerGate()) openGate('login');
 
   const coCode = new URLSearchParams(location.search).get('co');
   if (viewerRoomId && coCode) startCohost(viewerRoomId, coCode);

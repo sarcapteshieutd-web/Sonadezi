@@ -6,7 +6,7 @@ Lưu ý: tên mục và giao diện của Firebase thay đổi theo thời gian;
 
 ## 1. Tạo dự án Firebase
 1. Vào https://console.firebase.google.com bằng **tài khoản Google của công ty**, chọn **Add project** (Thêm dự án), đặt tên (ví dụ `sonadezi-phong-hop`). Có thể tắt Google Analytics.
-2. **Build → Authentication → Get started → Sign-in method**, bật **Anonymous** (Ẩn danh).
+2. **Build → Authentication → Get started → Sign-in method**, bật **Anonymous** (Ẩn danh) và, nếu dùng tài khoản VIP, bật thêm **Email/Password** (Email/Mật khẩu).
 3. **Build → Firestore Database → Create database**, chọn chế độ **Production**, chọn vùng gần Việt Nam (ví dụ Singapore). Vùng không thể đổi sau khi tạo.
 4. Tạo **Web app**: ở trang tổng quan dự án bấm biểu tượng `</>` (Web), đặt tên, **không cần** bật Firebase Hosting. Firebase hiện đoạn `firebaseConfig` gồm `apiKey`, `authDomain`, `projectId`, `appId`.
 
@@ -62,4 +62,32 @@ npx esbuild src/room.js --bundle --minify --format=iife --target=es2020 --outfil
 ```
 
 ## 8. Kiểm thử quy tắc bảo mật
-`firebase/rules-test.js` chạy 26 kiểm tra (người lạ, người xem, chủ phòng, phòng hết hạn…) với Firebase Emulator. Xem hướng dẫn ở đầu tệp.
+- `firebase/rules-test.js`: 51 kiểm tra cho phòng họp (người lạ, người xem, chủ phòng, phòng hết hạn…).
+- `firebase/rules-test-vip.js`: 48 kiểm tra cho tài khoản VIP (tự nâng quyền, đọc khóa khi chờ duyệt/bị khóa/hết hạn, quyền quản trị…).
+Cả hai chạy với Firebase Emulator, xem hướng dẫn ở đầu mỗi tệp.
+
+## 9. Tài khoản VIP và quản trị
+Tính năng: người dùng tự đăng ký, quản trị viên duyệt và cấp hạn dùng theo tháng, VIP nhận khóa Google dùng chung từ máy chủ, quản trị viên theo dõi mức sử dụng. Dùng chung dự án Firebase của phòng họp.
+
+Lưu ý: các bước dưới đây tôi đã kiểm thử bằng Firebase Emulator (quy tắc bảo mật và luồng trên trình duyệt), **chưa** thực hiện trên dự án Firebase thật của bạn.
+
+### 9.1. Thiết lập một lần
+1. **Authentication → Sign-in method:** bật **Email/Password**.
+2. **Firestore Database → Rules:** dán lại toàn bộ nội dung `translator/firebase/firestore.rules` (đã có thêm phần `users`, `admins`, `config`) và bấm **Publish**. Chưa dán lại thì đăng ký/đăng nhập VIP sẽ báo "Không đủ quyền".
+3. **Đăng ký tài khoản của bạn** trong ứng dụng (màn hình chọn tài khoản → Đăng ký tài khoản VIP). Màn hình chờ duyệt hiện **Mã tài khoản**, hãy sao chép mã này.
+4. **Cấp quyền quản trị:** Firestore Database → **Start collection** (hoặc **Add collection**) đặt tên `admins` → **Document ID** = mã tài khoản vừa sao chép → thêm một trường bất kỳ (ví dụ `role` = `admin`) → **Save**. Đây là cách duy nhất cấp quyền quản trị: ứng dụng không thể tự ghi vào `admins`, nên không ai tự nâng quyền được.
+5. Bấm **Kiểm tra lại** (hoặc tải lại trang). Tài khoản của bạn thành *Quản trị viên*; *Cài đặt* có nút **Quản trị tài khoản và hạn mức**.
+6. Trong bảng quản trị, nhập **Khóa Google dùng chung** (Cloud Translation + Cloud Text-to-Speech) và hạn mức dịch/đọc mỗi tháng, bấm **Lưu**. Nên giới hạn khóa theo tên miền (HTTP referrer) và theo API.
+7. Điền thông tin nhận thanh toán trong `config.js` (`donate.bank`, `donate.qrImage`, `plans`): thông tin này hiện cho người chờ duyệt.
+
+### 9.2. Vận hành hằng ngày
+- Người dùng đăng ký và chuyển khoản; quản trị viên mở bảng quản trị, mục **Chờ duyệt**, bấm **Duyệt 1 tháng** sau khi đối chiếu tiền đã nhận (nội dung chuyển khoản là email của người dùng). Người dùng được kích hoạt ngay, không cần tải lại.
+- Gia hạn: **Gia hạn +1 tháng**. Muốn thu quyền ngay: **Khóa** (VIP đang mở sẽ bị hạ về Miễn phí trong vài giây và không nhận lại khóa Google).
+- Theo dõi: mục **Hạn mức Google tháng này** cộng số ký tự do các thiết bị VIP tự báo. Đây không phải số đo của Google; hãy đối chiếu với Google Cloud Console và đặt **Budget alert** trong Billing.
+
+### 9.3. Cơ chế bảo vệ và giới hạn
+- **Máy chủ kiểm soát:** quy tắc Firestore chỉ trả khóa Google (`config/google`) cho quản trị viên hoặc người có hồ sơ `active` và còn hạn (`expiresAt`). Chỉ quản trị viên đổi được trạng thái và hạn dùng; người dùng chỉ ghi được tên, số liệu tự báo và lần dùng gần nhất.
+- **Giới hạn:** khóa đã được trả về trình duyệt thì người dùng có kỹ thuật vẫn có thể sao chép. Hết hạn chỉ chặn việc **nhận khóa lần sau**, không thu hồi khóa đã sao chép. Vì vậy hãy giới hạn khóa theo tên miền, đặt ngân sách cảnh báo và **đổi khóa Google định kỳ** (nhập khóa mới trong bảng quản trị; người dùng còn hạn tự nhận khóa mới ở lần mở sau).
+- Số liệu sử dụng do thiết bị tự báo, người dùng có thể báo sai; chỉ dùng để tham khảo.
+- **Chi phí Firebase:** mỗi lần mở ứng dụng VIP đọc hồ sơ và khóa; mỗi 20 giây hoạt động ghi một lần số liệu sử dụng. Với số người dùng nhỏ, thường nằm trong hạn mức miễn phí của Firestore (hãy đối chiếu bảng giá hiện hành).
+- Quên mật khẩu dùng thư đặt lại của Firebase Authentication. Muốn đổi mẫu thư: Authentication → Templates.

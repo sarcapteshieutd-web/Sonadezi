@@ -1,10 +1,13 @@
 // Phòng họp xem chung: đồng bộ tin nhắn theo thời gian thực qua Firebase (Firestore) + tạo mã QR.
 // Được đóng gói thành ../room.bundle.js bằng esbuild (xem docs/FIREBASE-SETUP.md).
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, connectAuthEmulator } from 'firebase/auth';
+import {
+  getAuth, signInAnonymously, connectAuthEmulator, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  signOut, onAuthStateChanged, sendPasswordResetEmail
+} from 'firebase/auth';
 import {
   getFirestore, connectFirestoreEmulator, doc, getDoc, getDocs, setDoc, updateDoc, addDoc,
-  collection, onSnapshot, query, orderBy, Timestamp, deleteDoc, writeBatch
+  collection, onSnapshot, query, orderBy, Timestamp, deleteDoc, writeBatch, increment
 } from 'firebase/firestore';
 import qrcode from 'qrcode-generator';
 
@@ -17,6 +20,12 @@ function randomRoomId() {
   for (const b of buf) s += ALPHABET[b % ALPHABET.length];
   return s;
 }
+
+const toProfile = (id, d) => ({
+  uid: id, email: d.email || '', name: d.name || '', status: d.status || 'pending', plan: d.plan || '', note: d.note || '',
+  expiresAtMs: d.expiresAt && d.expiresAt.toMillis ? d.expiresAt.toMillis() : 0,
+  requestedAt: d.requestedAt || 0, approvedAt: d.approvedAt || 0, lastSeen: d.lastSeen || 0, usage: d.usage || {}
+});
 
 function create(cfg) {
   if (!cfg || !cfg.projectId || !cfg.apiKey) throw new Error('Chưa cấu hình Firebase trong config.js');
@@ -35,11 +44,17 @@ function create(cfg) {
   const liveRef = (id, slot = 'now') => doc(db, 'rooms', id, 'live', slot); // 'now' = chủ phòng, 'co' = máy thứ hai
   const secretRef = id => doc(db, 'rooms', id, 'secret', 'code');
   const cohostRef = (id, u) => doc(db, 'rooms', id, 'cohosts', u);
+  const profileRef = u => doc(db, 'users', u);
+  const adminRef = u => doc(db, 'admins', u);
+  const googleCfgRef = doc(db, 'config', 'google');
+  onAuthStateChanged(auth, u => { if (u) uid = u.uid; }); // giữ uid của phòng họp khớp với tài khoản đang đăng nhập
 
   return {
+    // Chờ Firebase khôi phục phiên đã lưu (không đăng nhập ẩn danh)
+    async ready() { await auth.authStateReady(); },
     async init() {
+      await auth.authStateReady(); // phải chờ trước, nếu không phiên email đã lưu sẽ bị đăng nhập ẩn danh đè lên
       if (!auth.currentUser) await signInAnonymously(auth);
-      await auth.authStateReady();
       uid = auth.currentUser.uid;
       return uid;
     },
@@ -142,6 +157,76 @@ function create(cfg) {
       return onSnapshot(collection(db, 'rooms', id, 'viewers'), snap => {
         cb(snap.docs.map(d => ({ uid: d.id, lang: d.data().lang })));
       }, onError);
+    },
+
+    // ---------- Tài khoản VIP (đăng ký, duyệt, hạn dùng, khóa Google dùng chung) ----------
+    acct: {
+      // Người dùng email đang đăng nhập (null nếu chưa hoặc chỉ là phiên ẩn danh của phòng họp)
+      user() {
+        const u = auth.currentUser;
+        return u && !u.isAnonymous ? { uid: u.uid, email: u.email || '' } : null;
+      },
+      onAuth(cb) { return onAuthStateChanged(auth, u => cb(u && !u.isAnonymous ? { uid: u.uid, email: u.email || '' } : null)); },
+      async signUp(email, password, name) {
+        await createUserWithEmailAndPassword(auth, email, password);
+        uid = auth.currentUser.uid;
+        await this.ensureProfile(name);
+      },
+      async signIn(email, password) {
+        await signInWithEmailAndPassword(auth, email, password);
+        uid = auth.currentUser.uid;
+        await this.ensureProfile('');
+      },
+      async signOut() { await signOut(auth); uid = null; },
+      async resetPassword(email) { await sendPasswordResetEmail(auth, email); },
+      // Tạo hồ sơ "chờ duyệt" nếu chưa có (ví dụ lần đăng ký trước bị ngắt giữa chừng)
+      async ensureProfile(name) {
+        const u = auth.currentUser;
+        const ref = profileRef(u.uid);
+        const s = await getDoc(ref);
+        if (s.exists()) return;
+        await setDoc(ref, { email: u.email || '', name: (name || '').slice(0, 100), status: 'pending', requestedAt: Date.now() });
+      },
+      async getProfile(id) {
+        const s = await getDoc(profileRef(id));
+        return s.exists() ? toProfile(s.id, s.data()) : null;
+      },
+      // Theo dõi hồ sơ theo thời gian thực: quản trị viên duyệt là người dùng thấy ngay
+      subscribeProfile(id, cb, onError) {
+        return onSnapshot(profileRef(id), s => cb(s.exists() ? toProfile(s.id, s.data()) : null), onError || (() => {}));
+      },
+      async isAdmin(id) {
+        try { return (await getDoc(adminRef(id))).exists(); } catch (_) { return false; }
+      },
+      async getGoogleConfig() {
+        const s = await getDoc(googleCfgRef);
+        return s.exists() ? s.data() : null;
+      },
+      async saveGoogleConfig({ key, trLimit, ttsLimit }) {
+        await setDoc(googleCfgRef, { key: key || '', trLimit: trLimit || 0, ttsLimit: ttsLimit || 0, updatedAt: Date.now() });
+      },
+      async listUsers() {
+        const snap = await getDocs(collection(db, 'users'));
+        return snap.docs.map(d => toProfile(d.id, d.data()));
+      },
+      // Quản trị viên: duyệt, gia hạn, khóa. expiresAtMs là mốc hết hạn mới (bỏ trống để giữ nguyên).
+      async setUser(id, { status, expiresAtMs, plan, note }) {
+        const data = { status, approvedAt: Date.now(), approvedBy: auth.currentUser.uid };
+        if (typeof expiresAtMs === 'number') data.expiresAt = Timestamp.fromMillis(expiresAtMs);
+        if (typeof plan === 'string') data.plan = plan;
+        if (typeof note === 'string') data.note = note;
+        await updateDoc(profileRef(id), data);
+      },
+      async deleteUser(id) { await deleteDoc(profileRef(id)); },
+      // Báo số ký tự đã dùng trong tháng (thiết bị tự báo, chỉ để quản trị viên tham khảo)
+      async reportUsage(month, d) {
+        const u = auth.currentUser;
+        if (!u || u.isAnonymous) return;
+        const upd = { lastSeen: Date.now() };
+        if (d.tr) upd['usage.' + month + '.tr'] = increment(d.tr);
+        if (d.tts) upd['usage.' + month + '.tts'] = increment(d.tts);
+        await updateDoc(profileRef(u.uid), upd);
+      }
     },
 
     qrSvg(text, cell = 6) {

@@ -20,24 +20,8 @@ window.APP_CONFIG = {
     // { name: 'Gói tháng', price: '99.000đ / tháng', description: 'Dịch không giới hạn', url: 'https://...' }
     { name: 'VIP 1', price: '150.000đ / tháng', description: 'Gói VIP giúp bạn dịch mượt mà hơn và chất lượng dịch tốt hơn' }
   ],
-  // Tài khoản VIP (Google Cloud Translation + giọng Google WaveNet + lưu/xuất đoạn chat + chế độ hội nghị).
-  // Tài khoản Miễn phí không cần khai báo: dùng MyMemory + giọng thiết bị, không lưu/xuất chat, không có chế độ hội nghị.
-  // Mỗi tài khoản gồm tên đăng nhập và mã băm SHA-256 của chuỗi "muối|tên đăng nhập (chữ thường)|mật khẩu".
-  // Tạo dòng khai báo bằng cách mở tệp tao-tai-khoan.html trên máy của bạn (không gửi gì lên mạng).
-  // Muốn thu hồi một tài khoản: xóa dòng của tài khoản đó rồi đăng bản mới lên.
-  // CẢNH BÁO: ứng dụng chạy hoàn toàn trên trình duyệt, nên đây chỉ là cổng phân quyền "mềm": người rành kỹ thuật vẫn có thể
-  // đọc tệp này hoặc chỉnh mã để vượt qua. Mã băm không có thuật toán làm chậm, vì vậy hãy đặt mật khẩu dài, khó đoán.
-  // Muốn chặn thật sự cần một máy chủ (ví dụ Firebase Authentication + Cloud Functions giữ khóa API).
-  vip: {
-    salt: 'sonadezi-vip-doi-chuoi-nay',   // nên đổi thành chuỗi ngẫu nhiên của riêng bạn TRƯỚC khi tạo tài khoản
-    accounts: [
-      // { user: 'ten.dang.nhap', hash: '…64 ký tự hex từ tao-tai-khoan.html…' }
-    ],
-    // Khóa Google dùng chung cho mọi tài khoản VIP (để trống = mỗi người tự nhập khóa trong Cài đặt).
-    // CẢNH BÁO: khóa đặt ở đây nằm công khai trong mã trang web, ai mở trang cũng đọc được. Chỉ dùng khi đã giới hạn khóa theo
-    // tên miền (HTTP referrer), chỉ cho phép Cloud Translation và Cloud Text-to-Speech, và đã đặt ngân sách cảnh báo.
-    googleKey: ''
-  },
+  // Tài khoản Miễn phí / VIP: không khai báo ở đây. VIP đăng ký trong ứng dụng, quản trị viên duyệt và cấp hạn dùng 1 tháng
+  // (xem docs/FIREBASE-SETUP.md, mục "Tài khoản VIP"). Thông tin thanh toán hiển thị cho người chờ duyệt lấy từ phần donate và plans ở trên.
   // Cải thiện nhận diện giọng nói
   recognition: {
     // Bỏ qua câu đã chốt có độ tin cậy thấp hơn mức này (0 đến 1). Đặt 0 để tắt.

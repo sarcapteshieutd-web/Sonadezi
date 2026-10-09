@@ -89,5 +89,60 @@ service cloud.firestore {
         allow delete: if signedIn() && (request.auth.uid == viewerUid || isHost(roomId));
       }
     }
+
+    // ---------- Tài khoản VIP ----------
+    // - Người dùng tự đăng ký bằng email + mật khẩu (Firebase Authentication); hồ sơ users/{uid} luôn bắt đầu ở trạng thái "pending".
+    // - Chỉ quản trị viên (có tài liệu admins/{uid}) mới đổi được trạng thái và hạn dùng; người dùng không tự cấp quyền cho mình.
+    // - Khóa Google dùng chung (config/google) chỉ trả về cho quản trị viên hoặc VIP đang "active" và còn hạn (expiresAt).
+    // - tài liệu admins/{uid} KHÔNG ghi được từ ứng dụng: chỉ tạo thủ công trong Firebase Console.
+    function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function realUser() { return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous'; }
+    function myProfile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function vipActive() {
+      return realUser()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && myProfile().status == 'active'
+        && myProfile().expiresAt > request.time;
+    }
+
+    match /admins/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+
+    match /users/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+
+      // Tự đăng ký: chỉ tạo hồ sơ của chính mình, trạng thái chờ duyệt, email trùng email đăng nhập
+      allow create: if realUser() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email', 'name', 'status', 'requestedAt'])
+        && request.resource.data.status == 'pending'
+        && request.resource.data.email is string && request.resource.data.email == request.auth.token.email
+        && request.resource.data.name is string && request.resource.data.name.size() <= 100
+        && request.resource.data.requestedAt is number;
+
+      allow update: if
+        // người dùng: chỉ đổi tên, số liệu sử dụng tự báo và lần dùng gần nhất
+        (signedIn() && request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'usage', 'lastSeen'])
+          && request.resource.data.name is string && request.resource.data.name.size() <= 100)
+        // quản trị viên: duyệt, gia hạn, khóa
+        || (isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'expiresAt', 'plan', 'note', 'approvedAt', 'approvedBy'])
+          && request.resource.data.status in ['pending', 'active', 'blocked']);
+
+      allow delete: if isAdmin();
+    }
+
+    match /config/{docId} {
+      allow get: if docId == 'google' && (isAdmin() || vipActive());
+      allow list: if false;
+      allow create, update: if docId == 'google' && isAdmin()
+        && request.resource.data.keys().hasOnly(['key', 'trLimit', 'ttsLimit', 'updatedAt'])
+        && request.resource.data.key is string && request.resource.data.key.size() <= 200
+        && request.resource.data.trLimit is number && request.resource.data.ttsLimit is number;
+      allow delete: if false;
+    }
   }
 }
