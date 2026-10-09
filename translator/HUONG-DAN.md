@@ -80,6 +80,15 @@ Mặc định dùng **MyMemory** (miễn phí, không cần khóa; khoảng 5.00
 3. Hạn chế khóa: *Application restrictions = Websites*, thêm tên miền của bạn; *API restrictions* = Cloud Translation API.
 4. Trong ứng dụng: biểu tượng bánh răng → *Google Cloud Translation* → dán khóa → *Lưu*.
 
+### Giọng đọc Google Cloud WaveNet (tùy chọn, có giọng nam/nữ ổn định)
+Mặc định ứng dụng đọc bằng giọng có sẵn trên thiết bị (miễn phí, nhưng số giọng nam/nữ tùy thiết bị). Muốn giọng giống nhau trên mọi thiết bị:
+1. Trong cùng dự án Google Cloud, bật thêm *Cloud Text-to-Speech API* (đã bật thanh toán ở bước trên).
+2. Có thể dùng chung khóa Translation (thêm *Cloud Text-to-Speech API* vào phần *API restrictions* của khóa) hoặc tạo khóa riêng.
+3. Trong ứng dụng: bánh răng → *Giọng đọc* → *Nguồn giọng đọc* = *Google Cloud WaveNet* → (dán khóa nếu dùng khóa riêng) → chọn giọng nam/nữ → *Nghe thử* → *Lưu*.
+4. Chi phí theo bảng giá Google tại thời điểm tra cứu: WaveNet miễn phí 4 triệu ký tự/tháng, sau đó khoảng 4 USD cho 1 triệu ký tự. Vui lòng đối chiếu lại bảng giá hiện hành và đặt cảnh báo ngân sách (Budget alert) trong Google Cloud.
+5. Câu đã đọc được lưu tạm trong phiên làm việc để không bị tính phí lại khi bấm *Đọc lại*. Nếu gọi Google lỗi (mạng, khóa, hạn mức), ứng dụng báo lỗi và tự dùng giọng thiết bị.
+6. Danh sách giọng được lấy trực tiếp từ Google theo từng ngôn ngữ; nếu Google chưa có giọng WaveNet cho ngôn ngữ nào thì ngôn ngữ đó dùng giọng thiết bị.
+
 Cảnh báo bảo mật: khóa nhập trên trình duyệt chỉ lưu tại thiết bị đó, nhưng nếu dùng chung cho nhiều người thì nên đặt qua máy chủ trung gian (Netlify/Vercel Functions) để không lộ khóa.
 
 ## 7. Giới hạn cần biết
@@ -141,7 +150,7 @@ Trong Chế độ họp, tích **"Đọc bản dịch ra loa"** để mỗi bả
 - Bản dịch được **xếp hàng và đọc lần lượt**, không cắt nhau. Hàng chờ chỉ giữ **3 bản dịch mới nhất**; các câu quá cũ bị bỏ qua phần đọc (chữ vẫn hiện đầy đủ trên khung chat).
 - Khi đang đọc, app **tạm dừng nghe** (hiện nhãn "Đang đọc · micro tạm nghỉ") để không thu lại tiếng dịch, đọc xong tự nghe lại. **Lời nói trong lúc đang đọc sẽ không được ghi nhận**, nên cần người nói chờ bản dịch đọc xong.
 - Dùng micro hội nghị làm cả **đầu vào lẫn đầu ra mặc định** của laptop (Windows: Cài đặt → Hệ thống → Âm thanh), cắm USB.
-- Giọng đọc là giọng có sẵn trên laptop, chọn và chỉnh trong ⚙ → Giọng đọc.
+- Giọng đọc mặc định là giọng có sẵn trên laptop (hoặc Google Cloud WaveNet nếu đã bật), chọn và chỉnh trong ⚙ → Giọng đọc.
 - Với thương thảo hợp đồng nên **tắt** tùy chọn này và chỉ đọc chữ trên màn hình để không mất lời nói.
 
 ## 16. Phòng họp xem chung bằng mã QR
