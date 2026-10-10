@@ -163,7 +163,7 @@ Sau đó tăng số phiên bản `CACHE` trong `service-worker.js`.
 - Hội thoại tự được lưu trên thiết bị (tối đa 300 lượt gần nhất) nên tải lại trang vẫn còn; nút thùng rác xóa toàn bộ.
 - Nút **tải xuống** ở đầu trang mở hộp thoại lưu tệp: **.txt** (đọc nhanh) hoặc **.csv** (mở bằng Excel, đủ cột thời gian, ngôn ngữ, văn bản gốc và bản dịch). Trên điện thoại có thêm nút **Chia sẻ** (gửi qua Zalo, email…).
 - Dữ liệu chỉ nằm trên thiết bị người dùng, không gửi lên máy chủ nào ngoài dịch vụ dịch (MyMemory/Google).
-- Nút **Sao chép nội dung để tóm tắt bằng Claude**: sao chép sẵn lời nhắc kèm toàn bộ đoạn hội thoại; bạn dán vào Claude (nút *Mở Claude*) để nhận tóm tắt và sơ đồ cây Mermaid theo chủ đề, rồi dán mã Mermaid vào mermaid.live để xem sơ đồ. Cách này không gọi API nên không phát sinh chi phí API; đoạn chat chỉ rời thiết bị khi bạn tự dán vào Claude.
+- Nút **Sao chép lời nhắc tóm tắt bằng Claude**: tải tệp **.txt** của đoạn chat, bấm nút này để sao chép lời nhắc, rồi mở Claude (nút *Mở Claude*), đính kèm tệp và dán lời nhắc để nhận tóm tắt và sơ đồ cây Mermaid theo chủ đề; dán mã Mermaid vào mermaid.live để xem sơ đồ. Cách này không gọi API nên không phát sinh chi phí API; đoạn chat chỉ rời thiết bị khi bạn tự đính kèm vào Claude.
 
 ## 10. Nút Ủng hộ và gói sử dụng
 Nút trái tim ở đầu trang mở cửa sổ ủng hộ. Nội dung lấy từ `config.js`: QR chuyển khoản, thông tin tài khoản, liên kết thanh toán (chỉ nhận `https://`) và danh sách gói. Để trống thì mục tương ứng không hiện.

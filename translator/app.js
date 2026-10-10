@@ -1607,15 +1607,15 @@
   };
 
   // Tóm tắt bằng Claude: không gọi API, chỉ sao chép lời nhắc kèm hội thoại để người dùng tự dán vào Claude
-  const AI_PROMPT = 'Hãy tóm tắt cuộc hội thoại dịch dưới đây bằng tiếng Việt, gồm:\n' +
+  const AI_PROMPT = 'Hãy tóm tắt cuộc hội thoại dịch trong tệp đính kèm bằng tiếng Việt, gồm:\n' +
     '1) Tiêu đề ngắn và đoạn tóm tắt 3 đến 6 câu.\n2) Các ý chính (gạch đầu dòng).\n' +
     '3) Sơ đồ cây theo chủ đề ở dạng Mermaid (mindmap) trong một khối mã ```mermaid: 3 đến 7 chủ đề, mỗi chủ đề 2 đến 5 ý ngắn dưới 12 từ; việc cần làm hoặc nội dung đã thống nhất (nếu có) đưa vào một chủ đề riêng. Tránh dùng các ký tự ( ) [ ] { } " : trong nội dung nút.\n' +
-    'Chỉ dựa trên nội dung hội thoại, không bịa thêm.\n\n--- HỘI THOẠI ---\n';
+    'Chỉ dựa trên nội dung hội thoại trong tệp đính kèm, không bịa thêm.';
   el.expAi.onclick = async () => {
     if (!state.log.length) return;
-    const text = AI_PROMPT + buildTxt().replace(/\r\n/g, '\n');
-    try { await navigator.clipboard.writeText(text); toast('Đã sao chép. Mở Claude và dán vào để tóm tắt'); }
-    catch (_) { download(new File(['﻿' + text], `Noi-dung-tom-tat-${fileStamp()}.txt`, { type: 'text/plain;charset=utf-8' })); toast('Không sao chép được, đã tải tệp. Hãy mở tệp và dán nội dung vào Claude'); }
+    const text = AI_PROMPT;
+    try { await navigator.clipboard.writeText(text); toast('Đã sao chép lời nhắc. Mở Claude, đính kèm tệp .txt rồi dán lời nhắc'); }
+    catch (_) { download(new File(['﻿' + text], `Loi-nhac-tom-tat-${fileStamp()}.txt`, { type: 'text/plain;charset=utf-8' })); toast('Không sao chép được, đã tải tệp lời nhắc. Hãy mở tệp, dán nội dung vào Claude'); }
   };
 
   // ---------- Ủng hộ / gói sử dụng ----------
