@@ -94,6 +94,3 @@ Lưu ý: các bước dưới đây tôi đã kiểm thử bằng Firebase Emula
 
 ### 9.4. Cập nhật quy tắc khi nâng cấp lên bản có "gói Google Cloud" và "giới hạn mỗi VIP"
 Bản này thêm tài liệu `config/billing` (chỉ quản trị viên đọc/ghi: tín dụng, tỷ giá, ngày hết hạn dùng thử, đơn giá) và hai trường `userTr`, `userTts` trong `config/google` (giới hạn mỗi VIP, VIP còn hạn đọc được). **Bắt buộc dán lại toàn bộ `translator/firebase/firestore.rules` và bấm Publish** (Firestore Database → Rules); chưa dán lại thì lưu gói hoặc giới hạn sẽ báo "Không đủ quyền". Không cần tạo thủ công các tài liệu này: bảng quản trị tự tạo khi bạn bấm Lưu.
-
-### 9.5. Cập nhật quy tắc khi nâng cấp lên bản có "Tóm tắt bằng Claude"
-Bản này thêm tài liệu `config/ai` (khóa Anthropic, mô hình, giới hạn lượt mỗi VIP; quản trị viên ghi, VIP còn hạn đọc) và số lượt `usage.<tháng>.ai` trong hồ sơ người dùng. **Bắt buộc dán lại toàn bộ `translator/firebase/firestore.rules` và bấm Publish**; chưa dán lại thì lưu cấu hình Claude sẽ báo "Không đủ quyền" và VIP không đọc được khóa. Tài liệu `config/ai` được bảng quản trị tự tạo khi bạn bấm *Lưu cấu hình Claude*.

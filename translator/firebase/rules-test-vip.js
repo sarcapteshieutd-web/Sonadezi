@@ -97,20 +97,6 @@ const t = (name, got, exp) => {
   t('Người thường xóa hồ sơ người khác bị chặn', await call('DELETE', '/users/' + c.uid, b.tok), 'deny');
   t('Quản trị viên xóa hồ sơ C', await call('DELETE', '/users/' + c.uid, adm.tok), 'ok');
 
-  console.log('--- Khóa Claude (config/ai)');
-  const ai = { key: S('sk-ant-test'), model: S('claude-sonnet-5-5'), userAi: N(20), updatedAt: N(now) };
-  t('Người thường không ghi được cấu hình Claude', await call('PATCH', '/config/ai', a.tok, ai), 'deny');
-  t('Quản trị viên lưu cấu hình Claude', await call('PATCH', '/config/ai', adm.tok, ai), 'ok');
-  t('Quản trị viên lưu thừa trường bị chặn', await call('PATCH', '/config/ai', adm.tok, { ...ai, extra: S('x') }), 'deny');
-  t('Quản trị viên lưu userAi sai kiểu bị chặn', await call('PATCH', '/config/ai', adm.tok, { ...ai, userAi: S('20') }), 'deny');
-  t('Quản trị viên đọc cấu hình Claude', await call('GET', '/config/ai', adm.tok), 'ok');
-  t('VIP còn hạn đọc được khóa Claude', await call('GET', '/config/ai', a.tok), 'ok');
-  t('Không đăng nhập không đọc được khóa Claude', await call('GET', '/config/ai', null), 'deny');
-  t('Tài khoản bị khóa không đọc được khóa Claude', await call('GET', '/config/ai', b.tok), 'deny');
-  t('Tài khoản hết hạn không đọc được khóa Claude', await call('GET', '/config/ai', exp.tok), 'deny');
-  t('Tài khoản chờ duyệt không đọc được khóa Claude', await call('GET', '/config/ai', c.tok), 'deny');
-  t('VIP báo lượt tóm tắt (usage.ai)', await call('PATCH', '/users/' + a.uid, a.tok, { usage: M({ m202610: M({ ai: N(1) }) }), lastSeen: N(now) }, ['usage', 'lastSeen']), 'ok');
-
   console.log('--- Giới hạn mỗi VIP (config/google) và gói Google Cloud (config/billing)');
   const cfg2 = { key: S('AIzaFAKE'), trLimit: N(500000), ttsLimit: N(4000000), userTr: N(300000), userTts: N(600000), updatedAt: N(now) };
   const bill = { creditUsd: N(300), vndPerUsd: N(25970), trialEndMs: N(now + 89 * DAY), trPrice: N(20), ttsPrice: N(4), ttsFree: N(4000000), updatedAt: N(now) };
