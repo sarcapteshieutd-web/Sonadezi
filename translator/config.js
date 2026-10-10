@@ -18,7 +18,7 @@ window.APP_CONFIG = {
   // Gói sử dụng hiển thị cho người dùng chọn mua; url là trang thanh toán của từng gói
   plans: [
     // { name: 'Gói tháng', price: '99.000đ / tháng', description: 'Dịch không giới hạn', url: 'https://...' }
-    { name: 'VIP 1', price: '150.000đ / tháng', description: 'Nâng cấp lên VIP để dịch mượt mà hơn với Google Cloud Translation, nghe bản dịch bằng giọng đọc Google WaveNet tự nhiên (chọn giọng nam hoặc nữ, vẫn dùng được giọng có sẵn trên máy). Lưu và xuất đoạn chat ra tệp .txt hoặc Excel (.csv), dùng chế độ hội nghị để nghe bản dịch bằng tai nghe mà micro vẫn luôn mở. Đăng ký, thanh toán và chờ duyệt ngay trong ứng dụng, dùng theo tháng, gia hạn dễ dàng.' }
+    { name: 'VIP 1', price: '150.000đ / tháng', description: 'Dịch mượt mà hơn với Google Cloud Translation, nghe giọng đọc WaveNet tự nhiên (nam hoặc nữ) và dùng chế độ hội nghị với tai nghe. Nâng cấp ngay để trải nghiệm trọn vẹn!' }
   ],
   // Tài khoản Miễn phí / VIP: không khai báo ở đây. VIP đăng ký trong ứng dụng, quản trị viên duyệt và cấp hạn dùng 1 tháng
   // (xem docs/FIREBASE-SETUP.md, mục "Tài khoản VIP"). Thông tin thanh toán hiển thị cho người chờ duyệt lấy từ phần donate và plans ở trên.
