@@ -164,6 +164,12 @@ Sau đó tăng số phiên bản `CACHE` trong `service-worker.js`.
 - Nút **tải xuống** ở đầu trang mở hộp thoại lưu tệp: **.txt** (đọc nhanh) hoặc **.csv** (mở bằng Excel, đủ cột thời gian, ngôn ngữ, văn bản gốc và bản dịch). Trên điện thoại có thêm nút **Chia sẻ** (gửi qua Zalo, email…).
 - Dữ liệu chỉ nằm trên thiết bị người dùng, không gửi lên máy chủ nào ngoài dịch vụ dịch (MyMemory/Google).
 
+### Tóm tắt và sơ đồ cây bằng Claude (VIP và quản trị viên)
+- Trong hộp thoại lưu tệp có nút **Tóm tắt và sơ đồ cây (Claude)**: nội dung đoạn chat được gửi tới Claude (Anthropic) để tạo tiêu đề, đoạn tóm tắt, các ý chính và **sơ đồ cây Mermaid (mindmap) chia theo chủ đề**. Kết quả có thể sao chép, tải tệp **.md** (kèm khối mã Mermaid) hoặc tải ảnh sơ đồ **.svg**. Lần đầu có hộp xác nhận về việc gửi nội dung ra ngoài.
+- Đoạn chat dài chỉ gửi phần mới nhất (khoảng 24.000 ký tự). Khi lỗi, có nút sao chép nội dung để tự dán vào Claude.
+- Quản trị viên cấu hình tại **Cài đặt → Quản trị**, mục *Tóm tắt bằng Claude*: khóa Anthropic dùng chung, mô hình (Sonnet 5.5, Haiku 5.5 hoặc Opus 5.5) và giới hạn lượt mỗi VIP mỗi tháng (0 = không giới hạn). Quản trị viên không bị giới hạn lượt.
+- **Lưu ý bảo mật và chi phí:** khóa Anthropic được máy chủ chỉ trả cho quản trị viên và VIP còn hạn, nhưng ứng dụng gọi API trực tiếp từ trình duyệt nên VIP có thể thấy khóa bằng công cụ của trình duyệt. Hãy tạo khóa riêng cho ứng dụng, đặt giới hạn chi tiêu hằng tháng (Spend limit) tại Anthropic Console, đổi khóa khi cần. Chi phí mỗi lượt tùy mô hình và độ dài đoạn chat, chưa được xác minh: xem số liệu thật tại Anthropic Console → Usage. Cách chặn triệt để là đặt một máy chủ trung gian (Cloud Functions), chưa có trong bản này.
+
 ## 10. Nút Ủng hộ và gói sử dụng
 Nút trái tim ở đầu trang mở cửa sổ ủng hộ. Nội dung lấy từ `config.js`: QR chuyển khoản, thông tin tài khoản, liên kết thanh toán (chỉ nhận `https://`) và danh sách gói. Để trống thì mục tương ứng không hiện.
 
