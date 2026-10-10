@@ -371,6 +371,7 @@
           <button id="btnSwitchAcct" type="button" class="shrink-0 rounded-lg border border-slate-300 px-2 py-1 text-xs">Đổi tài khoản</button>
         </div>
         <p id="acctMeta" class="mt-1 hidden text-xs text-slate-600"></p>
+        <div id="vipUse" class="mt-2 hidden"></div>
         <div id="acctUidRow" class="mt-1 hidden items-center justify-between gap-2 text-xs text-slate-500">
           <span>Mã tài khoản: <code id="acctUid" class="break-all"></code></span>
           <button id="btnCopyUid" type="button" class="shrink-0 rounded border border-slate-300 px-1.5 py-0.5">Sao chép</button>
@@ -395,11 +396,24 @@
           <label class="block text-sm font-medium">Google Cloud Translation API key</label>
           <input id="inKey" type="password" autocomplete="off" placeholder="AIza…" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2" />
         </div>
-        <label class="mt-3 block text-sm font-medium">Giới hạn ký tự Google mỗi ngày</label>
-        <input id="inGLimit" type="number" min="0" step="1000" inputmode="numeric" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2" />
-        <p class="mt-1 text-xs text-slate-500">Nhập 0 để không giới hạn. Bộ đếm tính theo ngày trên thiết bị này, chỉ mang tính tham khảo, không thay số liệu tính phí của Google.</p>
-        <label class="mt-2 flex items-center gap-2 text-sm"><input id="chkGFallback" type="checkbox" class="h-4 w-4 accent-brand-600" />Đạt giới hạn thì tự chuyển sang MyMemory (miễn phí)</label>
-        <div class="mt-2 flex items-center justify-between gap-2"><span id="gUsageBox" class="text-xs"></span><button id="btnGReset" type="button" class="shrink-0 rounded-lg border border-slate-300 px-2 py-1 text-xs">Đặt lại bộ đếm</button></div>
+        <div id="boxGAdmin">
+          <div class="mt-3 overflow-hidden rounded-lg border border-slate-200">
+            <table class="w-full text-xs">
+              <tbody>
+                <tr class="border-b border-slate-200 bg-slate-50 font-medium text-slate-700"><td class="px-2 py-1">Bảng đo Google Cloud Translation</td><td class="px-2 py-1 text-right">Ký tự</td><td class="px-2 py-1 text-right">Lượt gọi</td></tr>
+                <tr class="border-b border-slate-200"><td class="px-2 py-1">Hôm nay</td><td id="trDayN" class="px-2 py-1 text-right tabular-nums"></td><td id="trDayC" class="px-2 py-1 text-right tabular-nums"></td></tr>
+                <tr class="border-b border-slate-200"><td class="px-2 py-1">Tháng này</td><td id="trMonN" class="px-2 py-1 text-right tabular-nums"></td><td id="trMonC" class="px-2 py-1 text-right tabular-nums"></td></tr>
+                <tr class="border-b border-slate-200"><td class="px-2 py-1">Hạn mức tháng do bạn đặt</td><td id="trLim" colspan="2" class="px-2 py-1 text-right tabular-nums"></td></tr>
+                <tr><td class="px-2 py-1">Ước tính phí (20 USD cho 1 triệu ký tự)</td><td id="trCost" colspan="2" class="px-2 py-1 text-right tabular-nums"></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <label class="mt-2 block text-sm font-medium">Giới hạn ký tự mỗi tháng (0 = không giới hạn)</label>
+          <input id="inGLimit" type="number" min="0" step="10000" inputmode="numeric" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2" />
+          <label class="mt-2 flex items-center gap-2 text-sm"><input id="chkGFallback" type="checkbox" class="h-4 w-4 accent-brand-600" />Đạt giới hạn thì tự chuyển sang MyMemory (miễn phí)</label>
+          <div class="mt-2 flex items-center justify-between gap-2"><span id="gUsageBox" class="text-xs"></span><button id="btnGReset" type="button" class="shrink-0 rounded-lg border border-slate-300 px-2 py-1 text-xs">Đặt lại bộ đo</button></div>
+          <p class="mt-1 text-xs text-slate-500">Bộ đo chỉ tính các lần gọi Google dịch thực sự và chỉ trên thiết bị này; không thay số liệu tính phí của Google. Ước tính phí dùng đơn giá tham khảo và chưa trừ ưu đãi miễn phí hằng tháng (nếu có). Đạt giới hạn thì tự dịch bằng MyMemory (nếu bật tùy chọn trên).</p>
+        </div>
         <p id="noteGKey" class="mt-1 text-xs text-slate-500">Khóa chỉ lưu trên thiết bị này. Nên giới hạn khóa theo tên miền (HTTP referrer) trong Google Cloud Console.</p>
       </div>
       <div class="mt-5 border-t border-slate-200 pt-4">
@@ -425,6 +439,7 @@
           <label class="mt-2 block text-sm">Giọng WaveNet (nam/nữ)</label>
           <select id="selCloudVoice" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2"></select>
           <p id="noteTts" class="mt-1 text-xs text-slate-500">Cần bật <b>Cloud Text-to-Speech API</b> và thanh toán trong Google Cloud. WaveNet miễn phí 4 triệu ký tự/tháng, sau đó khoảng 4 USD cho 1 triệu ký tự (theo bảng giá của Google, vui lòng đối chiếu lại). Nếu lỗi hoặc mất mạng, ứng dụng tự dùng giọng thiết bị.</p>
+          <div id="boxTtsAdmin">
           <div class="mt-3 overflow-hidden rounded-lg border border-slate-200">
             <table class="w-full text-xs">
               <tbody>
@@ -440,6 +455,7 @@
           <input id="inTtsLimit" type="number" min="0" step="10000" inputmode="numeric" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2" />
           <div class="mt-2 flex items-center justify-between gap-2"><span id="ttsStatus" class="text-xs"></span><button id="btnTtsReset" type="button" class="shrink-0 rounded-lg border border-slate-300 px-2 py-1 text-xs">Đặt lại bộ đo</button></div>
           <p class="mt-1 text-xs text-slate-500">Bộ đo chỉ tính các lần gọi Google thực sự (câu đọc lại lấy từ bộ nhớ đệm không tính) và chỉ trên thiết bị này; không thay số liệu tính phí của Google. Đạt giới hạn thì tự đọc bằng giọng thiết bị.</p>
+          </div>
         </div>
         <label class="mt-3 flex justify-between text-sm"><span>Tốc độ đọc</span><span id="lblRate"></span></label>
         <input id="inRate" type="range" min="0.6" max="1.3" step="0.05" class="w-full accent-brand-600" />
