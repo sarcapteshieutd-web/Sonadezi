@@ -136,12 +136,21 @@ service cloud.firestore {
     }
 
     match /config/{docId} {
+      // google: khóa dùng chung + hạn mức tổng + giới hạn mỗi tài khoản VIP (VIP còn hạn cần đọc để tự áp dụng)
       allow get: if docId == 'google' && (isAdmin() || vipActive());
+      // billing: thông tin gói/ngân sách Google Cloud của chủ dự án, chỉ quản trị viên đọc và ghi
+      allow get: if docId == 'billing' && isAdmin();
       allow list: if false;
       allow create, update: if docId == 'google' && isAdmin()
-        && request.resource.data.keys().hasOnly(['key', 'trLimit', 'ttsLimit', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['key', 'trLimit', 'ttsLimit', 'userTr', 'userTts', 'updatedAt'])
         && request.resource.data.key is string && request.resource.data.key.size() <= 200
-        && request.resource.data.trLimit is number && request.resource.data.ttsLimit is number;
+        && request.resource.data.trLimit is number && request.resource.data.ttsLimit is number
+        && request.resource.data.get('userTr', 0) is number && request.resource.data.get('userTts', 0) is number;
+      allow create, update: if docId == 'billing' && isAdmin()
+        && request.resource.data.keys().hasOnly(['creditUsd', 'vndPerUsd', 'trialEndMs', 'trPrice', 'ttsPrice', 'ttsFree', 'updatedAt'])
+        && request.resource.data.get('creditUsd', 0) is number && request.resource.data.get('vndPerUsd', 0) is number
+        && request.resource.data.get('trialEndMs', 0) is number && request.resource.data.get('trPrice', 0) is number
+        && request.resource.data.get('ttsPrice', 0) is number && request.resource.data.get('ttsFree', 0) is number;
       allow delete: if false;
     }
   }

@@ -61,7 +61,7 @@
     viewerBar: $('viewerBar'), selViewerLang: $('selViewerLang'), viewerStatus: $('viewerStatus'), coBar: $('coBar'), coStatus: $('coStatus'), chkEar: $('chkEar'),
     chkIncr: $('chkIncr'), selCut: $('selCut'), chkLat: $('chkLat'),
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
-    selEngine: $('selEngine'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
+    selEngine: $('selEngine'), rowEngine: $('rowEngine'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
     selTtsMode: $('selTtsMode'), rowTtsMode: $('rowTtsMode'), boxDevVoice: $('boxDevVoice'), boxCloudVoice: $('boxCloudVoice'), inTtsKey: $('inTtsKey'), selCloudVoice: $('selCloudVoice'),
     gate: $('gate'), gateFree: $('gateFree'), gateForm: $('gateForm'), gateEmail: $('gateEmail'), gatePass: $('gatePass'), gateErr: $('gateErr'), gateLogin: $('gateLogin'),
     gateToReg: $('gateToReg'), gateForgot: $('gateForgot'), regForm: $('regForm'), regName: $('regName'), regEmail: $('regEmail'), regPass: $('regPass'), regPass2: $('regPass2'),
@@ -96,6 +96,7 @@
   const state = {
     acct: acct0 ? acct0.type : null, // 'free' | 'vip' | null (chưa chọn)
     acctInfo: acct0 ? acct0.info : null, // {uid, email, name, status, expiresAtMs, admin, usage}
+    userLimit: { tr: 0, tts: 0 }, // giới hạn ký tự mỗi tháng của tài khoản VIP do quản trị viên đặt (0 = không giới hạn)
     sharedKey: '', // khóa Google dùng chung do quản trị viên cấp (chỉ giữ trong bộ nhớ, không lưu trên thiết bị)
     src: store.get('src', 'en'),
     tgt: store.get('tgt', 'vi'),
@@ -440,7 +441,21 @@
     el.gUsage.classList.toggle('hidden', !on);
   }
   // true: được gọi Google (đã cộng vào bộ đếm); false: đã đạt giới hạn, dùng MyMemory; ném lỗi nếu không cho chuyển
+  // Giới hạn mỗi tháng của tài khoản VIP (quản trị viên không bị giới hạn). Dựa trên số liệu hồ sơ trên máy chủ, nên tính chung mọi thiết bị.
+  let userLimitToast = '';
+  function userLimitHit(kind, n) {
+    if (!isVip() || (state.acctInfo && state.acctInfo.admin)) return 0;
+    const lim = state.userLimit[kind];
+    if (!(lim > 0)) return 0;
+    const used = (((state.acctInfo && state.acctInfo.usage) || {})[monthKey()] || {})[kind] || 0;
+    return used + pendingUse[kind] + n > lim ? lim : 0;
+  }
   function gCharge(text) {
+    const ul = userLimitHit('tr', text.length);
+    if (ul) {
+      if (userLimitToast !== todayKey()) { userLimitToast = todayKey(); toast(`Đã hết giới hạn ${fmtN(ul)} ký tự dịch bằng Google trong tháng, đang dùng MyMemory. Liên hệ quản trị viên để tăng giới hạn`); }
+      return false;
+    }
     const u = gUsed();
     const lim = state.gLimit;
     if (lim > 0 && u.n + text.length > lim) {
@@ -688,6 +703,8 @@
     const pitch = Math.max(-20, Math.min(20, (state.pitch - 1) * 10));
     const ck = [voice, rate.toFixed(2), pitch.toFixed(1), text].join('|');
     if (audioCache.has(ck)) return audioCache.get(ck);
+    const ul = userLimitHit('tts', text.length);
+    if (ul) throw new Error('Đã hết giới hạn ' + fmtN(ul) + ' ký tự giọng Google của tài khoản trong tháng');
     const lim = state.ttsLimit;
     if (lim > 0 && ttsUse().mn + text.length > lim) { renderTtsUsage(); throw new Error('Đã đạt giới hạn ' + fmtN(lim) + ' ký tự giọng Google trong tháng'); }
     const body = {
@@ -2109,6 +2126,8 @@
     el.btnConf.classList.toggle('hidden', !vip);
     el.chkConf.closest('label').classList.toggle('hidden', !vip);
     el.chkConf.checked = state.conf;
+    el.rowEngine.classList.toggle('hidden', !vip); // tài khoản thường chỉ có MyMemory nên không cần chọn nguồn dịch
+    if (!vip) el.selEngine.value = 'mymemory';
     el.selEngine.querySelector('option[value="google"]').disabled = !vip;
     el.selTtsMode.querySelector('option[value="cloud"]').disabled = !vip;
     el.rowTtsMode.classList.toggle('hidden', !vip); // tài khoản thường chỉ có giọng thiết bị nên không cần chọn nguồn
@@ -2118,8 +2137,10 @@
     if (vip && info) {
       if (info.admin) meta = 'Tài khoản quản trị: không giới hạn thời gian';
       else if (info.expiresAtMs) { const n = daysLeft(info.expiresAtMs); meta = `Còn ${n} ngày dùng VIP (hết hạn ${fmtDay(info.expiresAtMs)})`; warn = n <= 3; }
-      const u = (info.usage || {})[monthKey()];
-      if (u) meta += `${meta ? ' · ' : ''}Tháng này: dịch ${fmtN(u.tr || 0)} ký tự, đọc ${fmtN(u.tts || 0)} ký tự`;
+      const u = (info.usage || {})[monthKey()] || {};
+      const L = info.admin ? { tr: 0, tts: 0 } : state.userLimit;
+      const of = (v, lim) => fmtN(v || 0) + (lim > 0 ? ' / ' + fmtN(lim) : '');
+      if (u.tr || u.tts || L.tr || L.tts) meta += `${meta ? ' · ' : ''}Tháng này: dịch ${of(u.tr, L.tr)} ký tự, đọc ${of(u.tts, L.tts)} ký tự`;
     }
     el.acctMeta.textContent = meta;
     el.acctMeta.classList.toggle('hidden', !meta);
@@ -2162,8 +2183,9 @@
     try {
       const g = await kit.acct.getGoogleConfig();
       state.sharedKey = (g && g.key) || '';
+      state.userLimit = { tr: (g && g.userTr) || 0, tts: (g && g.userTts) || 0 };
       if (!store.get('gkey', '')) state.gkey = state.sharedKey;
-      renderGUsage();
+      renderGUsage(); applyAcct();
       if (!state.gkey && !sharedWarned) { sharedWarned = true; toast('Chưa có khóa Google dùng chung. Vào Cài đặt để nhập API key, hoặc liên hệ quản trị viên'); }
     } catch (_) { state.sharedKey = ''; } // chưa đủ quyền hoặc mất mạng: dịch bằng MyMemory
   }
@@ -2335,8 +2357,8 @@
     el.adminBody.textContent = 'Đang tải…';
     try {
       const kit = await getKit(false);
-      const [users, g] = await Promise.all([kit.acct.listUsers(), kit.acct.getGoogleConfig().catch(() => null)]);
-      renderAdmin(kit, users, g || {});
+      const [users, g, bill] = await Promise.all([kit.acct.listUsers(), kit.acct.getGoogleConfig().catch(() => null), kit.acct.getBillingConfig().catch(() => null)]);
+      renderAdmin(kit, users, g || {}, bill || {});
     } catch (e) { el.adminBody.textContent = 'Không tải được dữ liệu: ' + fbErr(e); }
   }
   function meter(label, used, limit) {
@@ -2353,7 +2375,7 @@
     track.appendChild(fill); w.appendChild(track);
     return w;
   }
-  function renderAdmin(kit, users, g) {
+  function renderAdmin(kit, users, g, bill) {
     const body = el.adminBody;
     body.textContent = '';
     const m = monthKey();
@@ -2379,12 +2401,108 @@
     save.onclick = async () => {
       save.disabled = true;
       try {
-        await kit.acct.saveGoogleConfig({ key: inKey.value.trim() || g.key || '', trLimit: Math.max(0, parseInt(inTr.value, 10) || 0), ttsLimit: Math.max(0, parseInt(inTts.value, 10) || 0) });
-        toast('Đã lưu'); loadAdmin();
+        await kit.acct.saveGoogleConfig({ key: inKey.value.trim() || g.key || '', trLimit: Math.max(0, parseInt(inTr.value, 10) || 0), ttsLimit: Math.max(0, parseInt(inTts.value, 10) || 0), userTr: g.userTr || 0, userTts: g.userTts || 0 });
+        toast('Đã lưu'); loadSharedKey(kit); loadAdmin(); // áp dụng ngay cho phiên của quản trị viên
       } catch (e) { toast(fbErr(e)); save.disabled = false; }
     };
     form.appendChild(save);
     body.appendChild(form);
+
+    // 1b) Gói Google Cloud của bạn: tín dụng, thời hạn, ước tính đã dùng
+    const B = {
+      creditUsd: bill.creditUsd == null ? 300 : bill.creditUsd, vndPerUsd: bill.vndPerUsd == null ? 25970 : bill.vndPerUsd,
+      trialEndMs: bill.trialEndMs == null ? Date.parse('2027-01-08T00:00:00') : bill.trialEndMs,
+      trPrice: bill.trPrice == null ? 20 : bill.trPrice, ttsPrice: bill.ttsPrice == null ? 4 : bill.ttsPrice, ttsFree: bill.ttsFree == null ? 4000000 : bill.ttsFree
+    };
+    const months = {};
+    for (const u of users) for (const [mk, v] of Object.entries(u.usage || {})) { const t = months[mk] || (months[mk] = { tr: 0, tts: 0 }); t.tr += (v && v.tr) || 0; t.tts += (v && v.tts) || 0; }
+    let spent = 0;
+    for (const v of Object.values(months)) spent += v.tr * B.trPrice / 1e6 + Math.max(0, v.tts - B.ttsFree) * B.ttsPrice / 1e6;
+    const remain = Math.max(0, B.creditUsd - spent);
+    const trialDays = B.trialEndMs > Date.now() ? daysLeft(B.trialEndMs) : 0;
+    const usd = v => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const vnd = v => '₫' + Math.round(v * B.vndPerUsd).toLocaleString('vi-VN');
+    body.appendChild(node('h3', 'mt-5 text-sm font-semibold', 'Gói Google Cloud của bạn'));
+    const plan = node('div', 'mt-2 rounded-lg border border-slate-200 p-3 text-sm');
+    const prow = (label, val, warnRow) => { const r = node('div', 'flex justify-between gap-2 py-0.5'); r.appendChild(node('span', 'text-slate-600', label)); const v = node('span', 'text-right font-medium tabular-nums' + (warnRow ? ' text-red-600' : ''), val); r.appendChild(v); plan.appendChild(r); };
+    prow('Tín dụng dùng thử', `${usd(B.creditUsd)} ≈ ${vnd(B.creditUsd)}`);
+    prow('Ước tính đã dùng (theo số liệu VIP báo về)', `${usd(spent)} ≈ ${vnd(spent)}`);
+    prow('Ước tính còn lại', `${usd(remain)} ≈ ${vnd(remain)}`, remain < B.creditUsd * 0.2);
+    prow('Hết hạn dùng thử', `${fmtDay(B.trialEndMs)}${trialDays ? ` (còn ${trialDays} ngày)` : ' (đã hết hạn)'}`, trialDays <= 14);
+    plan.appendChild(meter('Tín dụng đã dùng, ước tính (USD)', Math.round(Math.min(spent, B.creditUsd) * 100) / 100, B.creditUsd));
+    body.appendChild(plan);
+    body.appendChild(node('p', 'mt-1 text-xs text-slate-500', 'Ước tính dựa trên số ký tự các thiết bị VIP tự báo và đơn giá bạn nhập bên dưới, nên chỉ để tham khảo; không gồm các khoản khác trong dự án. Số liệu thật xem tại Google Cloud Console → Billing → Overview/Reports. Khi hết thời hạn dùng thử, Google dừng tài nguyên nếu bạn chưa nâng cấp lên tài khoản trả phí; hãy nâng cấp và đặt Budget alert trước ngày đó.'));
+    const bf = node('div', 'mt-2 rounded-lg border border-slate-200 p-3');
+    const mkB = (label, type, val, step) => {
+      bf.appendChild(node('label', 'mt-2 block text-sm first:mt-0', label));
+      const i = node('input', 'mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2'); i.type = type; i.value = val; if (step) i.step = step; i.autocomplete = 'off';
+      bf.appendChild(i); return i;
+    };
+    const bCredit = mkB('Tín dụng dùng thử (USD)', 'number', String(B.creditUsd), 'any');
+    const bRate = mkB('Tỷ giá quy đổi (đồng cho 1 USD)', 'number', String(B.vndPerUsd), 'any');
+    const bEnd = mkB('Ngày hết hạn dùng thử', 'date', new Date(B.trialEndMs).toISOString().slice(0, 10));
+    const bTr = mkB('Đơn giá dịch (USD cho 1 triệu ký tự)', 'number', String(B.trPrice), 'any');
+    const bTts = mkB('Đơn giá giọng WaveNet (USD cho 1 triệu ký tự)', 'number', String(B.ttsPrice), 'any');
+    const bFree = mkB('Giọng WaveNet miễn phí mỗi tháng (ký tự)', 'number', String(B.ttsFree), '1');
+    bf.appendChild(node('p', 'mt-1 text-xs text-slate-500', 'Các giá trị mặc định (300 USD, 89 ngày, đơn giá 20 và 4 USD, 4 triệu ký tự miễn phí) lấy theo trang Billing của bạn và bảng giá tra cứu được, chưa được xác minh đầy đủ: hãy đối chiếu với Google Cloud Console rồi chỉnh nếu khác. Ưu đãi miễn phí hằng tháng của Translation (nếu có) chưa được tính, nên ước tính nghiêng về phía thận trọng.'));
+    const bSave = node('button', 'mt-3 w-full rounded-xl border border-brand-600 py-2 text-sm font-medium text-brand-600', 'Lưu thông tin gói Google Cloud');
+    bSave.type = 'button';
+    bSave.onclick = async () => {
+      bSave.disabled = true;
+      const end = Date.parse(bEnd.value + 'T00:00:00');
+      try {
+        await kit.acct.saveBillingConfig({ creditUsd: Math.max(0, +bCredit.value || 0), vndPerUsd: Math.max(1, +bRate.value || 1), trialEndMs: isNaN(end) ? B.trialEndMs : end, trPrice: Math.max(0, +bTr.value || 0), ttsPrice: Math.max(0, +bTts.value || 0), ttsFree: Math.max(0, parseInt(bFree.value, 10) || 0) });
+        toast('Đã lưu thông tin gói'); loadAdmin();
+      } catch (e) { toast(fbErr(e)); bSave.disabled = false; }
+    };
+    bf.appendChild(bSave);
+    body.appendChild(bf);
+
+    // 1c) Giới hạn ký tự mỗi tài khoản VIP + gợi ý
+    body.appendChild(node('h3', 'mt-5 text-sm font-semibold', 'Giới hạn mỗi tài khoản VIP (mỗi tháng)'));
+    const uf = node('div', 'mt-2 rounded-lg border border-slate-200 p-3');
+    const mkU = (label, val) => {
+      uf.appendChild(node('label', 'mt-2 block text-sm first:mt-0', label));
+      const i = node('input', 'mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2'); i.type = 'number'; i.min = '0'; i.step = '10000'; i.value = String(val); i.autocomplete = 'off';
+      uf.appendChild(i); return i;
+    };
+    const uTr = mkU('Dịch bằng Google (ký tự mỗi VIP mỗi tháng, 0 = không giới hạn)', g.userTr || 0);
+    const uTts = mkU('Đọc bằng giọng WaveNet (ký tự mỗi VIP mỗi tháng, 0 = không giới hạn)', g.userTts || 0);
+    uf.appendChild(node('label', 'mt-3 block text-sm', 'Số tài khoản VIP dự kiến để tính gợi ý'));
+    const nVip = node('input', 'mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2'); nVip.type = 'number'; nVip.min = '1'; nVip.step = '1';
+    nVip.value = String(Math.max(5, users.filter(u => effStatus(u) === 'active').length));
+    uf.appendChild(nVip);
+    const sug = node('p', 'mt-2 rounded-lg bg-slate-50 p-2 text-xs text-slate-700');
+    uf.appendChild(sug);
+    let cur = { tr: 0, tts: 0 };
+    const recalc = () => {
+      const n = Math.max(1, parseInt(nVip.value, 10) || 1);
+      const monthsLeft = Math.max(1, Math.ceil(trialDays / 30));
+      const perUser = remain * 0.8 / monthsLeft / n;           // chừa 20% dự phòng
+      const perMillion = B.trPrice + 2 * B.ttsPrice;           // giả định mỗi ký tự dịch kèm đọc gấp đôi số ký tự
+      const tr = Math.max(0, Math.floor(perUser / perMillion * 1e6 / 10000) * 10000);
+      cur = { tr, tts: tr * 2 };
+      const worst = n * (parseInt(uTr.value, 10) || 0) * B.trPrice / 1e6 + n * (parseInt(uTts.value, 10) || 0) * B.ttsPrice / 1e6;
+      sug.textContent = `Gợi ý: còn ${usd(remain)}, dành 80% (${usd(remain * 0.8)}) cho khoảng ${monthsLeft} tháng còn lại của gói, chia cho ${n} VIP ≈ ${usd(perUser)} mỗi VIP mỗi tháng. ` +
+        `Với đơn giá hiện tại và giả định đọc gấp đôi số ký tự dịch: dịch ${fmtN(cur.tr)} ký tự, đọc ${fmtN(cur.tts)} ký tự mỗi VIP mỗi tháng. ` +
+        `Nếu mọi VIP dùng hết giới hạn đang nhập: tối đa ≈ ${usd(worst)} mỗi tháng (${vnd(worst)}), chưa trừ phần WaveNet miễn phí.`;
+    };
+    [nVip, uTr, uTts].forEach(i => i.addEventListener('input', recalc));
+    recalc();
+    const row = node('div', 'mt-2 flex gap-2');
+    const apply = node('button', 'flex-1 rounded-lg border border-slate-300 py-2 text-sm', 'Áp dụng gợi ý vào ô nhập'); apply.type = 'button';
+    apply.onclick = () => { uTr.value = String(cur.tr); uTts.value = String(cur.tts); recalc(); };
+    const uSave = node('button', 'flex-1 rounded-lg bg-brand-600 py-2 text-sm font-medium text-white', 'Lưu giới hạn mỗi VIP'); uSave.type = 'button';
+    uSave.onclick = async () => {
+      uSave.disabled = true;
+      try {
+        await kit.acct.saveGoogleConfig({ key: g.key || '', trLimit: g.trLimit || 0, ttsLimit: g.ttsLimit == null ? 4000000 : g.ttsLimit, userTr: Math.max(0, parseInt(uTr.value, 10) || 0), userTts: Math.max(0, parseInt(uTts.value, 10) || 0) });
+        toast('Đã lưu giới hạn mỗi VIP'); loadSharedKey(kit); loadAdmin();
+      } catch (e) { toast(fbErr(e)); uSave.disabled = false; }
+    };
+    row.appendChild(apply); row.appendChild(uSave); uf.appendChild(row);
+    uf.appendChild(node('p', 'mt-2 text-xs text-slate-500', 'Giới hạn tính theo số liệu hồ sơ trên máy chủ (gộp mọi thiết bị của cùng tài khoản). Khi hết giới hạn, ứng dụng của VIP tự chuyển sang MyMemory (dịch) hoặc giọng thiết bị (đọc). Quản trị viên không bị giới hạn. Việc áp dụng do ứng dụng trên thiết bị thực hiện nên chỉ là giới hạn "mềm", người rành kỹ thuật có thể vượt qua.'));
+    body.appendChild(uf);
 
     // 2) Danh sách tài khoản
     const counts = { pending: 0, active: 0, expired: 0, blocked: 0 };
@@ -2395,7 +2513,7 @@
     const chips = [['pending', `Chờ duyệt (${counts.pending})`], ['active', `Đang hoạt động (${counts.active})`], ['expired', `Hết hạn (${counts.expired})`], ['blocked', `Bị khóa (${counts.blocked})`], ['all', 'Tất cả']];
     for (const [k, label] of chips) {
       const b = node('button', 'rounded-full border px-2.5 py-1 text-xs ' + (adminFilter === k ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 text-slate-700'), label);
-      b.type = 'button'; b.onclick = () => { adminFilter = k; renderAdmin(kit, users, g); };
+      b.type = 'button'; b.onclick = () => { adminFilter = k; renderAdmin(kit, users, g, bill); };
       bar.appendChild(b);
     }
     const reload = node('button', 'rounded-full border border-slate-300 px-2.5 py-1 text-xs text-slate-700', 'Tải lại'); reload.type = 'button'; reload.onclick = loadAdmin;

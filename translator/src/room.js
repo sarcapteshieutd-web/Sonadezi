@@ -47,6 +47,7 @@ function create(cfg) {
   const profileRef = u => doc(db, 'users', u);
   const adminRef = u => doc(db, 'admins', u);
   const googleCfgRef = doc(db, 'config', 'google');
+  const billingRef = doc(db, 'config', 'billing');
   onAuthStateChanged(auth, u => { if (u) uid = u.uid; }); // giữ uid của phòng họp khớp với tài khoản đang đăng nhập
 
   return {
@@ -202,8 +203,17 @@ function create(cfg) {
         const s = await getDoc(googleCfgRef);
         return s.exists() ? s.data() : null;
       },
-      async saveGoogleConfig({ key, trLimit, ttsLimit }) {
-        await setDoc(googleCfgRef, { key: key || '', trLimit: trLimit || 0, ttsLimit: ttsLimit || 0, updatedAt: Date.now() });
+      // Khóa dùng chung, hạn mức tổng mỗi tháng (trLimit/ttsLimit) và giới hạn mỗi tài khoản VIP mỗi tháng (userTr/userTts); 0 = không giới hạn
+      async saveGoogleConfig({ key, trLimit, ttsLimit, userTr, userTts }) {
+        await setDoc(googleCfgRef, { key: key || '', trLimit: trLimit || 0, ttsLimit: ttsLimit || 0, userTr: userTr || 0, userTts: userTts || 0, updatedAt: Date.now() });
+      },
+      // Thông tin gói/ngân sách Google Cloud của chủ dự án (chỉ quản trị viên đọc/ghi)
+      async getBillingConfig() {
+        const s = await getDoc(billingRef);
+        return s.exists() ? s.data() : null;
+      },
+      async saveBillingConfig({ creditUsd, vndPerUsd, trialEndMs, trPrice, ttsPrice, ttsFree }) {
+        await setDoc(billingRef, { creditUsd, vndPerUsd, trialEndMs, trPrice, ttsPrice, ttsFree, updatedAt: Date.now() });
       },
       async listUsers() {
         const snap = await getDocs(collection(db, 'users'));

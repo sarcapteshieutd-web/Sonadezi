@@ -101,7 +101,7 @@ Khi mở ứng dụng lần đầu (hoặc sau khi chọn *Cài đặt → Đổ
 
 | | Miễn phí | VIP |
 |---|---|---|
-| Nguồn dịch | MyMemory (cố định) | Google Cloud Translation (mặc định) |
+| Nguồn dịch | MyMemory (cố định, không hiện lựa chọn) | Google Cloud Translation (mặc định) hoặc MyMemory |
 | Giọng đọc | Chỉ giọng của thiết bị (không có lựa chọn nguồn) | Chọn tự do giữa giọng Google WaveNet (mặc định) và giọng của thiết bị |
 | Lưu và xuất đoạn chat | Không (chỉ giữ trong phiên đang mở) | Có |
 | Chế độ hội nghị | Không | Có |
@@ -125,6 +125,8 @@ Thiết lập một lần (chi tiết ở `docs/FIREBASE-SETUP.md`, mục "Tài 
 Sau đó, trong *Cài đặt → Quản trị tài khoản và hạn mức*:
 - **Duyệt 1 tháng** cho người chờ duyệt; **Gia hạn +1 tháng** (cộng thêm từ ngày hết hạn nếu còn hạn, hoặc từ hôm nay nếu đã hết hạn); **Khóa / Mở khóa**; **Xóa** hồ sơ.
 - **Hạn mức Google tháng này:** tổng số ký tự dịch và đọc do các thiết bị VIP báo về, so với hạn mức bạn đặt. Số liệu do thiết bị tự báo nên chỉ mang tính tham khảo; số liệu và chi phí chính xác xem tại Google Cloud Console (Billing, APIs & Services → Quotas).
+- **Gói Google Cloud của bạn:** nhập tín dụng dùng thử, tỷ giá, ngày hết hạn và đơn giá; bảng hiển thị tín dụng quy đổi ra đồng, **ước tính đã dùng**, còn lại và số ngày còn lại của gói dùng thử. Ước tính chỉ dựa trên số ký tự các thiết bị VIP báo về và đơn giá bạn nhập (mặc định: 300 USD, đơn giá dịch 20 USD và giọng WaveNet 4 USD cho 1 triệu ký tự, 4 triệu ký tự WaveNet miễn phí mỗi tháng) nên chỉ để tham khảo; hãy đối chiếu đơn giá và tín dụng với Google Cloud Console → Billing. Khi gói dùng thử hết hạn, Google dừng tài nguyên nếu chưa nâng cấp lên tài khoản trả phí, nên cần nâng cấp và đặt Budget alert trước ngày đó.
+- **Giới hạn mỗi tài khoản VIP (mỗi tháng):** đặt số ký tự dịch và đọc tối đa cho mỗi VIP. Có công cụ **gợi ý**: nhập số VIP dự kiến, hệ thống chia 80% tín dụng còn lại cho số tháng còn lại của gói rồi quy ra số ký tự mỗi VIP (giả định số ký tự đọc gấp đôi số ký tự dịch), kèm chi phí tối đa nếu mọi VIP dùng hết giới hạn; bấm **Áp dụng gợi ý** rồi **Lưu**. Giới hạn tính theo hồ sơ trên máy chủ (gộp mọi thiết bị của cùng tài khoản). Hết giới hạn, ứng dụng của VIP tự chuyển sang MyMemory (dịch) hoặc giọng thiết bị (đọc); quản trị viên không bị giới hạn. Việc áp dụng do ứng dụng trên thiết bị thực hiện nên chỉ là giới hạn "mềm".
 - **Khóa Google dùng chung:** nhập một lần, VIP còn hạn tự nhận khóa này (khóa chỉ được máy chủ trả cho VIP còn hạn và quản trị viên). VIP vẫn có thể tự nhập khóa riêng trong Cài đặt.
 
 **Giới hạn cần biết về an toàn:**
