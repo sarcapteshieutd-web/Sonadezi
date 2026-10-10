@@ -47,6 +47,7 @@ function create(cfg) {
   const profileRef = u => doc(db, 'users', u);
   const adminRef = u => doc(db, 'admins', u);
   const googleCfgRef = doc(db, 'config', 'google');
+  const aiCfgRef = doc(db, 'config', 'ai');
   const billingRef = doc(db, 'config', 'billing');
   onAuthStateChanged(auth, u => { if (u) uid = u.uid; }); // giữ uid của phòng họp khớp với tài khoản đang đăng nhập
 
@@ -211,6 +212,14 @@ function create(cfg) {
       async saveGoogleConfig({ key, trLimit, ttsLimit, userTr, userTts }) {
         await setDoc(googleCfgRef, { key: key || '', trLimit: trLimit || 0, ttsLimit: ttsLimit || 0, userTr: userTr || 0, userTts: userTts || 0, updatedAt: Date.now() });
       },
+      // Cấu hình Claude (tóm tắt + sơ đồ cây): khóa Anthropic, mô hình, giới hạn lượt mỗi VIP mỗi tháng (0 = không giới hạn)
+      async getAiConfig() {
+        const s = await getDoc(aiCfgRef);
+        return s.exists() ? s.data() : null;
+      },
+      async saveAiConfig({ key, model, userAi }) {
+        await setDoc(aiCfgRef, { key: key || '', model: model || '', userAi: userAi || 0, updatedAt: Date.now() });
+      },
       // Thông tin gói/ngân sách Google Cloud của chủ dự án (chỉ quản trị viên đọc/ghi)
       async getBillingConfig() {
         const s = await getDoc(billingRef);
@@ -239,6 +248,7 @@ function create(cfg) {
         const upd = { lastSeen: Date.now() };
         if (d.tr) upd['usage.' + month + '.tr'] = increment(d.tr);
         if (d.tts) upd['usage.' + month + '.tts'] = increment(d.tts);
+        if (d.ai) upd['usage.' + month + '.ai'] = increment(d.ai);
         await updateDoc(profileRef(u.uid), upd);
       }
     },
