@@ -203,6 +203,10 @@ function create(cfg) {
         const s = await getDoc(googleCfgRef);
         return s.exists() ? s.data() : null;
       },
+      // Theo dõi cấu hình theo thời gian thực: quản trị viên đổi khóa/giới hạn hoặc thu quyền là máy VIP biết ngay (lỗi quyền gọi onError)
+      subscribeGoogleConfig(cb, onError) {
+        return onSnapshot(googleCfgRef, s => cb(s.exists() ? s.data() : null), onError || (() => {}));
+      },
       // Khóa dùng chung, hạn mức tổng mỗi tháng (trLimit/ttsLimit) và giới hạn mỗi tài khoản VIP mỗi tháng (userTr/userTts); 0 = không giới hạn
       async saveGoogleConfig({ key, trLimit, ttsLimit, userTr, userTts }) {
         await setDoc(googleCfgRef, { key: key || '', trLimit: trLimit || 0, ttsLimit: ttsLimit || 0, userTr: userTr || 0, userTts: userTts || 0, updatedAt: Date.now() });
