@@ -97,6 +97,21 @@ const t = (name, got, exp) => {
   t('Người thường xóa hồ sơ người khác bị chặn', await call('DELETE', '/users/' + c.uid, b.tok), 'deny');
   t('Quản trị viên xóa hồ sơ C', await call('DELETE', '/users/' + c.uid, adm.tok), 'ok');
 
+  console.log('--- Giới hạn mỗi VIP (config/google) và gói Google Cloud (config/billing)');
+  const cfg2 = { key: S('AIzaFAKE'), trLimit: N(500000), ttsLimit: N(4000000), userTr: N(300000), userTts: N(600000), updatedAt: N(now) };
+  const bill = { creditUsd: N(300), vndPerUsd: N(25970), trialEndMs: N(now + 89 * DAY), trPrice: N(20), ttsPrice: N(4), ttsFree: N(4000000), updatedAt: N(now) };
+  t('Quản trị viên lưu giới hạn mỗi VIP', await call('PATCH', '/config/google', adm.tok, cfg2), 'ok');
+  t('Quản trị viên lưu giới hạn kiểu chữ bị chặn', await call('PATCH', '/config/google', adm.tok, { ...cfg2, userTr: S('nhieu') }), 'deny');
+  t('VIP còn hạn đọc được giới hạn của mình', await call('GET', '/config/google', a.tok), 'ok');
+  t('VIP không sửa được giới hạn', await call('PATCH', '/config/google', a.tok, cfg2), 'deny');
+  t('Quản trị viên lưu gói Google Cloud', await call('PATCH', '/config/billing', adm.tok, bill), 'ok');
+  t('Quản trị viên đọc gói Google Cloud', await call('GET', '/config/billing', adm.tok), 'ok');
+  t('Quản trị viên lưu gói thừa trường bị chặn', await call('PATCH', '/config/billing', adm.tok, { ...bill, extra: S('x') }), 'deny');
+  t('VIP còn hạn không đọc được gói Google Cloud', await call('GET', '/config/billing', a.tok), 'deny');
+  t('VIP không ghi được gói Google Cloud', await call('PATCH', '/config/billing', a.tok, bill), 'deny');
+  t('Không đăng nhập không đọc được gói Google Cloud', await call('GET', '/config/billing', null), 'deny');
+  t('Tài liệu config khác (không phải google/billing) bị chặn', await call('PATCH', '/config/khac', adm.tok, bill), 'deny');
+
   console.log('\nKẾT QUẢ: ' + pass + ' đạt, ' + fail + ' lỗi');
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error('LỖI KHI CHẠY', e); process.exit(2); });

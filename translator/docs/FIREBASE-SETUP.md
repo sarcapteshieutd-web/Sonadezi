@@ -63,7 +63,7 @@ npx esbuild src/room.js --bundle --minify --format=iife --target=es2020 --outfil
 
 ## 8. Kiểm thử quy tắc bảo mật
 - `firebase/rules-test.js`: 51 kiểm tra cho phòng họp (người lạ, người xem, chủ phòng, phòng hết hạn…).
-- `firebase/rules-test-vip.js`: 48 kiểm tra cho tài khoản VIP (tự nâng quyền, đọc khóa khi chờ duyệt/bị khóa/hết hạn, quyền quản trị…).
+- `firebase/rules-test-vip.js`: 59 kiểm tra cho tài khoản VIP (tự nâng quyền, đọc khóa khi chờ duyệt/bị khóa/hết hạn, quyền quản trị, giới hạn mỗi VIP, thông tin gói Google Cloud…).
 Cả hai chạy với Firebase Emulator, xem hướng dẫn ở đầu mỗi tệp.
 
 ## 9. Tài khoản VIP và quản trị
@@ -91,3 +91,6 @@ Lưu ý: các bước dưới đây tôi đã kiểm thử bằng Firebase Emula
 - Số liệu sử dụng do thiết bị tự báo, người dùng có thể báo sai; chỉ dùng để tham khảo.
 - **Chi phí Firebase:** mỗi lần mở ứng dụng VIP đọc hồ sơ và khóa; mỗi 20 giây hoạt động ghi một lần số liệu sử dụng. Với số người dùng nhỏ, thường nằm trong hạn mức miễn phí của Firestore (hãy đối chiếu bảng giá hiện hành).
 - Quên mật khẩu dùng thư đặt lại của Firebase Authentication. Muốn đổi mẫu thư: Authentication → Templates.
+
+### 9.4. Cập nhật quy tắc khi nâng cấp lên bản có "gói Google Cloud" và "giới hạn mỗi VIP"
+Bản này thêm tài liệu `config/billing` (chỉ quản trị viên đọc/ghi: tín dụng, tỷ giá, ngày hết hạn dùng thử, đơn giá) và hai trường `userTr`, `userTts` trong `config/google` (giới hạn mỗi VIP, VIP còn hạn đọc được). **Bắt buộc dán lại toàn bộ `translator/firebase/firestore.rules` và bấm Publish** (Firestore Database → Rules); chưa dán lại thì lưu gói hoặc giới hạn sẽ báo "Không đủ quyền". Không cần tạo thủ công các tài liệu này: bảng quản trị tự tạo khi bạn bấm Lưu.
