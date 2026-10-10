@@ -1645,11 +1645,13 @@
     }
     if (!r.ok) {
       const code = r.status;
+      let detail = '';
+      try { detail = String(((await r.json()).error || {}).message || '').replace(/sk-ant-[\w-]+/g, '***').slice(0, 200); } catch (_) {} // lý do do Anthropic trả về (không chứa khóa)
       throw new Error(code === 401 || code === 403 ? 'Khóa Claude không hợp lệ hoặc đã bị thu hồi, vui lòng báo quản trị viên'
         : code === 429 ? 'Claude đang quá tải hoặc hết hạn mức, vui lòng thử lại sau ít phút'
         : code === 529 ? 'Claude đang quá tải, vui lòng thử lại sau'
-        : code === 400 ? 'Claude từ chối yêu cầu (mô hình hoặc nội dung không hợp lệ), vui lòng báo quản trị viên'
-        : 'Claude trả về lỗi ' + code);
+        : code === 400 ? 'Claude từ chối yêu cầu, vui lòng báo quản trị viên' + (detail ? ` (chi tiết: ${detail})` : '')
+        : 'Claude trả về lỗi ' + code + (detail ? ` (${detail})` : ''));
     }
     const j = await r.json();
     const text = (j.content || []).filter(b => b && b.type === 'text').map(b => b.text).join('');
