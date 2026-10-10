@@ -61,7 +61,7 @@
     viewerBar: $('viewerBar'), selViewerLang: $('selViewerLang'), viewerStatus: $('viewerStatus'), coBar: $('coBar'), coStatus: $('coStatus'), chkEar: $('chkEar'),
     chkIncr: $('chkIncr'), selCut: $('selCut'), chkLat: $('chkLat'),
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
-    selEngine: $('selEngine'), rowEngine: $('rowEngine'), rowGKey: $('rowGKey'), noteGKey: $('noteGKey'), rowTtsKey: $('rowTtsKey'), noteTts: $('noteTts'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
+    selEngine: $('selEngine'), rowEngine: $('rowEngine'), rowFallback: $('rowFallback'), rowGKey: $('rowGKey'), noteGKey: $('noteGKey'), rowTtsKey: $('rowTtsKey'), noteTts: $('noteTts'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
     selTtsMode: $('selTtsMode'), rowTtsMode: $('rowTtsMode'), boxDevVoice: $('boxDevVoice'), boxCloudVoice: $('boxCloudVoice'), inTtsKey: $('inTtsKey'), selCloudVoice: $('selCloudVoice'),
     gate: $('gate'), gateFree: $('gateFree'), gateForm: $('gateForm'), gateEmail: $('gateEmail'), gatePass: $('gatePass'), gateErr: $('gateErr'), gateLogin: $('gateLogin'),
     gateToReg: $('gateToReg'), gateForgot: $('gateForgot'), regForm: $('regForm'), regName: $('regName'), regEmail: $('regEmail'), regPass: $('regPass'), regPass2: $('regPass2'),
@@ -483,6 +483,7 @@
   function gCharge(text) {
     const ul = userLimitHit('tr', text.length);
     if (ul) {
+      limitBlocked = true;
       if (userLimitToast !== todayKey()) { userLimitToast = todayKey(); toast(`Đã hết giới hạn ${fmtN(ul)} ký tự dịch bằng Google trong tháng, đang dùng MyMemory. Liên hệ quản trị viên để tăng giới hạn`); }
       return false;
     }
@@ -727,6 +728,10 @@
   }
 
   // Bộ nhớ đệm âm thanh (cùng câu, cùng giọng, cùng tốc độ thì không tính phí lần nữa)
+  // Hết giới hạn ký tự trong tháng: mặc định tự chuyển về bản miễn phí (MyMemory / giọng thiết bị). Chỉ quản trị viên được tắt qua dấu tick.
+  const fallbackOn = () => !isAdminAcct() || state.gFallback;
+  let limitBlocked = false; // đã chạm giới hạn: khi được cấp thêm sẽ báo và dùng lại Google
+  function limitError(msg) { const e = new Error(msg); e.limit = true; limitBlocked = true; return e; }
   const audioCache = new Map();
   async function cloudAudioUrl(text, langKey, voice) {
     const rate = Math.min(2, state.rate * speechBoost);
@@ -734,9 +739,9 @@
     const ck = [voice, rate.toFixed(2), pitch.toFixed(1), text].join('|');
     if (audioCache.has(ck)) return audioCache.get(ck);
     const ul = userLimitHit('tts', text.length);
-    if (ul) throw new Error('Đã hết giới hạn ' + fmtN(ul) + ' ký tự giọng Google của tài khoản trong tháng');
+    if (ul) throw limitError('Đã hết giới hạn ' + fmtN(ul) + ' ký tự giọng Google của tài khoản trong tháng');
     const lim = isAdminAcct() ? state.ttsLimit : 0; // VIP theo mức quản trị viên đặt
-    if (lim > 0 && ttsUse().mn + text.length > lim) { renderTtsUsage(); throw new Error('Đã đạt giới hạn ' + fmtN(lim) + ' ký tự giọng Google trong tháng'); }
+    if (lim > 0 && ttsUse().mn + text.length > lim) { renderTtsUsage(); throw limitError('Đã đạt giới hạn ' + fmtN(lim) + ' ký tự giọng Google trong tháng'); }
     const body = {
       input: { text },
       voice: { languageCode: cloudLoc(langKey), name: voice },
@@ -803,7 +808,11 @@
   }
   function cloudFailed(e) {
     const now = Date.now();
-    if (now - cloudWarnAt > 30000) { cloudWarnAt = now; toast('Giọng Google Cloud lỗi (' + (e && e.message ? e.message : 'không rõ') + '), dùng giọng thiết bị'); }
+    if (now - cloudWarnAt > 30000) {
+      cloudWarnAt = now;
+      toast(e && e.limit ? e.message + (fallbackOn() ? ', đang đọc bằng giọng của thiết bị (miễn phí)' : ', tạm dừng đọc bằng Google')
+        : 'Giọng Google Cloud lỗi (' + (e && e.message ? e.message : 'không rõ') + '), dùng giọng thiết bị');
+    }
   }
 
   function speakDevice(text, langKey) {
@@ -817,7 +826,7 @@
     cancelSpeech();
     if (!cloudOn()) { speakDevice(text, langKey); return; }
     const my = speechToken;
-    speakCloud(text, langKey).catch(e => { cloudFailed(e); if (my === speechToken) speakDevice(text, langKey); });
+    speakCloud(text, langKey).catch(e => { cloudFailed(e); if (my === speechToken && !(e && e.limit && !fallbackOn())) speakDevice(text, langKey); });
   }
 
   // Đọc xong mới trả về (không cắt câu đang đọc). Có thời gian chờ tối đa phòng khi trình duyệt không báo kết thúc.
@@ -843,7 +852,7 @@
       await Promise.race([speakCloud(text, langKey), limit]);
     } catch (e) {
       cloudFailed(e);
-      if (my === speechToken) await speakAndWaitDevice(text, langKey);
+      if (my === speechToken && !(e && e.limit && !fallbackOn())) await speakAndWaitDevice(text, langKey);
     } finally { clearTimeout(timer); }
   }
 
@@ -1423,11 +1432,13 @@
     }
   }
   function syncTtsBoxes() {
-    const c = el.selTtsMode.value === 'cloud';
-    el.boxDevVoice.classList.toggle('hidden', c);
-    el.boxCloudVoice.classList.toggle('hidden', !c);
-    if (c) fillCloudVoices();
+    const vip = isVip();
+    el.boxDevVoice.classList.remove('hidden'); // giọng của thiết bị luôn có (tài khoản thường chỉ có giọng này)
+    el.boxCloudVoice.classList.toggle('hidden', !vip); // VIP/quản trị viên có thêm giọng Google WaveNet
+    if (vip) fillCloudVoices();
   }
+  el.selVoice.onchange = () => { if (isVip()) el.selTtsMode.value = 'device'; };
+  el.selCloudVoice.onchange = () => { el.selTtsMode.value = 'cloud'; };
   el.selTtsMode.onchange = syncTtsBoxes;
   let lastTtsKey = null; // chỉ tải lại danh sách giọng khi khóa thực sự đổi
   el.inTtsKey.onchange = () => {
@@ -1436,7 +1447,7 @@
     lastTtsKey = v;
     fillCloudVoices();
   };
-  el.selVoiceLang.onchange = () => { fillVoices(); if (el.selTtsMode.value === 'cloud') fillCloudVoices(); };
+  el.selVoiceLang.onchange = () => { fillVoices(); if (isVip()) fillCloudVoices(); };
   el.selSrcAcc.onchange = () => {
     store.set('stt_' + state.src, el.selSrcAcc.value);
     if (wantListening && rec) { try { rec.abort(); } catch (_) {} } // tự nghe lại với vùng nói mới
@@ -2184,6 +2195,7 @@
     el.rowTtsKey.classList.toggle('hidden', !admin); el.noteTts.classList.toggle('hidden', !admin);
     el.boxGAdmin.classList.toggle('hidden', !admin); el.boxTtsAdmin.classList.toggle('hidden', !admin); // bảng đo, hạn mức và ước tính phí: chỉ quản trị viên
     if (vip && !admin) { state.ttsKey = ''; if (state.sharedKey) state.gkey = state.sharedKey; else if (state.gkey && state.gkey !== state.sharedKey) state.gkey = ''; } // bỏ khóa tự nhập, chỉ dùng khóa dùng chung
+    el.rowFallback.classList.toggle('hidden', !admin);
     el.rowEngine.classList.toggle('hidden', !vip); // tài khoản thường chỉ có MyMemory nên không cần chọn nguồn dịch
     if (!vip) el.selEngine.value = 'mymemory';
     el.selEngine.querySelector('option[value="google"]').disabled = !vip;
@@ -2227,23 +2239,34 @@
   function becomeFree(msg, keep) {
     state.acct = 'free';
     if (!keep) { setHint('free'); if (profUnsub) { profUnsub(); profUnsub = null; } }
-    state.log = []; state.sharedKey = '';
+    if (cfgUnsub) { cfgUnsub(); cfgUnsub = null; }
+    state.log = []; state.sharedKey = ''; state.userLimit = { tr: 0, tts: 0 };
     if (!store.get('gkey', '')) state.gkey = '';
     applyAcct(); renderAll(); closeGate();
     if (msg) toast(msg);
   }
 
-  // Khóa Google dùng chung: chỉ Firestore trả về cho VIP đang còn hạn (kiểm tra ở quy tắc bảo mật)
-  async function loadSharedKey(kit) {
-    try {
-      const g = await kit.acct.getGoogleConfig();
-      state.sharedKey = (g && g.key) || '';
-      state.userLimit = { tr: (g && g.userTr) || 0, tts: (g && g.userTts) || 0 };
-      if (!(isAdminAcct() && store.get('gkey', ''))) state.gkey = state.sharedKey;
-      if (!isAdminAcct()) state.ttsKey = '';
+  // Khóa Google dùng chung và giới hạn mỗi VIP: chỉ Firestore trả về cho VIP đang còn hạn (kiểm tra ở quy tắc bảo mật).
+  // Theo dõi trực tiếp: quản trị viên đổi giới hạn hoặc khóa là có hiệu lực ngay, không cần tải lại; bị thu quyền thì mất khóa ngay.
+  let cfgUnsub = null;
+  const blockedNow = () => { const L = state.userLimit; return (L.tr > 0 && userUsed('tr') >= L.tr) || (L.tts > 0 && userUsed('tts') >= L.tts); };
+  function applyGoogleCfg(g) {
+    state.sharedKey = (g && g.key) || '';
+    state.userLimit = { tr: (g && g.userTr) || 0, tts: (g && g.userTts) || 0 };
+    if (!(isAdminAcct() && store.get('gkey', ''))) state.gkey = state.sharedKey;
+    if (!isAdminAcct()) state.ttsKey = '';
+    renderGUsage(); applyAcct();
+    if (limitBlocked && !isAdminAcct() && !blockedNow()) { limitBlocked = false; toast('Đã được cấp thêm giới hạn ký tự, đang dùng lại Google'); }
+    if (!state.gkey && !sharedWarned) { sharedWarned = true; toast('Chưa có khóa Google dùng chung. Vào Cài đặt để nhập API key, hoặc liên hệ quản trị viên'); }
+  }
+  function watchGoogleCfg(kit) {
+    if (cfgUnsub) return;
+    cfgUnsub = kit.acct.subscribeGoogleConfig(applyGoogleCfg, () => { // mất quyền (hết hạn/bị khóa) hoặc lỗi: dùng bản miễn phí
+      if (cfgUnsub) { cfgUnsub(); cfgUnsub = null; }
+      state.sharedKey = ''; state.userLimit = { tr: 0, tts: 0 };
+      if (!(isAdminAcct() && store.get('gkey', ''))) state.gkey = '';
       renderGUsage(); applyAcct();
-      if (!state.gkey && !sharedWarned) { sharedWarned = true; toast('Chưa có khóa Google dùng chung. Vào Cài đặt để nhập API key, hoặc liên hệ quản trị viên'); }
-    } catch (_) { state.sharedKey = ''; } // chưa đủ quyền hoặc mất mạng: dịch bằng MyMemory
+    });
   }
 
   function reportUsage(kind, n) {
@@ -2272,7 +2295,7 @@
       const was = isVip();
       becomeVip();
       if (!was) toast(admin ? 'Đã đăng nhập tài khoản quản trị' : 'Tài khoản VIP đã được kích hoạt');
-      loadSharedKey(kit);
+      watchGoogleCfg(kit);
       if (!admin && daysLeft(info.expiresAtMs) <= 3 && store.get('expWarn', '') !== todayKey()) { store.set('expWarn', todayKey()); toast(`Tài khoản VIP còn ${daysLeft(info.expiresAtMs)} ngày, vui lòng gia hạn`); }
     } else {
       if (isVip()) becomeFree(info.status === 'blocked' ? 'Tài khoản VIP đã bị khóa, đang dùng bản Miễn phí' : 'Tài khoản VIP đã hết hạn, đang dùng bản Miễn phí. Vui lòng gia hạn', true);
@@ -2458,7 +2481,7 @@
       save.disabled = true;
       try {
         await kit.acct.saveGoogleConfig({ key: inKey.value.trim() || g.key || '', trLimit: Math.max(0, parseInt(inTr.value, 10) || 0), ttsLimit: Math.max(0, parseInt(inTts.value, 10) || 0), userTr: g.userTr || 0, userTts: g.userTts || 0 });
-        toast('Đã lưu'); loadSharedKey(kit); loadAdmin(); // áp dụng ngay cho phiên của quản trị viên
+        toast('Đã lưu'); loadAdmin(); // cấu hình được theo dõi trực tiếp nên áp dụng ngay
       } catch (e) { toast(fbErr(e)); save.disabled = false; }
     };
     form.appendChild(save);
@@ -2553,7 +2576,7 @@
       uSave.disabled = true;
       try {
         await kit.acct.saveGoogleConfig({ key: g.key || '', trLimit: g.trLimit || 0, ttsLimit: g.ttsLimit == null ? 4000000 : g.ttsLimit, userTr: Math.max(0, parseInt(uTr.value, 10) || 0), userTts: Math.max(0, parseInt(uTts.value, 10) || 0) });
-        toast('Đã lưu giới hạn mỗi VIP'); loadSharedKey(kit); loadAdmin();
+        toast('Đã lưu giới hạn mỗi VIP'); loadAdmin();
       } catch (e) { toast(fbErr(e)); uSave.disabled = false; }
     };
     row.appendChild(apply); row.appendChild(uSave); uf.appendChild(row);
