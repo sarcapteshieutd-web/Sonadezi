@@ -391,14 +391,16 @@
         <p class="mt-1 text-xs text-slate-500">Khai báo email giúp nâng hạn mức MyMemory từ 5.000 lên khoảng 50.000 ký tự/ngày.</p>
       </div>
       <div id="boxGG" class="mt-3 hidden">
-        <label class="block text-sm font-medium">Google Cloud Translation API key</label>
-        <input id="inKey" type="password" autocomplete="off" placeholder="AIza…" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2" />
+        <div id="rowGKey">
+          <label class="block text-sm font-medium">Google Cloud Translation API key</label>
+          <input id="inKey" type="password" autocomplete="off" placeholder="AIza…" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2" />
+        </div>
         <label class="mt-3 block text-sm font-medium">Giới hạn ký tự Google mỗi ngày</label>
         <input id="inGLimit" type="number" min="0" step="1000" inputmode="numeric" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2" />
         <p class="mt-1 text-xs text-slate-500">Nhập 0 để không giới hạn. Bộ đếm tính theo ngày trên thiết bị này, chỉ mang tính tham khảo, không thay số liệu tính phí của Google.</p>
         <label class="mt-2 flex items-center gap-2 text-sm"><input id="chkGFallback" type="checkbox" class="h-4 w-4 accent-brand-600" />Đạt giới hạn thì tự chuyển sang MyMemory (miễn phí)</label>
         <div class="mt-2 flex items-center justify-between gap-2"><span id="gUsageBox" class="text-xs"></span><button id="btnGReset" type="button" class="shrink-0 rounded-lg border border-slate-300 px-2 py-1 text-xs">Đặt lại bộ đếm</button></div>
-        <p class="mt-1 text-xs text-slate-500">Khóa chỉ lưu trên thiết bị này. Nên giới hạn khóa theo tên miền (HTTP referrer) trong Google Cloud Console.</p>
+        <p id="noteGKey" class="mt-1 text-xs text-slate-500">Khóa chỉ lưu trên thiết bị này. Nên giới hạn khóa theo tên miền (HTTP referrer) trong Google Cloud Console.</p>
       </div>
       <div class="mt-5 border-t border-slate-200 pt-4">
         <h3 class="text-sm font-semibold">Giọng đọc</h3>
@@ -416,11 +418,13 @@
           <select id="selVoice" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2"></select>
         </div>
         <div id="boxCloudVoice" class="hidden">
-          <label class="mt-2 block text-sm">API key Text-to-Speech</label>
-          <input id="inTtsKey" type="password" autocomplete="off" placeholder="Để trống = dùng khóa Translation ở trên" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2" />
+          <div id="rowTtsKey">
+            <label class="mt-2 block text-sm">API key Text-to-Speech</label>
+            <input id="inTtsKey" type="password" autocomplete="off" placeholder="Để trống = dùng khóa Translation ở trên" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2" />
+          </div>
           <label class="mt-2 block text-sm">Giọng WaveNet (nam/nữ)</label>
           <select id="selCloudVoice" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2"></select>
-          <p class="mt-1 text-xs text-slate-500">Cần bật <b>Cloud Text-to-Speech API</b> và thanh toán trong Google Cloud. WaveNet miễn phí 4 triệu ký tự/tháng, sau đó khoảng 4 USD cho 1 triệu ký tự (theo bảng giá của Google, vui lòng đối chiếu lại). Nếu lỗi hoặc mất mạng, ứng dụng tự dùng giọng thiết bị.</p>
+          <p id="noteTts" class="mt-1 text-xs text-slate-500">Cần bật <b>Cloud Text-to-Speech API</b> và thanh toán trong Google Cloud. WaveNet miễn phí 4 triệu ký tự/tháng, sau đó khoảng 4 USD cho 1 triệu ký tự (theo bảng giá của Google, vui lòng đối chiếu lại). Nếu lỗi hoặc mất mạng, ứng dụng tự dùng giọng thiết bị.</p>
           <div class="mt-3 overflow-hidden rounded-lg border border-slate-200">
             <table class="w-full text-xs">
               <tbody>

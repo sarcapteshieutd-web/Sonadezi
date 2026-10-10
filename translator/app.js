@@ -61,7 +61,7 @@
     viewerBar: $('viewerBar'), selViewerLang: $('selViewerLang'), viewerStatus: $('viewerStatus'), coBar: $('coBar'), coStatus: $('coStatus'), chkEar: $('chkEar'),
     chkIncr: $('chkIncr'), selCut: $('selCut'), chkLat: $('chkLat'),
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
-    selEngine: $('selEngine'), rowEngine: $('rowEngine'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
+    selEngine: $('selEngine'), rowEngine: $('rowEngine'), rowGKey: $('rowGKey'), noteGKey: $('noteGKey'), rowTtsKey: $('rowTtsKey'), noteTts: $('noteTts'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
     selTtsMode: $('selTtsMode'), rowTtsMode: $('rowTtsMode'), boxDevVoice: $('boxDevVoice'), boxCloudVoice: $('boxCloudVoice'), inTtsKey: $('inTtsKey'), selCloudVoice: $('selCloudVoice'),
     gate: $('gate'), gateFree: $('gateFree'), gateForm: $('gateForm'), gateEmail: $('gateEmail'), gatePass: $('gatePass'), gateErr: $('gateErr'), gateLogin: $('gateLogin'),
     gateToReg: $('gateToReg'), gateForgot: $('gateForgot'), regForm: $('regForm'), regName: $('regName'), regEmail: $('regEmail'), regPass: $('regPass'), regPass2: $('regPass2'),
@@ -102,9 +102,9 @@
     tgt: store.get('tgt', 'vi'),
     engine: store.get('engine', 'mymemory'),
     email: store.get('email', ''),
-    gkey: store.get('gkey', ''), // khóa tự nhập; VIP không nhập thì dùng khóa dùng chung (nạp sau khi đăng nhập)
+    gkey: (acct0Vip && !(acct0.info && acct0.info.admin)) ? '' : store.get('gkey', ''), // chỉ quản trị viên được nhập khóa riêng; VIP dùng khóa dùng chung (nạp sau khi đăng nhập)
     ttsMode: store.get('ttsMode', 'device'), // nguồn giọng đọc: 'device' (miễn phí) hoặc 'cloud' (Google WaveNet)
-    ttsKey: store.get('ttskey', ''),
+    ttsKey: (acct0Vip && !(acct0.info && acct0.info.admin)) ? '' : store.get('ttskey', ''),
     ttsLimit: Math.max(0, parseInt(store.get('ttsLimit', '4000000'), 10) || 0), // giới hạn ký tự giọng Google mỗi tháng (0 = không giới hạn)
     gLimit: Math.max(0, parseInt(store.get('gLimit', '200000'), 10) || 0), // giới hạn ký tự Google mỗi ngày (0 = không giới hạn)
     gFallback: store.get('gFallback', '1') === '1', // đạt giới hạn: tự chuyển sang MyMemory
@@ -133,6 +133,7 @@
 
   state.mine = state.src;
   const isVip = () => state.acct === 'vip';
+  const isAdminAcct = () => isVip() && !!(state.acctInfo && state.acctInfo.admin); // chỉ quản trị viên thấy và nhập được khóa API
   // Chỉ tài khoản VIP lưu đoạn chat trên thiết bị; tài khoản Miễn phí chỉ giữ trong phiên đang mở
   function loadLog() {
     try { return JSON.parse(store.get('chat', '[]')).filter(i => LANGS[i.from] && LANGS[i.to]); } catch (_) { return []; }
@@ -1373,7 +1374,7 @@
     const keep = /-Wavenet-/i.test(el.selCloudVoice.value) ? el.selCloudVoice.value : ''; // giữ lựa chọn người dùng vừa chọn
     el.selCloudVoice.innerHTML = '';
     const msg = t => { const o = document.createElement('option'); o.textContent = t; el.selCloudVoice.appendChild(o); };
-    if (!key) { msg('Nhập API key để tải danh sách giọng'); return; }
+    if (!key) { msg(isAdminAcct() ? 'Nhập API key để tải danh sách giọng' : 'Chưa nhận được khóa Google dùng chung'); return; }
     msg('Đang tải danh sách giọng…');
     try {
       const list = await cloudVoices(k, key);
@@ -1426,8 +1427,8 @@
     state.rate = +el.inRate.value; state.pitch = +el.inPitch.value;
     state.ttsMode = el.selTtsMode.value; state.ttsKey = el.inTtsKey.value.trim(); // thử ngay, chưa cần bấm Lưu
     if (state.ttsMode === 'cloud') {
-      if (!cloudKey() && !el.inKey.value.trim()) { toast('Vui lòng nhập API key'); return; }
-      if (!state.ttsKey && !state.gkey) state.gkey = el.inKey.value.trim();
+      if (!cloudKey() && !(isAdminAcct() && el.inKey.value.trim())) { toast(isAdminAcct() ? 'Vui lòng nhập API key' : 'Chưa nhận được khóa Google dùng chung. Vui lòng liên hệ quản trị viên'); return; }
+      if (isAdminAcct() && !state.ttsKey && !state.gkey) state.gkey = el.inKey.value.trim();
       if (/-Wavenet-/i.test(el.selCloudVoice.value)) store.set('cvoice_' + k, el.selCloudVoice.value);
       unlockTTS();
     }
@@ -1440,13 +1441,13 @@
     fillVoices();
     el.selTtsMode.value = state.ttsMode;
     el.selCloudVoice.innerHTML = '';
-    el.inTtsKey.value = state.ttsKey; lastTtsKey = state.ttsKey;
+    el.inTtsKey.value = isAdminAcct() ? state.ttsKey : ''; lastTtsKey = el.inTtsKey.value;
     el.inTtsLimit.value = String(state.ttsLimit); renderTtsUsage();
     el.inRate.value = state.rate; el.inRate.oninput();
     el.inPitch.value = state.pitch; el.inPitch.oninput();
     el.selEngine.value = state.engine;
     el.inEmail.value = state.email;
-    el.inKey.value = store.get('gkey', ''); // chỉ hiện khóa tự nhập, không hiện khóa dùng chung
+    el.inKey.value = isAdminAcct() ? store.get('gkey', '') : ''; // chỉ quản trị viên thấy khóa tự nhập; không bao giờ hiện khóa dùng chung
     el.inGLimit.value = String(state.gLimit); el.chkGFallback.checked = state.gFallback; renderGUsage();
     syncEngineBoxes();
     syncTtsBoxes();
@@ -1461,13 +1462,13 @@
   el.btnSave.onclick = () => {
     state.engine = el.selEngine.value;
     state.email = el.inEmail.value.trim();
-    const typedKey = el.inKey.value.trim();
+    const typedKey = isAdminAcct() ? el.inKey.value.trim() : '';
     state.gkey = typedKey || (isVip() ? state.sharedKey : '');
     if (!isVip()) state.engine = 'mymemory'; // Miễn phí: chỉ MyMemory
-    if (state.engine === 'google' && !state.gkey) { toast('Vui lòng nhập API key'); return; }
-    state.ttsMode = isVip() ? el.selTtsMode.value : 'device'; state.ttsKey = el.inTtsKey.value.trim();
-    if (state.ttsMode === 'cloud' && !state.ttsKey && !state.gkey) { toast('Vui lòng nhập API key Text-to-Speech (hoặc khóa Translation)'); return; }
-    store.set('ttsMode', state.ttsMode); store.set('ttskey', state.ttsKey);
+    if (state.engine === 'google' && !state.gkey) { toast(isAdminAcct() ? 'Vui lòng nhập API key' : 'Chưa nhận được khóa Google dùng chung. Vui lòng liên hệ quản trị viên'); return; }
+    state.ttsMode = isVip() ? el.selTtsMode.value : 'device'; state.ttsKey = isAdminAcct() ? el.inTtsKey.value.trim() : '';
+    if (state.ttsMode === 'cloud' && !state.ttsKey && !state.gkey) { toast(isAdminAcct() ? 'Vui lòng nhập API key Text-to-Speech (hoặc khóa Translation)' : 'Chưa nhận được khóa Google dùng chung. Vui lòng liên hệ quản trị viên'); return; }
+    store.set('ttsMode', state.ttsMode); store.set('ttskey', isAdminAcct() ? state.ttsKey : '');
     state.ttsLimit = Math.max(0, parseInt(el.inTtsLimit.value, 10) || 0); store.set('ttsLimit', String(state.ttsLimit));
     if (state.ttsMode === 'cloud' && /-Wavenet-/i.test(el.selCloudVoice.value)) store.set('cvoice_' + el.selVoiceLang.value, el.selCloudVoice.value);
     state.gLimit = Math.max(0, parseInt(el.inGLimit.value, 10) || 0); state.gFallback = el.chkGFallback.checked;
@@ -2126,6 +2127,10 @@
     el.btnConf.classList.toggle('hidden', !vip);
     el.chkConf.closest('label').classList.toggle('hidden', !vip);
     el.chkConf.checked = state.conf;
+    const admin = isAdminAcct();
+    el.rowGKey.classList.toggle('hidden', !admin); el.noteGKey.classList.toggle('hidden', !admin); // VIP thường không thấy ô nhập khóa
+    el.rowTtsKey.classList.toggle('hidden', !admin); el.noteTts.classList.toggle('hidden', !admin);
+    if (vip && !admin) { state.ttsKey = ''; if (state.sharedKey) state.gkey = state.sharedKey; else if (state.gkey && state.gkey !== state.sharedKey) state.gkey = ''; } // bỏ khóa tự nhập, chỉ dùng khóa dùng chung
     el.rowEngine.classList.toggle('hidden', !vip); // tài khoản thường chỉ có MyMemory nên không cần chọn nguồn dịch
     if (!vip) el.selEngine.value = 'mymemory';
     el.selEngine.querySelector('option[value="google"]').disabled = !vip;
@@ -2184,7 +2189,8 @@
       const g = await kit.acct.getGoogleConfig();
       state.sharedKey = (g && g.key) || '';
       state.userLimit = { tr: (g && g.userTr) || 0, tts: (g && g.userTts) || 0 };
-      if (!store.get('gkey', '')) state.gkey = state.sharedKey;
+      if (!(isAdminAcct() && store.get('gkey', ''))) state.gkey = state.sharedKey;
+      if (!isAdminAcct()) state.ttsKey = '';
       renderGUsage(); applyAcct();
       if (!state.gkey && !sharedWarned) { sharedWarned = true; toast('Chưa có khóa Google dùng chung. Vào Cài đặt để nhập API key, hoặc liên hệ quản trị viên'); }
     } catch (_) { state.sharedKey = ''; } // chưa đủ quyền hoặc mất mạng: dịch bằng MyMemory
