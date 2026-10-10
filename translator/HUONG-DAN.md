@@ -102,12 +102,14 @@ Khi mở ứng dụng lần đầu (hoặc sau khi chọn *Cài đặt → Đổ
 | | Miễn phí | VIP |
 |---|---|---|
 | Nguồn dịch | MyMemory (cố định) | Google Cloud Translation (mặc định) |
-| Giọng đọc | Giọng của thiết bị (cố định) | Google Cloud WaveNet (mặc định) |
+| Giọng đọc | Chỉ giọng của thiết bị (không có lựa chọn nguồn) | Chọn tự do giữa giọng Google WaveNet (mặc định) và giọng của thiết bị |
 | Lưu và xuất đoạn chat | Không (chỉ giữ trong phiên đang mở) | Có |
 | Chế độ hội nghị | Không | Có |
 | Thời gian dùng | Không giới hạn | Theo tháng, quản trị viên cấp và gia hạn |
 
 Người xem phòng họp qua mã QR không phải chọn tài khoản.
+
+VIP và quản trị viên chọn nguồn giọng đọc ở hai nơi, luôn đồng bộ với nhau: ô **Giọng đọc ra** ngoài màn hình (hai nhóm "Giọng Google WaveNet" và "Giọng của thiết bị", chọn giọng nào là chuyển luôn sang nguồn đó) và mục **Nguồn giọng đọc** trong Cài đặt. Tài khoản thường chỉ thấy danh sách giọng thiết bị.
 
 ### Dành cho người dùng VIP
 1. Ở màn hình chọn tài khoản, chọn **Đăng ký tài khoản VIP**, nhập họ tên, email và mật khẩu (tối thiểu 8 ký tự).
