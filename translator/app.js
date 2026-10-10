@@ -62,7 +62,7 @@
     chkIncr: $('chkIncr'), selCut: $('selCut'), chkLat: $('chkLat'),
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
     selEngine: $('selEngine'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
-    selTtsMode: $('selTtsMode'), boxDevVoice: $('boxDevVoice'), boxCloudVoice: $('boxCloudVoice'), inTtsKey: $('inTtsKey'), selCloudVoice: $('selCloudVoice'),
+    selTtsMode: $('selTtsMode'), rowTtsMode: $('rowTtsMode'), boxDevVoice: $('boxDevVoice'), boxCloudVoice: $('boxCloudVoice'), inTtsKey: $('inTtsKey'), selCloudVoice: $('selCloudVoice'),
     gate: $('gate'), gateFree: $('gateFree'), gateForm: $('gateForm'), gateEmail: $('gateEmail'), gatePass: $('gatePass'), gateErr: $('gateErr'), gateLogin: $('gateLogin'),
     gateToReg: $('gateToReg'), gateForgot: $('gateForgot'), regForm: $('regForm'), regName: $('regName'), regEmail: $('regEmail'), regPass: $('regPass'), regPass2: $('regPass2'),
     regErr: $('regErr'), regSubmit: $('regSubmit'), regToLogin: $('regToLogin'), gateStatus: $('gateStatus'), gsTitle: $('gsTitle'), gsText: $('gsText'), gsPay: $('gsPay'),
@@ -196,26 +196,30 @@
       el.selSrcAcc.appendChild(o);
     }
     if (regs.length) el.selSrcAcc.value = sttLocale(state.src);
-    // Giọng Google Cloud (khi bật) hoặc giọng thiết bị: cùng nguồn và cùng nơi lưu với phần Cài đặt
-    let list = 'speechSynthesis' in window ? voicesFor(state.tgt) : [], cloud = false, pending = false;
-    if (cloudOn()) {
-      const cl = cloudVoicesCached(state.tgt);
-      if (cl) { list = cl; cloud = true; }
-      else if (!cloudTried[state.tgt]) { // chưa có danh sách: tải một lần rồi vẽ lại; lỗi thì dùng giọng thiết bị
+    // VIP/quản trị viên chọn được cả giọng Google WaveNet lẫn giọng thiết bị (hai nhóm trong cùng danh sách);
+    // tài khoản thường chỉ có giọng thiết bị. Chọn giọng ở đây đổi luôn nguồn giọng đọc, cùng nơi lưu với Cài đặt.
+    const dev = 'speechSynthesis' in window ? voicesFor(state.tgt) : [];
+    let cloudList = null, pending = false;
+    if (isVip() && cloudKey()) {
+      cloudList = cloudVoicesCached(state.tgt);
+      if (!cloudList && !cloudTried[state.tgt]) { // chưa có danh sách: tải một lần rồi vẽ lại; lỗi thì chỉ còn giọng thiết bị
         cloudTried[state.tgt] = true; pending = true;
         cloudVoices(state.tgt).then(r => { if (r.length) syncAccentUI(); }).catch(() => {});
       }
     }
+    const hasCloud = !!(cloudList && cloudList.length);
     const wrapT = el.selTgtVoice.parentElement;
-    wrapT.classList.toggle('hidden', pending || !list.length);
+    wrapT.classList.toggle('hidden', pending || !(dev.length || hasCloud));
     el.selTgtVoice.innerHTML = '';
-    for (const v of list) {
-      const o = document.createElement('option');
-      o.value = v.name;
-      o.textContent = cloud ? `${v.name} (${GENDER_VI[v.gender] || 'không rõ'})` : `${v.name} (${v.lang.replace('_', '-')})`;
-      el.selTgtVoice.appendChild(o);
-    }
-    if (list.length) el.selTgtVoice.value = (list.find(v => v.name === store.get((cloud ? 'cvoice_' : 'voice_') + state.tgt, '')) || list[0]).name;
+    const grouped = hasCloud && dev.length > 0;
+    const parentFor = title => { if (!grouped) return el.selTgtVoice; const g = document.createElement('optgroup'); g.label = title; el.selTgtVoice.appendChild(g); return g; };
+    const addOpts = (parent, list, prefix, label) => { for (const v of list) { const o = document.createElement('option'); o.value = prefix + v.name; o.textContent = label(v); parent.appendChild(o); } };
+    if (hasCloud) addOpts(parentFor('Giọng Google WaveNet'), cloudList, 'c:', v => `${v.name} (${GENDER_VI[v.gender] || 'không rõ'})`);
+    if (dev.length) addOpts(parentFor('Giọng của thiết bị'), dev, 'd:', v => `${v.name} (${v.lang.replace('_', '-')})`);
+    const useCloud = hasCloud && cloudOn();
+    const vals = [...el.selTgtVoice.options].map(o => o.value);
+    const want = (useCloud ? 'c:' + store.get('cvoice_' + state.tgt, '') : 'd:' + store.get('voice_' + state.tgt, ''));
+    el.selTgtVoice.value = vals.includes(want) ? want : (vals.find(v => v.startsWith(useCloud ? 'c:' : 'd:')) || vals[0] || '');
     el.accRow.style.display = wrapS.classList.contains('hidden') && wrapT.classList.contains('hidden') ? 'none' : '';
   }
 
@@ -1391,7 +1395,10 @@
     if (wantListening && rec) { try { rec.abort(); } catch (_) {} } // tự nghe lại với vùng nói mới
   };
   el.selTgtVoice.onchange = () => {
-    store.set((cloudOn() && /-Wavenet-/i.test(el.selTgtVoice.value) ? 'cvoice_' : 'voice_') + state.tgt, el.selTgtVoice.value);
+    const v = el.selTgtVoice.value, name = v.slice(2);
+    if (v.startsWith('c:') && isVip()) { state.ttsMode = 'cloud'; store.set('cvoice_' + state.tgt, name); } // chọn giọng WaveNet: chuyển sang nguồn Google
+    else { state.ttsMode = 'device'; store.set('voice_' + state.tgt, name); }                                // chọn giọng thiết bị: chuyển sang nguồn thiết bị
+    store.set('ttsMode', state.ttsMode);
     speak(TEST_TEXT[state.tgt] || TEST_TEXT.en, state.tgt);
   };
   el.inRate.oninput = () => { el.lblRate.textContent = (+el.inRate.value).toFixed(2) + '×'; };
@@ -2104,6 +2111,7 @@
     el.chkConf.checked = state.conf;
     el.selEngine.querySelector('option[value="google"]').disabled = !vip;
     el.selTtsMode.querySelector('option[value="cloud"]').disabled = !vip;
+    el.rowTtsMode.classList.toggle('hidden', !vip); // tài khoản thường chỉ có giọng thiết bị nên không cần chọn nguồn
     el.acctName.textContent = vip ? (info && info.admin ? 'Quản trị viên' : 'VIP') + (info && info.email ? ' (' + info.email + ')' : '') : (state.acct === 'free' ? 'Miễn phí' : 'Chưa chọn');
     // Thời gian dùng VIP trong tháng và mức dùng của riêng tài khoản này
     let meta = '', warn = false;

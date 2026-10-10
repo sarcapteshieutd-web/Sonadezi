@@ -402,11 +402,13 @@
         <h3 class="text-sm font-semibold">Giọng đọc</h3>
         <label class="mt-2 block text-sm">Ngôn ngữ</label>
         <select id="selVoiceLang" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2"></select>
-        <label class="mt-2 block text-sm">Nguồn giọng đọc</label>
-        <select id="selTtsMode" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2">
-          <option value="device">Giọng của thiết bị (miễn phí)</option>
-          <option value="cloud">Google Cloud WaveNet (cần API key)</option>
-        </select>
+        <div id="rowTtsMode">
+          <label class="mt-2 block text-sm">Nguồn giọng đọc</label>
+          <select id="selTtsMode" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2">
+            <option value="device">Giọng của thiết bị (miễn phí)</option>
+            <option value="cloud">Google Cloud WaveNet (cần API key)</option>
+          </select>
+        </div>
         <div id="boxDevVoice">
           <label class="mt-2 block text-sm">Giọng</label>
           <select id="selVoice" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2"></select>
