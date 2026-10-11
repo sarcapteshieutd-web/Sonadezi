@@ -94,3 +94,6 @@ Lưu ý: các bước dưới đây tôi đã kiểm thử bằng Firebase Emula
 
 ### 9.4. Cập nhật quy tắc khi nâng cấp lên bản có "gói Google Cloud" và "giới hạn mỗi VIP"
 Bản này thêm tài liệu `config/billing` (chỉ quản trị viên đọc/ghi: tín dụng, tỷ giá, ngày hết hạn dùng thử, đơn giá) và hai trường `userTr`, `userTts` trong `config/google` (giới hạn mỗi VIP, VIP còn hạn đọc được). **Bắt buộc dán lại toàn bộ `translator/firebase/firestore.rules` và bấm Publish** (Firestore Database → Rules); chưa dán lại thì lưu gói hoặc giới hạn sẽ báo "Không đủ quyền". Không cần tạo thủ công các tài liệu này: bảng quản trị tự tạo khi bạn bấm Lưu.
+
+### 9.5. Cập nhật quy tắc khi nâng cấp lên bản có "nhận dạng đám mây" (họp song ngữ)
+Bản này thêm các trường `sttLimit`, `userStt`, `sttOver` vào `config/google` và `sttPrice` vào `config/billing`, cùng loại đo `stt` (giây) trong `users/{uid}.usage`. **Bắt buộc dán lại toàn bộ `translator/firebase/firestore.rules` và bấm Publish**; chưa dán lại thì lưu hạn mức nhận dạng đám mây sẽ báo "Không đủ quyền". `room.bundle.js` đã được xây lại cho bản này. Khi sửa `src/room.js`, xây lại bằng lệnh ở mục 7. Bộ kiểm thử quy tắc (`rules-test.js`, `rules-test-vip.js`) cần Firebase Emulator **sạch** mỗi lần chạy (khởi động lại emulator trước khi chạy lại).

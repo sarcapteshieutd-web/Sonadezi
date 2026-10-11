@@ -270,3 +270,22 @@ Dùng khi bạn đi dự hội nghị, người trình bày nói ngoại ngữ v
 - Nếu bản dịch dồn lại, app giữ tối đa 2 câu mới nhất và đọc nhanh hơn khoảng 25% để bắt kịp; câu cũ hơn có thể bị bỏ qua.
 - Dùng **tai nghe** để tiếng đọc không lọt vào micro. Nếu phát ra loa ngoài, tiếng đọc có thể bị micro thu lại và dịch nhầm.
 - Micro đặt gần nguồn âm (gần loa hội trường hoặc lấy tín hiệu từ bàn trộn âm thanh) cho kết quả tốt nhất. Chưa đo độ trễ thực tế tại hội nghị.
+
+## 23. Họp song ngữ: tự nhận ngôn ngữ từng câu (nhận dạng đám mây)
+Dùng khi hai bên nói xen kẽ tiếng Việt và một ngoại ngữ (Anh, Trung, Nhật hoặc Hàn) mà không muốn bấm đổi người nói. Chỉ dành cho tài khoản **VIP và quản trị viên**.
+1. Chọn cặp ngôn ngữ gồm tiếng Việt và một ngoại ngữ (ví dụ Tiếng Việt và Tiếng Nhật), rồi bấm **Chế độ họp**.
+2. Trong thanh chế độ họp, tích ô **Song ngữ: tự nhận ngôn ngữ từng câu (nhận dạng đám mây)**. Có thể chọn micro (ví dụ loa họp EMEET M0 Plus) trong danh sách bên cạnh; lựa chọn được nhớ cho lần sau.
+3. Mỗi câu hiện sau khi người nói ngắt hơi: ngoại ngữ nằm cột trái, tiếng Việt cột phải; câu được dịch sang ngôn ngữ còn lại. Không có chữ hiện dần khi đang nói.
+- Không dùng cùng **Chế độ hội nghị** (hội nghị vẫn dùng nhận dạng của trình duyệt, một ngôn ngữ cố định). Cặp ngôn ngữ không chứa tiếng Việt thì không dùng được.
+- Khi bật **Đọc bản dịch ra loa**, micro tạm nghỉ lúc ứng dụng đọc rồi tự nghe lại.
+- Mỗi phút âm thanh gửi đi **có tính phí** theo bảng giá Google Cloud Speech-to-Text; ứng dụng chỉ gửi đoạn có tiếng nói. Mức đã dùng hiển thị ngay trên thanh chế độ họp.
+- Hết hạn mức tháng do quản trị viên đặt: theo cấu hình, ứng dụng **quay về nhận dạng của trình duyệt** (miễn phí, một ngôn ngữ, đổi bằng nút ⇄) hoặc **cho dùng tiếp** (có thể phát sinh thêm chi phí).
+- Đã kiểm thử bằng micro và dịch vụ giả lập; **chưa đo** độ chính xác nhận dạng, độ chính xác phát hiện ngôn ngữ và độ trễ thực tế với khóa Google thật và loa EMEET. Hãy dùng nút **Thử 5 giây** (mục dưới) cho từng cặp ngôn ngữ trước buổi họp quan trọng. Nếu một cặp nhận dạng kém, dùng luồng cũ (nhận dạng trình duyệt và nút ⇄) cho cặp đó.
+
+### Thiết lập cho quản trị viên
+1. Trong Google Cloud Console, bật **Cloud Speech-to-Text API** trên cùng dự án với khóa dùng chung, và thêm dịch vụ này vào mục **API restrictions** của khóa.
+2. Dán lại toàn bộ `firebase/firestore.rules` vào Firebase Console và bấm **Publish** (có thêm các trường `sttLimit`, `userStt`, `sttOver`, `sttPrice`). Chưa dán thì bảng quản trị báo "Không đủ quyền" khi lưu.
+3. Mở **Cài đặt → Quản trị tài khoản và hạn mức**: đặt hạn mức nhận dạng đám mây (phút mỗi tháng) và hạn mức mỗi VIP, chọn hành vi khi hết hạn mức, nhập đơn giá mỗi phút (mặc định 0,016 USD **chưa được xác minh**, hãy đối chiếu với trang giá của Google).
+4. Dùng **Thử 5 giây** cho từng cặp (Anh, Trung, Nhật, Hàn với Việt): nói một câu, đọc chữ nhận được và ngôn ngữ phát hiện. Lỗi 403 nghĩa là dịch vụ chưa bật hoặc khóa chưa cho phép Speech-to-Text. Tiếng Trung có thể cần mã `cmn-Hans-CN` thay cho `zh-CN`: nếu kết quả kém, sửa bảng `CODES` trong `stt-cloud.js`.
+- Chế độ "Cho dùng tiếp" **không có trần chi phí**: hãy đặt cảnh báo ngân sách (Budget alert) trong Google Cloud Billing.
+- Hạn mức tổng chỉ được áp cho chính quản trị viên; số phút của toàn hệ thống hiển thị ở thước đo "Google Speech-to-Text (phút)" để theo dõi. Số liệu do thiết bị tự báo nên chỉ để tham khảo; số liệu và tiền thật xem trên Google Cloud Console.
