@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thử nghiệm nhận dạng hai ngôn ngữ</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; background: #f6f7fb; color: #111; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p.note { margin: 0 0 12px; font-size: 13px; color: #555; }
+  button { font-size: 16px; padding: 10px 18px; border-radius: 10px; border: 0; background: #1e3a8a; color: #fff; margin-right: 8px; }
+  button.stop { background: #b91c1c; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+  .col { background: #fff; border-radius: 12px; padding: 12px; min-height: 140px; border: 2px solid #ddd; }
+  .col.win { border-color: #16a34a; }
+  .col h2 { font-size: 15px; margin: 0 0 6px; }
+  .state { font-size: 12px; color: #666; margin-bottom: 6px; }
+  .txt { font-size: 18px; min-height: 52px; }
+  .conf { font-size: 13px; color: #1e3a8a; margin-top: 6px; }
+  #verdict { font-size: 16px; font-weight: 600; margin: 8px 0; }
+  #log { background: #111; color: #9ef; font: 12px/1.5 ui-monospace, monospace; padding: 10px; border-radius: 10px; height: 220px; overflow: auto; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>Thử nghiệm nhận dạng hai ngôn ngữ cùng lúc</h1>
+<p class="note">Trang tạm để kiểm tra trình duyệt có cho chạy song song hai phiên nghe (Anh và Việt) hay không. Không thuộc ứng dụng chính.</p>
+<div>
+  <button id="go">Bắt đầu nghe</button>
+  <button id="halt" class="stop">Dừng</button>
+</div>
+<div id="verdict">Chưa chạy</div>
+<div class="cols">
+  <div class="col" id="c-en"><h2>Tiếng Anh (en-US)</h2><div class="state" id="s-en">chưa chạy</div><div class="txt" id="t-en"></div><div class="conf" id="f-en"></div></div>
+  <div class="col" id="c-vi"><h2>Tiếng Việt (vi-VN)</h2><div class="state" id="s-vi">chưa chạy</div><div class="txt" id="t-vi"></div><div class="conf" id="f-vi"></div></div>
+</div>
+<div id="log"></div>
+<script>
+(() => {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const $ = id => document.getElementById(id);
+  const logEl = $('log');
+  const t0 = Date.now();
+  const log = m => { logEl.textContent += ((Date.now() - t0) / 1000).toFixed(1) + 's  ' + m + '\n'; logEl.scrollTop = logEl.scrollHeight; };
+  if (!SR) { $('verdict').textContent = 'Trình duyệt không hỗ trợ SpeechRecognition'; return; }
+
+  const LANGS = { en: 'en-US', vi: 'vi-VN' };
+  const S = { en: { rec: null, last: null }, vi: { rec: null, last: null } };
+  let running = false;
+  const counters = { en: { start: 0, end: 0, err: 0 }, vi: { start: 0, end: 0, err: 0 } };
+
+  function show(k) {
+    const c = counters[k];
+    $('s-' + k).textContent = (S[k].rec ? 'đang chạy' : 'dừng') + ` | start ${c.start}, end ${c.end}, lỗi ${c.err}`;
+  }
+
+  function compare() {
+    const a = S.en.last, b = S.vi.last;
+    if (!a || !b || Math.abs(a.at - b.at) > 2500) return;
+    const win = a.conf >= b.conf ? 'en' : 'vi';
+    $('verdict').textContent = `Kết quả cao hơn: ${win === 'en' ? 'Tiếng Anh' : 'Tiếng Việt'} (Anh ${a.conf.toFixed(2)} so với Việt ${b.conf.toFixed(2)})`;
+    $('c-en').classList.toggle('win', win === 'en');
+    $('c-vi').classList.toggle('win', win === 'vi');
+  }
+
+  function begin(k) {
+    if (!running) return;
+    const rec = new SR();
+    rec.lang = LANGS[k];
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    rec.onstart = () => { counters[k].start++; log(`[${k}] onstart`); show(k); };
+    rec.onaudiostart = () => log(`[${k}] onaudiostart`);
+    rec.onerror = ev => { counters[k].err++; log(`[${k}] LỖI: ${ev.error} ${ev.message || ''}`); show(k); };
+    rec.onend = () => {
+      counters[k].end++; log(`[${k}] onend`); S[k].rec = null; show(k);
+      if (running) setTimeout(() => begin(k), 300);
+    };
+    rec.onresult = ev => {
+      let text = '', conf = 0, fin = false;
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        const r = ev.results[i];
+        text += r[0].transcript; conf = r[0].confidence || 0; fin = r.isFinal;
+      }
+      $('t-' + k).textContent = text;
+      $('f-' + k).textContent = (fin ? 'CHỐT' : 'tạm') + ' | độ tin cậy ' + conf.toFixed(2);
+      if (fin) { S[k].last = { conf, at: Date.now() }; log(`[${k}] final "${text}" conf=${conf.toFixed(2)}`); compare(); }
+    };
+    S[k].rec = rec;
+    try { rec.start(); } catch (e) { counters[k].err++; log(`[${k}] start() ném lỗi: ${e.name} ${e.message}`); }
+    show(k);
+  }
+
+  $('go').onclick = () => {
+    if (running) return;
+    running = true;
+    log('Bắt đầu: khởi động phiên en-US, 600 ms sau mới khởi động vi-VN');
+    begin('en');
+    setTimeout(() => begin('vi'), 600);
+  };
+  $('halt').onclick = () => {
+    running = false;
+    ['en', 'vi'].forEach(k => { try { S[k].rec && S[k].rec.stop(); } catch (_) {} });
+    log('Đã dừng');
+    $('verdict').textContent = 'Đã dừng';
+  };
+})();
+</script>
+</body>
+</html>
