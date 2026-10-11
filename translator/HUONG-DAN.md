@@ -292,3 +292,6 @@ Dùng khi hai bên nói xen kẽ tiếng Việt và một ngoại ngữ (Anh, Tr
 4. Dùng **Thử 5 giây** cho từng cặp (Anh, Trung, Nhật, Hàn với Việt): nói một câu, đọc chữ nhận được và ngôn ngữ phát hiện. Lỗi 403 nghĩa là dịch vụ chưa bật hoặc khóa chưa cho phép Speech-to-Text. Tiếng Trung có thể cần mã `cmn-Hans-CN` thay cho `zh-CN`: nếu kết quả kém, sửa bảng `CODES` trong `stt-cloud.js`.
 - Chế độ "Cho dùng tiếp" **không có trần chi phí**: hãy đặt cảnh báo ngân sách (Budget alert) trong Google Cloud Billing.
 - Hạn mức tổng chỉ được áp cho chính quản trị viên; số phút của toàn hệ thống hiển thị ở thước đo "Google Speech-to-Text (phút)" để theo dõi. Số liệu do thiết bị tự báo nên chỉ để tham khảo; số liệu và tiền thật xem trên Google Cloud Console.
+
+## 24. Nhật ký nghe/đọc để chẩn đoán lỗi micro
+Khi bật **Hiện độ trễ** (Cài đặt), thanh đỏ của Chế độ họp hiện thêm một khung chữ nhỏ ghi 10 sự kiện gần nhất, kèm giờ: mở phiên nghe, micro đã bật, lỗi nghe, đọc bản dịch (micro tạm nghỉ), đọc xong (trình duyệt báo kết thúc hay **hết giờ chờ**), bật lại micro, nghe được gì. Nếu micro không nghe lại sau khi đọc bản dịch, chụp màn hình khung này gửi người hỗ trợ: các dòng này cho biết micro dừng ở bước nào.
