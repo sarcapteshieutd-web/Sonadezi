@@ -121,7 +121,133 @@
     return { allow: !over || mode === 'continue', warn: !over && total >= cap * 0.8, over };
   }
 
-  const api = { SAMPLE_RATE, CODES, pairFromLangs, langFromCode, downsampleTo16k, floatToPcm16, pcm16ToBase64, billedSeconds, createSegmenter, quotaDecision };
+  // ---------- Gọi API Google Speech-to-Text (V1, khóa API) ----------
+  const ENDPOINT = 'https://speech.googleapis.com/v1/speech:recognize';
+  function sttError(status, message) { const e = new Error(message); e.status = status; return e; }
+  function httpError(status) {
+    if (status === 403) return sttError(403, 'Khóa API chưa được phép dùng Speech-to-Text (403). Hãy bật Cloud Speech-to-Text trong dự án Google Cloud và cho phép dịch vụ này trong giới hạn của khóa');
+    if (status === 400) return sttError(400, 'Yêu cầu nhận dạng không hợp lệ (400). Kiểm tra mã ngôn ngữ và khóa API');
+    if (status === 429) return sttError(429, 'Đã vượt hạn mức của Google Speech-to-Text (429)');
+    return sttError(status, 'Dịch vụ nhận dạng của Google tạm thời lỗi (' + status + ')');
+  }
+
+  // Lỗi mạng và 5xx được thử lại đúng một lần; 4xx không thử lại. Thông điệp lỗi không bao giờ chứa khóa API.
+  async function recognize(pcm, opts) {
+    const fetchImpl = opts.fetchImpl || (typeof fetch !== 'undefined' ? fetch.bind(globalThis) : null);
+    if (!fetchImpl) throw sttError(0, 'Trình duyệt không hỗ trợ gọi dịch vụ nhận dạng');
+    const body = JSON.stringify({
+      config: { encoding: 'LINEAR16', sampleRateHertz: SAMPLE_RATE, languageCode: opts.primary, alternativeLanguageCodes: [opts.alt], enableAutomaticPunctuation: true },
+      audio: { content: pcm16ToBase64(pcm) }
+    });
+    const url = ENDPOINT + '?key=' + encodeURIComponent(opts.apiKey);
+    let res, err;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      err = null;
+      try { res = await fetchImpl(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }); }
+      catch (_) { err = sttError(0, 'Mất kết nối tới dịch vụ nhận dạng'); continue; }
+      if (res.ok) break;
+      err = httpError(res.status);
+      if (res.status < 500) throw err;
+    }
+    if (err) throw err;
+    const j = await res.json();
+    const results = (j && j.results) || [];
+    const parts = results.map(r => (r.alternatives && r.alternatives[0] && r.alternatives[0].transcript) || '').filter(Boolean);
+    const glue = /^(ja|zh)/i.test(opts.primary) ? '' : ' ';
+    const first = results[0] && results[0].alternatives && results[0].alternatives[0];
+    return { text: parts.join(glue).trim(), code: (results[0] && results[0].languageCode) || '', confidence: (first && first.confidence) || 0 };
+  }
+
+  // ---------- Thu âm từ micro (chỉ chạy trên trình duyệt) ----------
+  const WORKLET_SRC = 'class P extends AudioWorkletProcessor{constructor(){super();this.b=new Float32Array(2048);this.n=0;}' +
+    'process(i){const c=i[0]&&i[0][0];if(c){for(let k=0;k<c.length;k++){this.b[this.n++]=c[k];if(this.n===2048){this.port.postMessage(this.b.slice(0));this.n=0;}}}return true;}}' +
+    'registerProcessor("stt-capture",P);';
+
+  // Mở micro và gọi onFrame(Float32Array ở tần số gốc, sampleRate) liên tục; trả về { sampleRate, close() }
+  async function openCapture(deviceId, onFrame) {
+    const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+    if (deviceId) audio.deviceId = { exact: deviceId };
+    const stream = await navigator.mediaDevices.getUserMedia({ audio });
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AC();
+    if (ctx.state === 'suspended') { try { await ctx.resume(); } catch (_) {} }
+    const source = ctx.createMediaStreamSource(stream);
+    const mute = ctx.createGain(); mute.gain.value = 0; mute.connect(ctx.destination); // giữ đồ thị âm thanh chạy mà không phát ra loa
+    let node;
+    try {
+      const url = URL.createObjectURL(new Blob([WORKLET_SRC], { type: 'application/javascript' }));
+      await ctx.audioWorklet.addModule(url); URL.revokeObjectURL(url);
+      node = new AudioWorkletNode(ctx, 'stt-capture');
+      node.port.onmessage = e => onFrame(e.data, ctx.sampleRate);
+    } catch (_) {
+      node = ctx.createScriptProcessor(4096, 1, 1);
+      node.onaudioprocess = e => onFrame(new Float32Array(e.inputBuffer.getChannelData(0)), ctx.sampleRate);
+    }
+    source.connect(node); node.connect(mute);
+    return {
+      sampleRate: ctx.sampleRate,
+      close() {
+        try { node.disconnect(); source.disconnect(); mute.disconnect(); } catch (_) {}
+        stream.getTracks().forEach(t => t.stop());
+        try { ctx.close(); } catch (_) {}
+      }
+    };
+  }
+
+  let cap = null, seg = null, cfg = null, paused = false, chain = Promise.resolve();
+
+  function handleSegment(samples) {
+    const c = cfg, secs = billedSeconds(samples.length), pcm = floatToPcm16(samples);
+    chain = chain.then(async () => {
+      try {
+        const r = await recognize(pcm, { apiKey: c.apiKey, primary: c.pair.primary, alt: c.pair.alt });
+        const lang = langFromCode(r.code, c.pair);
+        // Văn bản rỗng hoặc ngôn ngữ ngoài cặp: vẫn báo số giây (Google vẫn tính tiền) nhưng không có nội dung
+        c.onSegment(r.text && lang ? { text: r.text, lang, seconds: secs, confidence: r.confidence } : { text: '', lang: null, seconds: secs, confidence: 0 });
+      } catch (e) { if (c.onError) c.onError(e); }
+    });
+  }
+
+  // opts: { deviceId?, apiKey, pair: {primary, alt, foreign}, onSegment, onLevel?, onError? }
+  async function start(opts) {
+    stop();
+    cfg = opts; seg = createSegmenter(); paused = false;
+    cap = await openCapture(opts.deviceId, (f, rate) => {
+      if (paused) return;
+      const down = downsampleTo16k(f, rate);
+      if (opts.onLevel) { let s = 0; for (let i = 0; i < down.length; i++) s += down[i] * down[i]; opts.onLevel(Math.sqrt(s / (down.length || 1))); }
+      for (const piece of seg.push(down)) handleSegment(piece);
+    });
+  }
+  function pause() { paused = true; if (seg) seg = createSegmenter(); } // bỏ đoạn đang dở để không thu lại tiếng đọc bản dịch
+  function resume() { paused = false; }
+  function stop() {
+    if (seg && cfg) for (const piece of seg.flush()) handleSegment(piece);
+    if (cap) { cap.close(); cap = null; }
+    seg = null; paused = false;
+  }
+
+  async function listDevices() {
+    let list = await navigator.mediaDevices.enumerateDevices();
+    if (list.some(d => d.kind === 'audioinput' && !d.label)) { // chưa có quyền micro thì nhãn bị ẩn
+      try { (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach(t => t.stop()); list = await navigator.mediaDevices.enumerateDevices(); } catch (_) {}
+    }
+    return list.filter(d => d.kind === 'audioinput').map((d, i) => ({ id: d.deviceId, label: d.label || 'Micro ' + (i + 1) }));
+  }
+
+  // Thu 5 giây rồi gọi API một lần: dùng để kiểm tra khóa, dịch vụ và chất lượng nhận dạng của từng cặp
+  async function probe(opts) {
+    const frames = [];
+    const c = await openCapture(opts.deviceId, (f, rate) => frames.push(downsampleTo16k(f, rate)));
+    await new Promise(r => setTimeout(r, 5000));
+    c.close();
+    const total = frames.reduce((n, f) => n + f.length, 0);
+    const samples = concat(frames, total);
+    const r = await recognize(floatToPcm16(samples), { apiKey: opts.apiKey, primary: opts.pair.primary, alt: opts.pair.alt });
+    return { text: r.text, lang: langFromCode(r.code, opts.pair), seconds: billedSeconds(samples.length) };
+  }
+
+  const api = { SAMPLE_RATE, CODES, pairFromLangs, langFromCode, downsampleTo16k, floatToPcm16, pcm16ToBase64, billedSeconds, createSegmenter, quotaDecision, recognize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  if (typeof window !== 'undefined') window.CloudSTT = Object.assign(window.CloudSTT || {}, api);
+  if (typeof window !== 'undefined') window.CloudSTT = Object.assign(window.CloudSTT || {}, api, { start, pause, resume, stop, listDevices, probe });
 })();
