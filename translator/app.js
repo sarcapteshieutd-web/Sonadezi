@@ -1308,7 +1308,7 @@
     if (rec) { rec.onend = null; try { rec.abort(); } catch (_) {} }
     resetUtt(); el.src.value = ''; updateCounter();
     syncDual(); syncLangUI(); renderSttStatus();
-    window.CloudSTT.start({ deviceId: state.micId || undefined, apiKey: cloudKey(), pair, gate: sttGate, onSegment: onCloudSegment, onBlocked: onCloudOver, onError: onCloudError })
+    window.CloudSTT.start({ deviceId: state.micId || undefined, apiKey: cloudKey(), pair, paused: state.speaking, gate: sttGate, onSegment: onCloudSegment, onBlocked: onCloudOver, onError: onCloudError })
       .then(fillMics)
       .catch(e => onCloudError(Object.assign(new Error('Không mở được micro: ' + (e && e.message ? e.message : e)), { status: -1 })));
   }
@@ -1320,7 +1320,7 @@
   function restartCloud() {
     if (state.cloudActive) stopCloud();
     if (!state.meeting) return;
-    if (state.bilingual && !bilingualBlock()) startCloud(); else { wantListening = true; beginSession(); }
+    if (state.bilingual && !bilingualBlock()) startCloud(); else { wantListening = true; if (!state.speaking) beginSession(); }
   }
   // Quay về nhận dạng của trình duyệt (một ngôn ngữ), giữ hướng dịch theo ngôn ngữ của câu vừa nhận
   function fallbackToBrowser(reason) {
@@ -1331,7 +1331,7 @@
     if (!state.meeting) return;
     wantListening = true; committed = '';
     if (pair && last && last !== state.src) setLangs(last, last === 'vi' ? pair.foreign : 'vi', false);
-    else beginSession();
+    else if (!state.speaking) beginSession(); // đang đọc bản dịch thì để drainSpeech tự nghe lại sau khi đọc xong
   }
   function onCloudSegment(seg) {
     const q = seg.quota;
@@ -1343,8 +1343,9 @@
     renderSttStatus();
     if (q && q.over) onCloudOver();
   }
-  function onCloudOver() {
+  function onCloudOver(q) {
     if (!state.cloudActive) return;
+    if (q && q.reason === 'account') { fallbackToBrowser('Tài khoản không còn dùng được nhận dạng đám mây, chuyển sang nhận dạng của trình duyệt'); return; }
     if (state.sttOver === 'continue') {
       if (sttOverToast !== todayKey()) { sttOverToast = todayKey(); toast('Đã vượt hạn mức nhận dạng đám mây trong tháng, vẫn tiếp tục dùng theo cấu hình. Liên hệ quản trị viên'); }
       return;
@@ -1361,7 +1362,7 @@
     store.set('bilingual', state.bilingual ? '1' : '0');
     if (state.meeting) {
       if (state.bilingual && !state.cloudActive) { const why = bilingualBlock(); if (why) toast(why); else startCloud(); }
-      else if (!state.bilingual && state.cloudActive) { stopCloud(); wantListening = true; beginSession(); }
+      else if (!state.bilingual && state.cloudActive) { stopCloud(); wantListening = true; if (!state.speaking) beginSession(); }
     }
     syncBilingualUI();
   };
@@ -2412,6 +2413,7 @@
     state.log = []; state.sharedKey = ''; state.userLimit = { tr: 0, tts: 0, stt: 0 }; state.sttLimit = 0; state.sttOver = 'fallback';
     if (!store.get('gkey', '')) state.gkey = '';
     applyAcct(); renderAll(); closeGate();
+    if (state.cloudActive) fallbackToBrowser('Tài khoản không còn dùng được nhận dạng đám mây, chuyển sang nhận dạng của trình duyệt');
     if (msg) toast(msg);
   }
 
@@ -2437,6 +2439,7 @@
       state.sharedKey = ''; state.userLimit = { tr: 0, tts: 0, stt: 0 }; state.sttLimit = 0; state.sttOver = 'fallback';
       if (!(isAdminAcct() && store.get('gkey', ''))) state.gkey = '';
       renderGUsage(); applyAcct();
+      if (state.cloudActive) fallbackToBrowser('Không còn quyền dùng khóa Google dùng chung, chuyển sang nhận dạng của trình duyệt');
     });
   }
 
@@ -2459,6 +2462,7 @@
   // quản trị viên theo hạn mức tổng (chỉ là phanh an toàn cho chính họ). Chặn khi số đã dùng ĐÃ vượt hạn mức, nên đoạn làm vượt
   // vẫn được xử lý (không mất lời đang nói); tính phút ngay trước khi gửi vì Google tính tiền theo lượng âm thanh gửi đi.
   function sttGate(seconds) {
+    if (!isVip() || !cloudKey()) return { allow: false, warn: false, over: false, reason: 'account' }; // hết hạn, bị khóa, đăng xuất hoặc mất khóa giữa họp: không gửi nữa
     const limitMin = isAdminAcct() ? state.sttLimit : state.userLimit.stt;
     const used = userUsed('stt'), Q = window.CloudSTT.quotaDecision;
     if (!Q({ usedSec: used, addSec: 0, limitMin, mode: state.sttOver }).allow) return { allow: false, warn: false, over: true };
@@ -2657,12 +2661,13 @@
     };
     const inTr = mkInput('Hạn mức dịch mỗi tháng (ký tự, 0 = chưa đặt)', 'number', String(g.trLimit || 0));
     const inTts = mkInput('Hạn mức giọng đọc mỗi tháng (ký tự)', 'number', String(g.ttsLimit == null ? 4000000 : g.ttsLimit));
-    const inStt = mkInput('Hạn mức nhận dạng đám mây mỗi tháng (phút, 0 = chưa đặt)', 'number', String(g.sttLimit || 0));
+    const inStt = mkInput('Hạn mức nhận dạng đám mây mỗi tháng (phút, 0 = chưa đặt; chỉ áp dụng cho chính quản trị viên)', 'number', String(g.sttLimit || 0));
     form.appendChild(node('label', 'mt-2 block text-sm', 'Khi hết hạn mức nhận dạng đám mây'));
     const selOver = node('select', 'mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2');
     for (const [v, t] of [['fallback', 'Quay về nhận dạng của trình duyệt (miễn phí, một ngôn ngữ)'], ['continue', 'Cho dùng tiếp (có thể phát sinh thêm chi phí)']]) { const o = node('option', '', t); o.value = v; selOver.appendChild(o); }
     selOver.value = g.sttOver === 'continue' ? 'continue' : 'fallback';
     form.appendChild(selOver);
+    if ((g.sttLimit || 0) > 0 && !(g.userStt > 0)) form.appendChild(node('p', 'mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-800', 'Chưa đặt hạn mức mỗi VIP nhận dạng đám mây: mọi VIP đang được dùng không giới hạn. Hạn mức tổng chỉ áp dụng cho chính quản trị viên; hãy đặt hạn mức mỗi VIP ở mục bên dưới.'));
     const inKey = mkInput('Khóa Google dùng chung cho VIP (Translation + Text-to-Speech + Speech-to-Text)', 'password', '', g.key ? 'Đã lưu. Nhập khóa mới để thay thế' : 'Dán API key (AIza…)');
     form.appendChild(node('p', 'mt-1 text-xs text-slate-500', 'Khóa chỉ được máy chủ trả cho quản trị viên và VIP còn hạn. Nên giới hạn khóa theo tên miền và theo API trong Google Cloud Console, và đổi khóa khi có người hết hạn.'));
     const save = node('button', 'mt-3 w-full rounded-xl bg-brand-600 py-2 text-sm font-medium text-white', 'Lưu hạn mức và khóa');
@@ -2739,7 +2744,7 @@
     const bTts = mkB('Đơn giá giọng WaveNet (USD cho 1 triệu ký tự)', 'number', String(B.ttsPrice), 'any');
     const bFree = mkB('Giọng WaveNet miễn phí mỗi tháng (ký tự)', 'number', String(B.ttsFree), '1');
     const bStt = mkB('Đơn giá nhận dạng đám mây (USD mỗi phút)', 'number', String(B.sttPrice), 'any');
-    bf.appendChild(node('p', 'mt-1 text-xs text-slate-500', 'Đơn giá nhận dạng đám mây mặc định 0,016 USD/phút CHƯA được xác minh: hãy đối chiếu với trang giá của Google Cloud Speech-to-Text rồi sửa cho đúng.'));
+    bf.appendChild(node('p', 'mt-1 text-xs text-slate-500', 'Đơn giá nhận dạng đám mây mặc định 0,016 USD/phút CHƯA được xác minh: hãy đối chiếu với trang giá của Google Cloud Speech-to-Text rồi sửa cho đúng (kể cả cách làm tròn thời gian: ứng dụng đang tính tròn lên 1 giây mỗi đoạn).'));
     bf.appendChild(node('p', 'mt-1 text-xs text-slate-500', 'Các giá trị mặc định (300 USD, 89 ngày, đơn giá 20 và 4 USD, 4 triệu ký tự miễn phí) lấy theo trang Billing của bạn và bảng giá tra cứu được, chưa được xác minh đầy đủ: hãy đối chiếu với Google Cloud Console rồi chỉnh nếu khác. Ưu đãi miễn phí hằng tháng của Translation (nếu có) chưa được tính, nên ước tính nghiêng về phía thận trọng.'));
     const bSave = node('button', 'mt-3 w-full rounded-xl border border-brand-600 py-2 text-sm font-medium text-brand-600', 'Lưu thông tin gói Google Cloud');
     bSave.type = 'button';

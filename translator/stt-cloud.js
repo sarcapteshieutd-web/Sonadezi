@@ -78,9 +78,11 @@
   function createSegmenter(opts) {
     const o = Object.assign({ silenceMs: SILENCE_MS, preRollMs: PRE_ROLL_MS, trailMs: TRAIL_MS, minMs: MIN_MS, maxMs: MAX_MS }, opts);
     const silenceN = ms(o.silenceMs), preN = ms(o.preRollMs), trailN = ms(o.trailMs), minN = ms(o.minMs), maxN = ms(o.maxMs);
-    let noise = 0, inSpeech = false, pre = [], preLen = 0, buf = [], total = 0, speech = 0, silent = 0;
+    let noise = 0, inSpeech = false, pre = [], preLen = 0, buf = [], total = 0, speech = 0, silent = 0, rmsList = [];
 
-    const reset = () => { inSpeech = false; buf = []; total = 0; speech = 0; silent = 0; pre = []; preLen = 0; };
+    const reset = () => { inSpeech = false; buf = []; total = 0; speech = 0; silent = 0; pre = []; preLen = 0; rmsList = []; };
+    // Tiếng ồn đều (quạt, điều hòa, máy chiếu) có năng lượng gần như không đổi theo khung, tiếng nói thì lên xuống theo âm tiết
+    const isSteady = l => { if (l.length < 20) return false; const a = l.slice().sort((x, y) => x - y), p10 = a[Math.floor(a.length * 0.1)], p90 = a[Math.floor(a.length * 0.9)]; return p10 > 0 && p90 < 2 * p10; };
     function emit(keepLen) {
       const seg = speech >= minN ? concat(buf, total).subarray(0, keepLen) : null;
       reset();
@@ -103,10 +105,16 @@
             return [];
           }
         }
-        buf.push(frame); total += frame.length;
+        buf.push(frame); total += frame.length; rmsList.push(rms);
         if (isSpeech) { speech += frame.length; silent = 0; } else silent += frame.length;
         if (silent >= silenceN) return emit(total - Math.max(0, silent - trailN));
-        if (total >= maxN) return emit(total);
+        if (total >= maxN) {
+          if (isSteady(rmsList)) { // không phải lời nói: học lại mức ồn nền mới, không gửi (không tính phút)
+            const m = rmsList.slice().sort((x, y) => x - y)[Math.floor(rmsList.length / 2)];
+            reset(); noise = m; return [];
+          }
+          return emit(total);
+        }
         return [];
       },
       flush() { return inSpeech ? emit(total) : []; }
@@ -164,13 +172,21 @@
     'registerProcessor("stt-capture",P);';
 
   // Mở micro và gọi onFrame(Float32Array ở tần số gốc, sampleRate) liên tục; trả về { sampleRate, close() }
-  async function openCapture(deviceId, onFrame) {
+  async function openCapture(deviceId, onFrame, onDead) {
     const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
     if (deviceId) audio.deviceId = { exact: deviceId };
     const stream = await navigator.mediaDevices.getUserMedia({ audio });
     const AC = window.AudioContext || window.webkitAudioContext;
     const ctx = new AC();
     if (ctx.state === 'suspended') { try { await ctx.resume(); } catch (_) {} }
+    let closing = false, dead = false;
+    const die = why => { if (!closing && !dead) { dead = true; if (onDead) onDead(why); } };
+    stream.getTracks().forEach(t => t.addEventListener('ended', () => die('ended'))); // rút micro/loa họp
+    ctx.onstatechange = () => { // trình duyệt (nhất là iPad) có thể tạm dừng AudioContext khi khóa màn hình hoặc chuyển ứng dụng
+      if (closing || ctx.state === 'running') return;
+      try { ctx.resume(); } catch (_) {}
+      setTimeout(() => { if (!closing && ctx.state !== 'running') die('suspended'); }, 3000);
+    };
     const source = ctx.createMediaStreamSource(stream);
     const mute = ctx.createGain(); mute.gain.value = 0; mute.connect(ctx.destination); // giữ đồ thị âm thanh chạy mà không phát ra loa
     let node;
@@ -187,6 +203,7 @@
     return {
       sampleRate: ctx.sampleRate,
       close() {
+        closing = true;
         try { node.disconnect(); source.disconnect(); mute.disconnect(); } catch (_) {}
         stream.getTracks().forEach(t => t.stop());
         try { ctx.close(); } catch (_) {}
@@ -194,7 +211,7 @@
     };
   }
 
-  let cap = null, seg = null, cfg = null, paused = false, chain = Promise.resolve();
+  let cap = null, seg = null, cfg = null, paused = false, chain = Promise.resolve(), gen = 0; // gen: số thế hệ, để bỏ qua lần start() đã bị stop()/start() khác chen ngang
 
   function handleSegment(samples) {
     const c = cfg, secs = billedSeconds(samples.length), pcm = floatToPcm16(samples);
@@ -211,20 +228,27 @@
     });
   }
 
-  // opts: { deviceId?, apiKey, pair: {primary, alt, foreign}, onSegment, onLevel?, onError?, gate?(seconds) -> {allow,...}, onBlocked? }
+  // opts: { deviceId?, apiKey, pair: {primary, alt, foreign}, onSegment, onLevel?, onError?, gate?(seconds) -> {allow,...}, onBlocked?, paused? }
   async function start(opts) {
     stop();
-    cfg = opts; seg = createSegmenter(); paused = false;
-    cap = await openCapture(opts.deviceId, (f, rate) => {
-      if (paused) return;
+    const my = ++gen;
+    cfg = opts; seg = createSegmenter(); paused = !!opts.paused;
+    const c = await openCapture(opts.deviceId, (f, rate) => {
+      if (my !== gen || paused) return;
       const down = downsampleTo16k(f, rate);
       if (opts.onLevel) { let s = 0; for (let i = 0; i < down.length; i++) s += down[i] * down[i]; opts.onLevel(Math.sqrt(s / (down.length || 1))); }
       for (const piece of seg.push(down)) handleSegment(piece);
+    }, why => {
+      if (my !== gen) return;
+      if (opts.onError) opts.onError(sttError(-1, why === 'ended' ? 'Micro đã bị ngắt kết nối' : 'Không thu được âm thanh (trình duyệt đã tạm dừng micro)'));
     });
+    if (my !== gen) { c.close(); return; } // đã bị stop() hoặc start() khác thay thế trong lúc chờ quyền micro
+    cap = c;
   }
   function pause() { paused = true; if (seg) seg = createSegmenter(); } // bỏ đoạn đang dở để không thu lại tiếng đọc bản dịch
   function resume() { paused = false; }
   function stop() {
+    gen++;
     if (seg && cfg) for (const piece of seg.flush()) handleSegment(piece);
     if (cap) { cap.close(); cap = null; }
     seg = null; paused = false;
