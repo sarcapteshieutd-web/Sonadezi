@@ -261,6 +261,11 @@
         <span>Đang nghe: <b id="meetingLang" class="text-base"></b></span>
         <label class="flex items-center gap-1.5 text-xs"><input id="chkAutoTurn" type="checkbox" class="h-4 w-4 accent-red-600" />Tự đổi sau mỗi lượt</label>
       </div>
+      <div id="bilingualRow" class="flex flex-wrap items-center justify-between gap-2">
+        <label class="flex items-center gap-1.5 text-xs"><input id="chkBilingual" type="checkbox" class="h-4 w-4 accent-red-600" />Song ngữ: tự nhận ngôn ngữ từng câu (nhận dạng đám mây)</label>
+        <select id="selMic" aria-label="Chọn micro" class="hidden max-w-[16rem] truncate rounded border border-red-300 bg-transparent px-1 py-0.5 text-xs"></select>
+        <span id="sttStatus" class="text-[0.6875rem]"></span>
+      </div>
       <div class="flex items-center justify-between gap-2">
         <label class="flex items-center gap-1.5 text-xs"><input id="chkMeetingSpeak" type="checkbox" class="h-4 w-4 accent-red-600" />Đọc bản dịch ra loa</label>
         <label class="flex items-center gap-1.5 text-xs"><input id="chkConf" type="checkbox" class="h-4 w-4 accent-red-600" />Chế độ hội nghị (nghe bằng tai nghe, micro không tắt)</label>
@@ -539,6 +544,7 @@
   <div id="toast" class="pointer-events-none fixed bottom-6 left-1/2 z-30 hidden -translate-x-1/2 rounded-full bg-slate-900 px-4 py-2 text-sm text-white shadow-lg"></div>
 
   <script src="config.js"></script>
+  <script src="stt-cloud.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -198,17 +198,20 @@
 
   function handleSegment(samples) {
     const c = cfg, secs = billedSeconds(samples.length), pcm = floatToPcm16(samples);
+    // Cổng hạn mức do bên gọi cung cấp: gọi TRƯỚC khi gửi (Google tính tiền theo âm thanh gửi đi); bị chặn thì không gửi
+    const quota = c.gate ? c.gate(secs) : null;
+    if (quota && !quota.allow) { if (c.onBlocked) c.onBlocked(quota); return; }
     chain = chain.then(async () => {
       try {
         const r = await recognize(pcm, { apiKey: c.apiKey, primary: c.pair.primary, alt: c.pair.alt });
         const lang = langFromCode(r.code, c.pair);
         // Văn bản rỗng hoặc ngôn ngữ ngoài cặp: vẫn báo số giây (Google vẫn tính tiền) nhưng không có nội dung
-        c.onSegment(r.text && lang ? { text: r.text, lang, seconds: secs, confidence: r.confidence } : { text: '', lang: null, seconds: secs, confidence: 0 });
+        c.onSegment(r.text && lang ? { text: r.text, lang, seconds: secs, confidence: r.confidence, quota } : { text: '', lang: null, seconds: secs, confidence: 0, quota });
       } catch (e) { if (c.onError) c.onError(e); }
     });
   }
 
-  // opts: { deviceId?, apiKey, pair: {primary, alt, foreign}, onSegment, onLevel?, onError? }
+  // opts: { deviceId?, apiKey, pair: {primary, alt, foreign}, onSegment, onLevel?, onError?, gate?(seconds) -> {allow,...}, onBlocked? }
   async function start(opts) {
     stop();
     cfg = opts; seg = createSegmenter(); paused = false;

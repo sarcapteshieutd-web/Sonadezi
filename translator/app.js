@@ -54,6 +54,7 @@
     btnMeeting: $('btnMeeting'), btnConf: $('btnConf'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
     chkMeetingSpeak: $('chkMeetingSpeak'), chkConf: $('chkConf'), meetingSpeaking: $('meetingSpeaking'),
     chkAutoTurn: $('chkAutoTurn'), meetingLang: $('meetingLang'),
+    chkBilingual: $('chkBilingual'), selMic: $('selMic'), sttStatus: $('sttStatus'),
     app: $('app'), btnBig: $('btnBig'), btnBigExit: $('btnBigExit'), btnDual: $('btnDual'), btnFontMinus: $('btnFontMinus'), btnFontPlus: $('btnFontPlus'),
     dualHeadL: $('dualHeadL'), dualHeadR: $('dualHeadR'), liveDual: $('liveDual'),
     ldLLbl: $('ldLLbl'), ldLTxt: $('ldLTxt'), ldLRec: $('ldLRec'), ldRLbl: $('ldRLbl'), ldRTxt: $('ldRTxt'), ldRRec: $('ldRRec'), btnRoom: $('btnRoom'), roomDot: $('roomDot'),
@@ -108,6 +109,7 @@
     ttsKey: (acct0Vip && !(acct0.info && acct0.info.admin)) ? '' : store.get('ttskey', ''),
     ttsLimit: Math.max(0, parseInt(store.get('ttsLimit', '4000000'), 10) || 0), // giới hạn ký tự giọng Google mỗi tháng (0 = không giới hạn)
     gLimit: Math.max(0, parseInt(store.get('gLimitM', '0'), 10) || 0), // giới hạn ký tự Google dịch mỗi tháng của quản trị viên tại máy này (0 = không giới hạn)
+    bilingual: store.get('bilingual', '0') === '1', micId: store.get('micId', ''), cloudActive: false, cloudForeign: '', // họp song ngữ bằng nhận dạng đám mây
     sttLimit: 0, sttOver: 'fallback', // hạn mức tổng nhận dạng đám mây (phút/tháng) và hành vi khi hết: 'fallback' hoặc 'continue'
     gFallback: store.get('gFallback', '1') === '1', // đạt giới hạn: tự chuyển sang MyMemory
     auto: store.get('auto', '1') === '1',
@@ -177,7 +179,7 @@
     el.selTgt.value = state.tgt;
     el.lblSrc.textContent = LANGS[state.src].name;
     el.lblTgt.textContent = LANGS[state.tgt].name;
-    el.meetingLang.textContent = LANGS[state.src].name;
+    el.meetingLang.textContent = state.cloudActive ? `Tự nhận (${LANGS[state.cloudForeign].name} / ${LANGS.vi.name})` : LANGS[state.src].name;
     store.set('src', state.src);
     store.set('tgt', state.tgt);
     syncDual();
@@ -236,6 +238,11 @@
     state.tgt = t;
     syncLangUI();
     updateCounter();
+    if (wasMeeting && state.cloudActive) { // đang nhận dạng đám mây: chỉ khởi động lại khi đổi sang cặp ngôn ngữ khác
+      const np = bilingualPair();
+      if (!np || np.foreign !== state.cloudForeign) restartCloud();
+      return;
+    }
     if (wasMeeting && !state.speaking) beginSession(); // tiếp tục ghi họp với ngôn ngữ mới (khi đang đọc, sẽ nghe lại sau)
   }
 
@@ -999,11 +1006,11 @@
     const parts = await Promise.all(splitChunks(text).map(c => translateChunk(c, undefined, from, to)));
     return parts.join('').replace(/\s+\n/g, '\n').trim();
   }
-  function queueMeeting(text, pre) {
+  function queueMeeting(text, pre, fromArg, toArg) { // fromArg/toArg: hướng dịch riêng của từng câu (họp song ngữ)
     const now = Date.now();
-    if (text === lastMeetingText && now - lastMeetingAt < 4000) return; // tránh lặp câu do lỗi của trình duyệt
+    if (!fromArg && text === lastMeetingText && now - lastMeetingAt < 4000) return; // tránh lặp câu do lỗi của trình duyệt (nhận dạng đám mây không có lỗi này)
     lastMeetingText = text; lastMeetingAt = now;
-    const from = state.src, to = state.tgt;
+    const from = fromArg || state.src, to = toArg || state.tgt;
     const t0 = (pre && pre.tLast) || now; // mốc ngừng nói để đo độ trễ
     meetingChain = meetingChain.then(async () => {
       let out;
@@ -1195,7 +1202,8 @@
       return;
     }
     setSpeakingUI(true);
-    if (rec) { rec.onend = null; try { rec.abort(); } catch (_) {} } // tạm nghỉ micro
+    if (state.cloudActive) window.CloudSTT.pause(); // tạm nghỉ micro, không thu lại tiếng đọc
+    else if (rec) { rec.onend = null; try { rec.abort(); } catch (_) {} } // tạm nghỉ micro
     el.src.value = '';
     updateCounter();
     while (speechQueue.length && state.meeting) {
@@ -1204,7 +1212,7 @@
     }
     draining = false;
     setSpeakingUI(false);
-    if (state.meeting) beginSession(); // đọc xong: nghe lại bằng ngôn ngữ hiện tại
+    if (state.meeting) { if (state.cloudActive) window.CloudSTT.resume(); else beginSession(); } // đọc xong: nghe lại
   }
   function onMeetingResult(ev) {
     if (state.speaking) return; // đang đọc bản dịch: bỏ qua kết quả lẻ còn sót
@@ -1249,8 +1257,118 @@
     el.btnMeeting.classList.toggle('text-brand-600', !on);
     el.btnMeeting.classList.toggle('border-brand-600', !on);
   }
+
+  // ----- Họp song ngữ: nhận dạng đám mây (Google Speech-to-Text) tự phát hiện ngôn ngữ từng câu -----
+  const bilingualPair = () => (window.CloudSTT ? window.CloudSTT.pairFromLangs(state.src, state.tgt) : null);
+  const sttLimitMin = () => (isAdminAcct() ? state.sttLimit : state.userLimit.stt);
+  // Lý do chưa dùng được ('' = dùng được)
+  function bilingualBlock() {
+    if (!window.CloudSTT) return 'Chưa tải được thành phần nhận dạng đám mây';
+    if (!isVip()) return 'Chỉ dành cho tài khoản VIP và quản trị viên';
+    if (state.conf) return 'Không dùng cùng chế độ hội nghị';
+    if (!bilingualPair()) return 'Cặp ngôn ngữ cần gồm tiếng Việt và một trong các tiếng Anh, Trung, Nhật, Hàn';
+    if (!cloudKey()) return 'Chưa có khóa Google dùng chung';
+    if (!window.CloudSTT.quotaDecision({ usedSec: userUsed('stt'), addSec: 0, limitMin: sttLimitMin(), mode: state.sttOver }).allow) return 'Đã hết hạn mức nhận dạng đám mây trong tháng';
+    return '';
+  }
+  function renderSttStatus() {
+    const lim = sttLimitMin(), used = userUsed('stt') / 60;
+    let txt = '', warn = false;
+    if (state.cloudActive) {
+      txt = `Đang nghe bằng đám mây · đã dùng ${used.toFixed(1)}${lim > 0 ? ' / ' + fmtN(lim) : ''} phút`;
+      warn = lim > 0 && used >= lim * 0.8;
+    } else if (state.bilingual && state.meeting) { txt = bilingualBlock(); warn = !!txt; }
+    el.chkAutoTurn.disabled = state.conf || state.cloudActive; // nhận dạng đám mây tự nhận ngôn ngữ nên không cần tự đổi lượt
+    el.sttStatus.textContent = txt;
+    el.sttStatus.classList.toggle('font-semibold', warn);
+  }
+  function syncBilingualUI() {
+    const why = bilingualBlock();
+    el.chkBilingual.checked = state.bilingual;
+    el.chkBilingual.disabled = !!why && !state.bilingual; // đang bật thì vẫn cho tắt
+    el.chkBilingual.title = why;
+    el.selMic.classList.toggle('hidden', !(state.bilingual && !why));
+    renderSttStatus();
+  }
+  async function fillMics() {
+    try {
+      const list = await window.CloudSTT.listDevices();
+      el.selMic.innerHTML = '';
+      const def = document.createElement('option'); def.value = ''; def.textContent = 'Micro mặc định'; el.selMic.appendChild(def);
+      for (const d of list) { const o = document.createElement('option'); o.value = d.id; o.textContent = d.label; el.selMic.appendChild(o); }
+      el.selMic.value = list.some(d => d.id === state.micId) ? state.micId : '';
+    } catch (_) { /* chưa có quyền micro: giữ danh sách rỗng, micro mặc định */ }
+  }
+  let sttWarned = false, sttOverToast = '', sttErrToast = 0, sttLastLang = null;
+  function startCloud() {
+    const pair = bilingualPair();
+    state.cloudActive = true; state.cloudForeign = pair.foreign; sttLastLang = null;
+    state.mine = pair.foreign; // ngoại ngữ nằm cột trái, tiếng Việt cột phải
+    wantListening = false;
+    if (rec) { rec.onend = null; try { rec.abort(); } catch (_) {} }
+    resetUtt(); el.src.value = ''; updateCounter();
+    syncDual(); syncLangUI(); renderSttStatus();
+    window.CloudSTT.start({ deviceId: state.micId || undefined, apiKey: cloudKey(), pair, gate: sttGate, onSegment: onCloudSegment, onBlocked: onCloudOver, onError: onCloudError })
+      .then(fillMics)
+      .catch(e => onCloudError(Object.assign(new Error('Không mở được micro: ' + (e && e.message ? e.message : e)), { status: -1 })));
+  }
+  function stopCloud() {
+    state.cloudActive = false;
+    window.CloudSTT.stop();
+    syncLangUI(); renderSttStatus();
+  }
+  function restartCloud() {
+    if (state.cloudActive) stopCloud();
+    if (!state.meeting) return;
+    if (state.bilingual && !bilingualBlock()) startCloud(); else { wantListening = true; beginSession(); }
+  }
+  // Quay về nhận dạng của trình duyệt (một ngôn ngữ), giữ hướng dịch theo ngôn ngữ của câu vừa nhận
+  function fallbackToBrowser(reason) {
+    if (!state.cloudActive) return;
+    const pair = bilingualPair(), last = sttLastLang;
+    stopCloud();
+    if (reason) toast(reason);
+    if (!state.meeting) return;
+    wantListening = true; committed = '';
+    if (pair && last && last !== state.src) setLangs(last, last === 'vi' ? pair.foreign : 'vi', false);
+    else beginSession();
+  }
+  function onCloudSegment(seg) {
+    const q = seg.quota;
+    if (q && q.warn && !sttWarned) { sttWarned = true; toast('Đã dùng 80% hạn mức nhận dạng đám mây trong tháng'); }
+    if (seg.text && seg.lang) {
+      sttLastLang = seg.lang;
+      queueMeeting(seg.text, undefined, seg.lang, seg.lang === 'vi' ? state.cloudForeign : 'vi');
+    }
+    renderSttStatus();
+    if (q && q.over) onCloudOver();
+  }
+  function onCloudOver() {
+    if (!state.cloudActive) return;
+    if (state.sttOver === 'continue') {
+      if (sttOverToast !== todayKey()) { sttOverToast = todayKey(); toast('Đã vượt hạn mức nhận dạng đám mây trong tháng, vẫn tiếp tục dùng theo cấu hình. Liên hệ quản trị viên'); }
+      return;
+    }
+    fallbackToBrowser('Đã hết hạn mức nhận dạng đám mây, chuyển sang nhận dạng của trình duyệt (một ngôn ngữ). Liên hệ quản trị viên để tăng hạn mức');
+  }
+  function onCloudError(e) {
+    const transient = e && (e.status === 0 || e.status === 429 || e.status >= 500);
+    if (transient) { if (Date.now() - sttErrToast > 10000) { sttErrToast = Date.now(); toast(e.message); } return; }
+    fallbackToBrowser((e && e.message) || 'Lỗi nhận dạng đám mây, chuyển sang nhận dạng của trình duyệt');
+  }
+  el.chkBilingual.onchange = () => {
+    state.bilingual = el.chkBilingual.checked;
+    store.set('bilingual', state.bilingual ? '1' : '0');
+    if (state.meeting) {
+      if (state.bilingual && !state.cloudActive) { const why = bilingualBlock(); if (why) toast(why); else startCloud(); }
+      else if (!state.bilingual && state.cloudActive) { stopCloud(); wantListening = true; beginSession(); }
+    }
+    syncBilingualUI();
+  };
+  el.selMic.onchange = () => { state.micId = el.selMic.value; store.set('micId', state.micId); if (state.cloudActive) restartCloud(); };
   function startMeeting() {
-    if (!SR) { toast('Trình duyệt không hỗ trợ nhận diện giọng nói. Dùng Chrome (Android) hoặc Safari (iOS 14.5+).'); return; }
+    const useCloud = state.bilingual && !bilingualBlock();
+    if (!SR && !useCloud) { toast('Trình duyệt không hỗ trợ nhận diện giọng nói. Dùng Chrome (Android) hoặc Safari (iOS 14.5+).'); return; }
     if (state.listening || wantListening) stopListening();
     archiveTurn();
     unlockTTS();
@@ -1265,13 +1383,15 @@
     tickMeeting();
     setMeetingUI(true);
     requestWake();
-    beginSession();
+    if (useCloud) startCloud(); else beginSession();
+    syncBilingualUI();
   }
   function stopMeeting() {
     if (!state.meeting) return;
     const rest = el.src.value.trim();
     state.meeting = false;
     wantListening = false;
+    if (state.cloudActive) stopCloud();
     resetUtt();
     speechQueue.length = 0;
     cancelSpeech();
@@ -1312,6 +1432,8 @@
     el.chkAutoTurn.disabled = state.conf; // hội nghị: ngôn ngữ cố định, không đảo lượt
     el.chkConf.checked = state.conf;
     syncConfBtn();
+    if (state.conf && state.cloudActive) fallbackToBrowser('Chế độ hội nghị dùng nhận dạng của trình duyệt (một ngôn ngữ cố định)');
+    syncBilingualUI();
   }
   el.chkConf.onchange = () => { if (!isVip()) { el.chkConf.checked = false; vipOnly(); return; } state.conf = el.chkConf.checked; store.set('conf', state.conf ? '1' : '0'); syncConf(); };
   el.chkAutoTurn.checked = state.autoTurn;
