@@ -103,3 +103,34 @@ test('quotaDecision: vượt hạn mức chặn ở fallback, cho qua ở contin
   assert.deepEqual(S.quotaDecision({ usedSec: 595, addSec: 10, limitMin: 10, mode: 'fallback' }), { allow: false, warn: false, over: true });
   assert.deepEqual(S.quotaDecision({ usedSec: 595, addSec: 10, limitMin: 10, mode: 'continue' }), { allow: true, warn: false, over: true });
 });
+
+test('segmenter: tùy chọn silenceMs ngắn hơn cắt câu sớm hơn', () => {
+  const sig = cat(tone(1), quiet(0.5));
+  assert.equal(run(sig, S.createSegmenter({ silenceMs: 400 })).length, 1);
+  assert.equal(run(sig, S.createSegmenter({ silenceMs: 800 })).length, 0);
+});
+test('segmenter: đoạn mang tailMs là phần im lặng đã chờ (để tính mốc ngừng nói)', () => {
+  const [seg] = run(cat(tone(1), quiet(1)), S.createSegmenter({ silenceMs: 500 }));
+  assert.ok(seg.tailMs >= 500 && seg.tailMs < 560, 'tailMs=' + seg.tailMs);
+});
+test('SPEED_PRESETS: nhanh < cân bằng < chính xác theo thời gian chờ im lặng và độ dài đoạn tối đa', () => {
+  const P = S.SPEED_PRESETS;
+  assert.ok(P.fast.silenceMs < P.balanced.silenceMs && P.balanced.silenceMs < P.accurate.silenceMs);
+  assert.ok(P.fast.maxMs < P.balanced.maxMs && P.balanced.maxMs <= P.accurate.maxMs);
+});
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+test('createOrderedRunner: chạy song song nhưng giao kết quả đúng thứ tự', async () => {
+  const delivered = [];
+  const submit = S.createOrderedRunner(async j => { await sleep(j.ms); return j.id; }, (j, r) => { delivered.push([j.id, r.ok, r.v]); });
+  const t0 = Date.now();
+  await Promise.all([submit({ id: 'a', ms: 150 }), submit({ id: 'b', ms: 10 }), submit({ id: 'c', ms: 10 })]);
+  assert.deepEqual(delivered.map(d => d[0]), ['a', 'b', 'c']);
+  assert.ok(Date.now() - t0 < 260, 'phải chạy song song, không cộng dồn thời gian');
+});
+test('createOrderedRunner: lỗi của một đoạn không chặn các đoạn sau', async () => {
+  const delivered = [];
+  const submit = S.createOrderedRunner(async j => { if (j.fail) throw new Error('x'); return j.id; }, (j, r) => { delivered.push([j.id, r.ok]); });
+  await Promise.all([submit({ id: 'a', fail: true }), submit({ id: 'b' })]);
+  assert.deepEqual(delivered, [['a', false], ['b', true]]);
+});

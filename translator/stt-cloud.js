@@ -6,17 +6,24 @@
   'use strict';
 
   const SAMPLE_RATE = 16000;
-  const SILENCE_MS = 700;   // im lặng bao lâu thì kết thúc một câu
+  const SILENCE_MS = 550;   // im lặng bao lâu thì kết thúc một câu (mức "cân bằng")
   const PRE_ROLL_MS = 300;  // giữ lại phần đầu câu trước khi vượt ngưỡng
   const TRAIL_MS = 300;     // phần im lặng cuối câu giữ lại (phần còn lại cắt bỏ để đỡ tốn phút)
   const MIN_MS = 400;       // tiếng ngắn hơn mức này bị bỏ
-  const MAX_MS = 25000;     // ép cắt khi nói liên tục quá lâu
+  const MAX_MS = 12000;     // ép cắt khi nói liên tục quá lâu: đoạn càng dài thì càng phải chờ Google xử lý mới thấy chữ
   const MIN_THRESHOLD = 0.01;
   const NOISE_FACTOR = 3;
 
   // Mã nhận dạng của Google theo khóa ngôn ngữ trong ứng dụng. Tiếng Trung có thể cần 'cmn-Hans-CN' tùy phiên bản API.
   const CODES = { en: 'en-US', vi: 'vi-VN', zh: 'zh-CN', ja: 'ja-JP', ko: 'ko-KR' };
   const FOREIGN = ['en', 'zh', 'ja', 'ko'];
+
+  // Ba mức tốc độ: ngắt câu sớm cho chữ hiện nhanh hơn nhưng dễ cắt giữa câu; ngắt muộn chính xác hơn nhưng chậm hơn
+  const SPEED_PRESETS = {
+    fast: { silenceMs: 400, maxMs: 8000 },
+    balanced: { silenceMs: SILENCE_MS, maxMs: MAX_MS },
+    accurate: { silenceMs: 800, maxMs: 25000 }
+  };
 
   const ms = n => Math.round(n * SAMPLE_RATE / 1000);
 
@@ -85,6 +92,7 @@
     const isSteady = l => { if (l.length < 20) return false; const a = l.slice().sort((x, y) => x - y), p10 = a[Math.floor(a.length * 0.1)], p90 = a[Math.floor(a.length * 0.9)]; return p10 > 0 && p90 < 2 * p10; };
     function emit(keepLen) {
       const seg = speech >= minN ? concat(buf, total).subarray(0, keepLen) : null;
+      if (seg) seg.tailMs = Math.round(silent * 1000 / SAMPLE_RATE); // phần im lặng đã chờ: mốc ngừng nói = lúc cắt đoạn trừ tailMs
       reset();
       return seg ? [seg] : [];
     }
@@ -127,6 +135,17 @@
     const total = usedSec + addSec, cap = limitMin * 60;
     const over = total > cap;
     return { allow: !over || mode === 'continue', warn: !over && total >= cap * 0.8, over };
+  }
+
+  // Chạy các công việc bất đồng bộ SONG SONG (không để đoạn sau chờ đoạn trước) nhưng giao kết quả đúng thứ tự gửi.
+  // deliver(job, { ok, v } | { ok:false, e }) được gọi lần lượt; lỗi của một việc không chặn các việc sau.
+  function createOrderedRunner(run, deliver) {
+    let tail = Promise.resolve();
+    return job => {
+      const p = Promise.resolve().then(() => run(job)).then(v => ({ ok: true, v }), e => ({ ok: false, e }));
+      tail = tail.then(() => p).then(r => deliver(job, r)).catch(() => {});
+      return tail;
+    };
   }
 
   // ---------- Gọi API Google Speech-to-Text (V1, khóa API) ----------
@@ -211,28 +230,36 @@
     };
   }
 
-  let cap = null, seg = null, cfg = null, paused = false, chain = Promise.resolve(), gen = 0; // gen: số thế hệ, để bỏ qua lần start() đã bị stop()/start() khác chen ngang
+  let cap = null, seg = null, cfg = null, paused = false, gen = 0, segOptsCur = {}; // gen: số thế hệ, để bỏ qua lần start() đã bị stop()/start() khác chen ngang
+
+  const runner = createOrderedRunner(
+    job => recognize(job.pcm, { apiKey: job.c.apiKey, primary: job.c.pair.primary, alt: job.c.pair.alt }),
+    (job, r) => {
+      const c = job.c;
+      if (!r.ok) { if (c.onError) c.onError(r.e); return; }
+      const lang = langFromCode(r.v.code, c.pair);
+      const base = { seconds: job.secs, quota: job.quota, endedAt: job.endedAt };
+      // Văn bản rỗng hoặc ngôn ngữ ngoài cặp: vẫn báo số giây (Google vẫn tính tiền) nhưng không có nội dung
+      c.onSegment(r.v.text && lang ? { ...base, text: r.v.text, lang, confidence: r.v.confidence } : { ...base, text: '', lang: null, confidence: 0 });
+    });
 
   function handleSegment(samples) {
-    const c = cfg, secs = billedSeconds(samples.length), pcm = floatToPcm16(samples);
+    const c = cfg, secs = billedSeconds(samples.length);
     // Cổng hạn mức do bên gọi cung cấp: gọi TRƯỚC khi gửi (Google tính tiền theo âm thanh gửi đi); bị chặn thì không gửi
     const quota = c.gate ? c.gate(secs) : null;
     if (quota && !quota.allow) { if (c.onBlocked) c.onBlocked(quota); return; }
-    chain = chain.then(async () => {
-      try {
-        const r = await recognize(pcm, { apiKey: c.apiKey, primary: c.pair.primary, alt: c.pair.alt });
-        const lang = langFromCode(r.code, c.pair);
-        // Văn bản rỗng hoặc ngôn ngữ ngoài cặp: vẫn báo số giây (Google vẫn tính tiền) nhưng không có nội dung
-        c.onSegment(r.text && lang ? { text: r.text, lang, seconds: secs, confidence: r.confidence, quota } : { text: '', lang: null, seconds: secs, confidence: 0, quota });
-      } catch (e) { if (c.onError) c.onError(e); }
-    });
+    runner({ c, pcm: floatToPcm16(samples), secs, quota, endedAt: Date.now() - (samples.tailMs || 0) });
   }
 
   // opts: { deviceId?, apiKey, pair: {primary, alt, foreign}, onSegment, onLevel?, onError?, gate?(seconds) -> {allow,...}, onBlocked?, paused? }
   async function start(opts) {
     stop();
     const my = ++gen;
-    cfg = opts; seg = createSegmenter(); paused = !!opts.paused;
+    cfg = opts; paused = !!opts.paused;
+    const segOpts = {}; // chỉ truyền các tùy chọn có giá trị để không ghi đè mặc định bằng undefined
+    if (opts.silenceMs > 0) segOpts.silenceMs = opts.silenceMs;
+    if (opts.maxMs > 0) segOpts.maxMs = opts.maxMs;
+    segOptsCur = segOpts; seg = createSegmenter(segOpts);
     const c = await openCapture(opts.deviceId, (f, rate) => {
       if (my !== gen || paused) return;
       const down = downsampleTo16k(f, rate);
@@ -245,7 +272,7 @@
     if (my !== gen) { c.close(); return; } // đã bị stop() hoặc start() khác thay thế trong lúc chờ quyền micro
     cap = c;
   }
-  function pause() { paused = true; if (seg) seg = createSegmenter(); } // bỏ đoạn đang dở để không thu lại tiếng đọc bản dịch
+  function pause() { paused = true; if (seg) seg = createSegmenter(segOptsCur); } // bỏ đoạn đang dở để không thu lại tiếng đọc bản dịch
   function resume() { paused = false; }
   function stop() {
     gen++;
@@ -274,7 +301,7 @@
     return { text: r.text, lang: langFromCode(r.code, opts.pair), seconds: billedSeconds(samples.length) };
   }
 
-  const api = { SAMPLE_RATE, CODES, pairFromLangs, langFromCode, downsampleTo16k, floatToPcm16, pcm16ToBase64, billedSeconds, createSegmenter, quotaDecision, recognize };
+  const api = { SAMPLE_RATE, CODES, SPEED_PRESETS, pairFromLangs, langFromCode, downsampleTo16k, floatToPcm16, pcm16ToBase64, billedSeconds, createSegmenter, createOrderedRunner, quotaDecision, recognize };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof window !== 'undefined') window.CloudSTT = Object.assign(window.CloudSTT || {}, api, { start, pause, resume, stop, listDevices, probe });
 })();

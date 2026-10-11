@@ -54,7 +54,7 @@
     btnMeeting: $('btnMeeting'), btnConf: $('btnConf'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
     chkMeetingSpeak: $('chkMeetingSpeak'), chkConf: $('chkConf'), meetingSpeaking: $('meetingSpeaking'),
     chkAutoTurn: $('chkAutoTurn'), meetingLang: $('meetingLang'),
-    chkBilingual: $('chkBilingual'), selMic: $('selMic'), sttStatus: $('sttStatus'), sttLevel: $('sttLevel'), sttLevelBar: $('sttLevelBar'),
+    chkBilingual: $('chkBilingual'), selMic: $('selMic'), selSttSpeed: $('selSttSpeed'), sttStatus: $('sttStatus'), sttLevel: $('sttLevel'), sttLevelBar: $('sttLevelBar'),
     app: $('app'), btnBig: $('btnBig'), btnBigExit: $('btnBigExit'), btnDual: $('btnDual'), btnFontMinus: $('btnFontMinus'), btnFontPlus: $('btnFontPlus'),
     dualHeadL: $('dualHeadL'), dualHeadR: $('dualHeadR'), liveDual: $('liveDual'),
     ldLLbl: $('ldLLbl'), ldLTxt: $('ldLTxt'), ldLRec: $('ldLRec'), ldRLbl: $('ldRLbl'), ldRTxt: $('ldRTxt'), ldRRec: $('ldRRec'), btnRoom: $('btnRoom'), roomDot: $('roomDot'),
@@ -109,7 +109,7 @@
     ttsKey: (acct0Vip && !(acct0.info && acct0.info.admin)) ? '' : store.get('ttskey', ''),
     ttsLimit: Math.max(0, parseInt(store.get('ttsLimit', '4000000'), 10) || 0), // giới hạn ký tự giọng Google mỗi tháng (0 = không giới hạn)
     gLimit: Math.max(0, parseInt(store.get('gLimitM', '0'), 10) || 0), // giới hạn ký tự Google dịch mỗi tháng của quản trị viên tại máy này (0 = không giới hạn)
-    bilingual: store.get('bilingual', '0') === '1', micId: store.get('micId', ''), cloudActive: false, cloudForeign: '', // họp song ngữ bằng nhận dạng đám mây
+    bilingual: store.get('bilingual', '0') === '1', micId: store.get('micId', ''), sttSpeed: ['fast', 'balanced', 'accurate'].includes(store.get('sttSpeed', 'balanced')) ? store.get('sttSpeed', 'balanced') : 'balanced', cloudActive: false, cloudForeign: '', // họp song ngữ bằng nhận dạng đám mây
     sttLimit: 0, sttOver: 'fallback', // hạn mức tổng nhận dạng đám mây (phút/tháng) và hành vi khi hết: 'fallback' hoặc 'continue'
     gFallback: store.get('gFallback', '1') === '1', // đạt giới hạn: tự chuyển sang MyMemory
     auto: store.get('auto', '1') === '1',
@@ -1292,6 +1292,8 @@
     el.chkBilingual.disabled = !!why && !state.bilingual; // đang bật thì vẫn cho tắt
     el.chkBilingual.title = why;
     el.selMic.classList.toggle('hidden', !(state.bilingual && !why));
+    el.selSttSpeed.classList.toggle('hidden', !(state.bilingual && !why));
+    el.selSttSpeed.value = state.sttSpeed;
     renderSttStatus();
   }
   async function fillMics() {
@@ -1315,7 +1317,7 @@
     resetUtt(); el.src.value = ''; updateCounter();
     syncDual(); syncLangUI(); renderSttStatus();
     setListeningUI(true); liveDualUpdate(); // nút micro đỏ, ô "Đang nghe" ở cả hai cột
-    window.CloudSTT.start({ deviceId: state.micId || undefined, apiKey: cloudKey(), pair, paused: state.speaking, gate: sttGateTracked, onLevel: lvl => { el.sttLevelBar.style.width = Math.min(100, Math.round(lvl * 400)) + '%'; }, onSegment: onCloudSegment, onBlocked: onCloudOver, onError: onCloudError })
+    window.CloudSTT.start({ deviceId: state.micId || undefined, apiKey: cloudKey(), pair, paused: state.speaking, ...window.CloudSTT.SPEED_PRESETS[state.sttSpeed], gate: sttGateTracked, onLevel: lvl => { el.sttLevelBar.style.width = Math.min(100, Math.round(lvl * 400)) + '%'; }, onSegment: onCloudSegment, onBlocked: onCloudOver, onError: onCloudError })
       .then(fillMics)
       .catch(e => onCloudError(Object.assign(new Error('Không mở được micro: ' + (e && e.message ? e.message : e)), { status: -1 })));
   }
@@ -1349,7 +1351,8 @@
     if (q && q.warn && !sttWarned) { sttWarned = true; toast('Đã dùng 80% hạn mức nhận dạng đám mây trong tháng'); }
     if (seg.text && seg.lang) {
       sttLastLang = seg.lang;
-      queueMeeting(seg.text, undefined, seg.lang, seg.lang === 'vi' ? state.cloudForeign : 'vi');
+      // tLast = mốc người nói ngừng: nhãn ⏱ đo từ lúc ngừng nói đến lúc hiện bản dịch (gồm chờ ngắt câu, gửi, nhận dạng, dịch)
+      queueMeeting(seg.text, { tLast: seg.endedAt, consumed: '', parts: [] }, seg.lang, seg.lang === 'vi' ? state.cloudForeign : 'vi');
     }
     renderSttStatus();
     if (q && q.over) onCloudOver();
@@ -1378,6 +1381,7 @@
     }
     syncBilingualUI();
   };
+  el.selSttSpeed.onchange = () => { state.sttSpeed = el.selSttSpeed.value; store.set('sttSpeed', state.sttSpeed); if (state.cloudActive) restartCloud(); };
   el.selMic.onchange = () => { state.micId = el.selMic.value; store.set('micId', state.micId); if (state.cloudActive) restartCloud(); };
   function startMeeting() {
     const useCloud = state.bilingual && !bilingualBlock();

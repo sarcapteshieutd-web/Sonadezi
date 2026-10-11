@@ -263,6 +263,11 @@
       </div>
       <div id="bilingualRow" class="flex flex-wrap items-center justify-between gap-2">
         <label class="flex items-center gap-1.5 text-xs"><input id="chkBilingual" type="checkbox" class="h-4 w-4 accent-red-600" />Song ngữ: tự nhận ngôn ngữ từng câu (nhận dạng đám mây)</label>
+        <select id="selSttSpeed" aria-label="Tốc độ ngắt câu" title="Tốc độ ngắt câu: nhanh hiện chữ sớm hơn nhưng dễ cắt giữa câu" class="hidden rounded border border-red-300 bg-transparent px-1 py-0.5 text-xs">
+          <option value="fast">Nhanh (ngắt câu sớm)</option>
+          <option value="balanced">Cân bằng</option>
+          <option value="accurate">Chính xác (ngắt câu muộn)</option>
+        </select>
         <select id="selMic" aria-label="Chọn micro" class="hidden max-w-[16rem] truncate rounded border border-red-300 bg-transparent px-1 py-0.5 text-xs"></select>
         <span id="sttLevel" class="hidden h-1.5 w-16 shrink-0 overflow-hidden rounded bg-red-100" aria-hidden="true"><span id="sttLevelBar" class="block h-full bg-red-600" style="width:0%"></span></span>
         <span id="sttStatus" class="text-[0.6875rem]"></span>
