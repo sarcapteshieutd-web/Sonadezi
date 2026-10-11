@@ -54,7 +54,7 @@
     btnMeeting: $('btnMeeting'), btnConf: $('btnConf'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
     chkMeetingSpeak: $('chkMeetingSpeak'), chkConf: $('chkConf'), meetingSpeaking: $('meetingSpeaking'),
     chkAutoTurn: $('chkAutoTurn'), meetingLang: $('meetingLang'),
-    micLog: $('micLog'), chkBilingual: $('chkBilingual'), selMic: $('selMic'), selSttSpeed: $('selSttSpeed'), sttStatus: $('sttStatus'), sttLevel: $('sttLevel'), sttLevelBar: $('sttLevelBar'),
+    micLog: $('micLog'), talkStatus: $('talkStatus'), talkText: $('talkText'), chkBilingual: $('chkBilingual'), selMic: $('selMic'), selSttSpeed: $('selSttSpeed'), sttStatus: $('sttStatus'), sttLevel: $('sttLevel'), sttLevelBar: $('sttLevelBar'),
     app: $('app'), btnBig: $('btnBig'), btnBigExit: $('btnBigExit'), btnDual: $('btnDual'), btnFontMinus: $('btnFontMinus'), btnFontPlus: $('btnFontPlus'),
     dualHeadL: $('dualHeadL'), dualHeadR: $('dualHeadR'), liveDual: $('liveDual'),
     ldLLbl: $('ldLLbl'), ldLTxt: $('ldLTxt'), ldLRec: $('ldLRec'), ldRLbl: $('ldRLbl'), ldRTxt: $('ldRTxt'), ldRRec: $('ldRRec'), btnRoom: $('btnRoom'), roomDot: $('roomDot'),
@@ -109,7 +109,7 @@
     ttsKey: (acct0Vip && !(acct0.info && acct0.info.admin)) ? '' : store.get('ttskey', ''),
     ttsLimit: Math.max(0, parseInt(store.get('ttsLimit', '4000000'), 10) || 0), // giới hạn ký tự giọng Google mỗi tháng (0 = không giới hạn)
     gLimit: Math.max(0, parseInt(store.get('gLimitM', '0'), 10) || 0), // giới hạn ký tự Google dịch mỗi tháng của quản trị viên tại máy này (0 = không giới hạn)
-    bilingual: store.get('bilingual', '0') === '1', micId: store.get('micId', ''), sttSpeed: ['fast', 'balanced', 'accurate'].includes(store.get('sttSpeed', 'balanced')) ? store.get('sttSpeed', 'balanced') : 'balanced', cloudActive: false, cloudForeign: '', // họp song ngữ bằng nhận dạng đám mây
+    bilingual: store.get('bilingual', '0') === '1', micId: store.get('micId', ''), sttSpeed: ['fast', 'balanced', 'accurate'].includes(store.get('sttSpeed', 'balanced')) ? store.get('sttSpeed', 'balanced') : 'balanced', cloudActive: false, cloudForeign: '', sttSending: 0, pendingTr: 0, reading: false, // họp song ngữ bằng nhận dạng đám mây
     sttLimit: 0, sttOver: 'fallback', // hạn mức tổng nhận dạng đám mây (phút/tháng) và hành vi khi hết: 'fallback' hoặc 'continue'
     gFallback: store.get('gFallback', '1') === '1', // đạt giới hạn: tự chuyển sang MyMemory
     auto: store.get('auto', '1') === '1',
@@ -310,6 +310,7 @@
       const t = document.createElement('div');
       t.className = 'whitespace-pre-wrap break-words text-lg font-medium leading-snug text-slate-900';
       t.textContent = text == null ? '—' : text;
+      if (lang === item.to) outEls.set(item, t);
       cell.append(meta, t);
       if (text != null) {
         const tools = document.createElement('div');
@@ -388,6 +389,7 @@
     const out = document.createElement('div');
     out.className = 'whitespace-pre-wrap break-words text-base font-semibold leading-snug';
     out.textContent = item.out;
+    outEls.set(item, out);
     const tools = document.createElement('div');
     tools.className = 'mt-1 flex gap-1 ' + (mine ? 'text-brand-100' : 'text-slate-500');
     tools.append(
@@ -643,7 +645,8 @@
   }
 
   let speechBoost = 1; // đọc nhanh hơn khi bản dịch đang dồn lại
-  function buildUtterances(text, langKey) {
+  // onProg(chỉ số ký tự, độ dài từ): báo vị trí đang đọc để tô sáng. Ưu tiên sự kiện boundary của trình duyệt; không có thì ước lượng theo thời gian
+  function buildUtterances(text, langKey, onProg) {
     const lang = LANGS[langKey].tts;
     const list = voicesFor(langKey);
     const v = list.find(x => x.name === store.get('voice_' + langKey, '')) || list[0];
@@ -651,13 +654,27 @@
     // Đọc từng câu để có quãng nghỉ tự nhiên, dễ nghe hơn
     const sentences = text.match(/[^.!?。！？\n]+[.!?。！？]*/g) || [text];
     const out = [];
+    let from = 0;
     for (const part of sentences) {
+      const at = text.indexOf(part, from);
+      from = (at < 0 ? from : at) + part.length;
       if (!part.trim()) continue;
       const u = new SpeechSynthesisUtterance(part.trim());
       u.lang = lang;
       if (v) u.voice = v;
       u.rate = Math.min(2, state.rate * speechBoost);
       u.pitch = state.pitch;
+      if (onProg) {
+        const base = (at < 0 ? from - part.length : at) + (part.length - part.trimStart().length), len = u.text.length;
+        let seen = false, timer = 0, t0 = 0;
+        const stop = () => { clearInterval(timer); timer = 0; };
+        u.addEventListener('start', () => {
+          onProg(base, 0); t0 = Date.now();
+          timer = setInterval(() => { if (seen) return stop(); onProg(base + Math.min(len - 1, Math.floor((Date.now() - t0) / 1000 * 13 * (u.rate || 1))), 0); }, 150); // ước lượng khi trình duyệt không báo từ
+        });
+        u.addEventListener('boundary', e => { seen = true; stop(); onProg(base + (e.charIndex || 0), e.charLength || 0); });
+        u.addEventListener('end', stop); u.addEventListener('error', stop);
+      }
       out.push(u);
     }
     return out;
@@ -793,7 +810,7 @@
     if ('speechSynthesis' in window) speechSynthesis.cancel();
   }
 
-  async function speakCloud(text, langKey) {
+  async function speakCloud(text, langKey, onProg) {
     const my = speechToken;
     const voice = await cloudVoiceName(langKey);
     if (!voice) throw new Error('Chưa có giọng WaveNet cho ' + LANGS[langKey].name);
@@ -808,10 +825,18 @@
     if (cur.trim()) chunks.push(cur);
     const urls = chunks.map(c => cloudAudioUrl(c.trim(), langKey, voice));
     urls.forEach(p => p.catch(() => {})); // lỗi sẽ được bắt khi await bên dưới
-    for (const p of urls) {
-      const url = await p;
+    const total = chunks.reduce((n, c) => n + c.length, 0) || 1;
+    let consumed = 0;
+    for (let k = 0; k < urls.length; k++) {
+      const url = await urls[k];
       if (my !== speechToken) return; // đã bị dừng hoặc thay bằng câu khác
-      await playUrl(url);
+      const lenK = chunks[k].length, doneK = consumed;
+      if (onProg) { // Google không cho biết từng từ: tô theo tỷ lệ thời gian đã phát của đoạn âm thanh
+        audioEl.ontimeupdate = () => { const d = audioEl.duration; if (d > 0) onProg(Math.floor((doneK + lenK * Math.min(1, audioEl.currentTime / d)) / total * text.length), 0); };
+        onProg(Math.floor(doneK / total * text.length), 0);
+      }
+      try { await playUrl(url); } finally { audioEl.ontimeupdate = null; }
+      consumed += lenK;
       if (my !== speechToken) return;
     }
   }
@@ -839,10 +864,10 @@
   }
 
   // Đọc xong mới trả về (không cắt câu đang đọc). Có thời gian chờ tối đa phòng khi trình duyệt không báo kết thúc.
-  function speakAndWaitDevice(text, langKey) {
+  function speakAndWaitDevice(text, langKey, onProg) {
     return new Promise(resolve => {
       if (!('speechSynthesis' in window) || !text) { resolve(); return; }
-      const us = buildUtterances(text, langKey);
+      const us = buildUtterances(text, langKey, onProg);
       if (!us.length) { resolve(); return; }
       const timer = setTimeout(() => { micLog('đọc xong do HẾT GIỜ CHỜ (trình duyệt không báo kết thúc)'); resolve(); }, Math.max(8000, text.length * 150));
       const done = () => { clearTimeout(timer); micLog('đọc xong (trình duyệt báo kết thúc)'); resolve(); };
@@ -851,17 +876,17 @@
       us.forEach(u => speechSynthesis.speak(u));
     });
   }
-  async function speakAndWait(text, langKey) {
+  async function speakAndWait(text, langKey, onProg) {
     if (!text) return;
-    if (!cloudOn()) return speakAndWaitDevice(text, langKey);
+    if (!cloudOn()) return speakAndWaitDevice(text, langKey, onProg);
     const my = speechToken;
     let timer;
     const limit = new Promise(resolve => { timer = setTimeout(() => { micLog('đọc bằng Google HẾT GIỜ CHỜ'); resolve(); }, Math.max(20000, text.length * 200)); });
     try {
-      await Promise.race([speakCloud(text, langKey), limit]);
+      await Promise.race([speakCloud(text, langKey, onProg), limit]);
     } catch (e) {
       cloudFailed(e);
-      if (my === speechToken && !(e && e.limit && !fallbackOn())) await speakAndWaitDevice(text, langKey);
+      if (my === speechToken && !(e && e.limit && !fallbackOn())) await speakAndWaitDevice(text, langKey, onProg);
     } finally { clearTimeout(timer); }
   }
 
@@ -920,6 +945,7 @@
     el.btnMic.setAttribute('aria-label', on ? 'Dừng nói' : 'Bắt đầu nói');
     el.micHint.textContent = on ? 'Đang nghe… chạm để dừng' : 'Chạm để nói';
     updateCounter();
+    renderTalkStatus();
   }
 
   function startListening() {
@@ -1025,8 +1051,9 @@
     if (!fromArg && text === lastMeetingText && now - lastMeetingAt < 4000) return; // tránh lặp câu do lỗi của trình duyệt (nhận dạng đám mây không có lỗi này)
     lastMeetingText = text; lastMeetingAt = now;
     const from = fromArg || state.src, to = toArg || state.tgt;
+    state.pendingTr++; renderTalkStatus();
     const t0 = (pre && pre.tLast) || now; // mốc ngừng nói để đo độ trễ
-    meetingChain = meetingChain.then(async () => {
+    meetingChain = meetingChain.then(async () => { try {
       let out;
       try {
         const prefixOk = pre && text.startsWith(pre.consumed || '');
@@ -1043,9 +1070,10 @@
       } catch (_) {
         try { out = await translateText(text, from, to); } catch (__) { out = '[Chưa dịch được]'; }
       }
-      addHistory({ src: text, out, from, to, meeting: true, lat: Date.now() - t0 });
-      if ((state.meetingSpeak || state.conf) && state.meeting && !state.twoMode && !/^\[Chưa dịch được\]$/.test(out)) enqueueSpeech(out, to);
-    });
+      const histItem = { src: text, out, from, to, meeting: true, lat: Date.now() - t0 };
+      addHistory(histItem);
+      if ((state.meetingSpeak || state.conf) && state.meeting && !state.twoMode && !/^\[Chưa dịch được\]$/.test(out)) enqueueSpeech(out, to, histItem);
+    } finally { state.pendingTr--; renderTalkStatus(); } });
   }
 
   // ----- Dịch tăng dần và tự chốt câu (giảm độ trễ) -----
@@ -1190,29 +1218,91 @@
     return true;
   }
 
+  // ----- Thanh tín hiệu (sẵn sàng nói / đang xử lý / đang đọc dịch / micro không nghe) -----
+  function renderTalkStatus() {
+    if (!el.talkStatus) return;
+    let st = '', txt = '';
+    if (state.meeting) {
+      if (state.reading) { st = state.conf ? 'reading-conf' : 'reading'; txt = state.conf ? 'Đang đọc bản dịch · micro vẫn nghe' : 'Đang đọc bản dịch · micro tạm nghỉ, chưa nói được'; }
+      else if (state.pendingTr > 0 || state.sttSending > 0) { st = 'busy'; txt = 'Đang xử lý bản dịch…'; }
+      else if (state.listening || state.cloudActive) { st = 'ready'; txt = 'Sẵn sàng nói'; }
+      else { st = 'dead'; txt = 'Micro chưa nghe · đang mở lại…'; }
+    }
+    el.talkStatus.dataset.state = st;
+    el.talkText.textContent = txt;
+  }
+
+  // ----- Tô sáng chữ đang đọc ngay trong bong bóng bản dịch -----
+  const outEls = new WeakMap(); // mục lịch sử -> phần tử chữ bản dịch
+  let readCtx = null;
+  // Vị trí từ đang đọc quanh ký tự idx (len > 0 nếu trình duyệt cho biết độ dài từ)
+  function wordSpan(text, idx, len) {
+    let s = Math.max(0, Math.min(text.length, idx | 0));
+    if (len > 0) return { start: s, end: Math.min(text.length, s + len) };
+    if (!/\s/.test(text)) return { start: s, end: Math.min(text.length, s + 2) }; // tiếng Trung/Nhật/Thái không có dấu cách
+    while (s < text.length && /\s/.test(text[s])) s++;
+    while (s > 0 && !/\s/.test(text[s - 1])) s--;
+    let e = s;
+    while (e < text.length && !/\s/.test(text[e])) e++;
+    return { start: s, end: e };
+  }
+  function readStart(item, text) {
+    readCtx = { el: item ? outEls.get(item) : null, text };
+    if (readCtx.el && readCtx.el.isConnected) { try { readCtx.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (_) {} }
+    paintRead(0, 0);
+  }
+  function paintRead(idx, len) {
+    const c = readCtx;
+    if (!c || !c.el || !c.el.isConnected) return;
+    const w = wordSpan(c.text, idx, len);
+    const done = document.createElement('span'), cur = document.createElement('span');
+    done.className = 'rd-done'; cur.className = 'rd-cur';
+    done.textContent = c.text.slice(0, w.start); cur.textContent = c.text.slice(w.start, w.end);
+    c.el.textContent = '';
+    c.el.append(done, cur, document.createTextNode(c.text.slice(w.end)));
+  }
+  function readEnd() {
+    const c = readCtx; readCtx = null;
+    if (c && c.el && c.el.isConnected) c.el.textContent = c.text; // trả về chữ nguyên vẹn
+  }
+
   // Đọc bản dịch lần lượt; trong lúc đọc tạm dừng nghe để không thu lại tiếng dịch
   const speechQueue = [];
   let draining = false;
   function setSpeakingUI(on) {
     state.speaking = on;
     el.meetingSpeaking.classList.toggle('hidden', !on);
+    renderTalkStatus();
   }
-  function enqueueSpeech(text, langKey) {
-    speechQueue.push({ text, langKey });
+  function enqueueSpeech(text, langKey, item) {
+    speechQueue.push({ text, langKey, item });
     while (speechQueue.length > (state.conf ? 2 : 3)) speechQueue.shift(); // chỉ giữ vài bản dịch mới nhất, tránh đọc chậm hơn cuộc họp
     drainSpeech();
+  }
+  // Đọc lần lượt các bản dịch trong hàng đợi. Lỗi ở một câu không được làm kẹt cả hàng đợi hay làm micro tắt mãi:
+  // dù đọc lỗi hay không, khối finally luôn đặt lại trạng thái và bật lại micro.
+  async function speakItem(item) {
+    readStart(item.item, item.text);
+    try { await speakAndWait(item.text, item.langKey, paintRead); }
+    catch (e) { micLog('lỗi khi đọc: ' + ((e && e.message) || e)); }
+    finally { readEnd(); }
   }
   async function drainSpeech() {
     if (draining) return;
     draining = true;
+    state.reading = true; renderTalkStatus();
     if (state.conf) { // hội nghị: không tắt micro, đọc dồn thì tăng tốc để bắt kịp
-      while (speechQueue.length && state.meeting) {
-        const item = speechQueue.shift();
-        speechBoost = speechQueue.length ? 1.25 : 1;
-        await speakAndWait(item.text, item.langKey);
+      try {
+        while (speechQueue.length && state.meeting) {
+          const item = speechQueue.shift();
+          speechBoost = speechQueue.length ? 1.25 : 1;
+          await speakItem(item);
+        }
+      } finally {
+        speechBoost = 1;
+        draining = false;
+        state.reading = false; renderTalkStatus();
       }
-      speechBoost = 1;
-      draining = false;
       return;
     }
     setSpeakingUI(true);
@@ -1221,14 +1311,15 @@
     else if (rec) { rec.onend = null; try { rec.abort(); } catch (_) {} } // tạm nghỉ micro
     el.src.value = '';
     updateCounter();
-    while (speechQueue.length && state.meeting) {
-      const item = speechQueue.shift();
-      await speakAndWait(item.text, item.langKey);
+    try {
+      while (speechQueue.length && state.meeting) await speakItem(speechQueue.shift());
+    } finally {
+      draining = false;
+      state.reading = false;
+      setSpeakingUI(false);
+      micLog('đọc xong hàng đợi: bật lại micro');
+      if (state.meeting) { if (state.cloudActive) window.CloudSTT.resume(); else beginSession(); } // đọc xong: nghe lại
     }
-    draining = false;
-    setSpeakingUI(false);
-    micLog('đọc xong hàng đợi: bật lại micro');
-    if (state.meeting) { if (state.cloudActive) window.CloudSTT.resume(); else beginSession(); } // đọc xong: nghe lại
   }
   function onMeetingResult(ev) {
     if (state.speaking) { micLog('bỏ qua kết quả nghe vì đang đọc'); return; } // đang đọc bản dịch: bỏ qua kết quả lẻ còn sót
@@ -1292,12 +1383,13 @@
     let txt = '', warn = false;
     if (state.cloudActive) {
       txt = `Đang nghe bằng đám mây · đã dùng ${used.toFixed(1)}${lim > 0 ? ' / ' + fmtN(lim) : ''} phút`;
-      if (sttSending > 0) txt += ' · đang gửi…';
+      if (state.sttSending > 0) txt += ' · đang gửi…';
       if (sttLastLang) txt += ` · Vừa nhận: ${LANGS[sttLastLang].name}`;
       warn = lim > 0 && used >= lim * 0.8;
     } else if (state.bilingual && state.meeting) { txt = bilingualBlock(); warn = !!txt; }
     el.chkAutoTurn.disabled = state.conf || state.cloudActive; // nhận dạng đám mây tự nhận ngôn ngữ nên không cần tự đổi lượt
     el.sttLevel.classList.toggle('hidden', !state.cloudActive);
+    renderTalkStatus();
     el.sttStatus.textContent = txt;
     el.sttStatus.classList.toggle('font-semibold', warn);
   }
@@ -1320,9 +1412,9 @@
       el.selMic.value = list.some(d => d.id === state.micId) ? state.micId : '';
     } catch (_) { /* chưa có quyền micro: giữ danh sách rỗng, micro mặc định */ }
   }
-  let sttWarned = false, sttOverToast = '', sttErrToast = 0, sttLastLang = null, sttSending = 0;
+  let sttWarned = false, sttOverToast = '', sttErrToast = 0, sttLastLang = null;
   // Cổng gửi: đếm số đoạn đang chờ Google trả về để hiện "đang gửi…"
-  const sttGateTracked = s => { const g = sttGate(s); if (g.allow) { sttSending++; renderSttStatus(); } return g; };
+  const sttGateTracked = s => { const g = sttGate(s); if (g.allow) { state.sttSending++; renderSttStatus(); } return g; };
   function startCloud() {
     const pair = bilingualPair();
     state.cloudActive = true; state.cloudForeign = pair.foreign; sttLastLang = null;
@@ -1337,7 +1429,7 @@
       .catch(e => onCloudError(Object.assign(new Error('Không mở được micro: ' + (e && e.message ? e.message : e)), { status: -1 })));
   }
   function stopCloud() {
-    state.cloudActive = false; sttSending = 0;
+    state.cloudActive = false; state.sttSending = 0;
     window.CloudSTT.stop();
     el.sttLevelBar.style.width = '0%';
     syncLangUI(); renderSttStatus();
@@ -1361,7 +1453,7 @@
     else if (!state.speaking) beginSession(); // đang đọc bản dịch thì để drainSpeech tự nghe lại sau khi đọc xong
   }
   function onCloudSegment(seg) {
-    if (sttSending > 0) sttSending--;
+    if (state.sttSending > 0) state.sttSending--;
     micLog(`đám mây nhận: ${seg.lang || '-'} "${(seg.text || '').slice(0, 20)}" (${seg.seconds} giây)`);
     const q = seg.quota;
     if (q && q.warn && !sttWarned) { sttWarned = true; toast('Đã dùng 80% hạn mức nhận dạng đám mây trong tháng'); }
@@ -1383,7 +1475,7 @@
     fallbackToBrowser('Đã hết hạn mức nhận dạng đám mây, chuyển sang nhận dạng của trình duyệt (một ngôn ngữ). Liên hệ quản trị viên để tăng hạn mức');
   }
   function onCloudError(e) {
-    if (sttSending > 0) sttSending--;
+    if (state.sttSending > 0) state.sttSending--;
     const transient = e && (e.status === 0 || e.status === 429 || e.status >= 500);
     if (transient) { if (Date.now() - sttErrToast > 10000) { sttErrToast = Date.now(); toast(e.message); } return; }
     fallbackToBrowser((e && e.message) || 'Lỗi nhận dạng đám mây, chuyển sang nhận dạng của trình duyệt');
@@ -1418,6 +1510,7 @@
     requestWake();
     if (useCloud) startCloud(); else beginSession();
     syncBilingualUI();
+    renderTalkStatus();
   }
   function stopMeeting() {
     if (!state.meeting) return;
@@ -1428,6 +1521,7 @@
     resetUtt();
     speechQueue.length = 0;
     cancelSpeech();
+    readEnd(); state.reading = false;
     setSpeakingUI(false);
     clearInterval(meetingTimer);
     if (rec) { rec.onend = null; try { rec.stop(); } catch (_) {} }

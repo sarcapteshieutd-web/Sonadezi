@@ -33,6 +33,20 @@
     @keyframes blink { 0%,100% { opacity: 1 } 50% { opacity: .45 } }
     /* Chế độ màn hình lớn: chữ phóng to, ẩn ô nhập */
     .big #history, .big #liveRow, .big #liveDual { zoom: 1.5; }
+    /* Thanh tín hiệu: sẵn sàng nói / đang xử lý / đang đọc bản dịch / micro không nghe */
+    #talkStatus { display: none; align-items: center; justify-content: center; gap: 8px; margin-top: 6px; padding: 8px 12px; border-radius: 12px; font-size: 1rem; font-weight: 600; text-align: center; }
+    #talkStatus:not([data-state=""]) { display: flex; }
+    #talkStatus .talk-dot { flex: none; width: 12px; height: 12px; border-radius: 9999px; background: currentColor; }
+    #talkStatus[data-state="ready"] { background: #dcfce7; color: #166534; }
+    #talkStatus[data-state="busy"] { background: #fef3c7; color: #92400e; }
+    #talkStatus[data-state="reading"], #talkStatus[data-state="reading-conf"] { background: #dbeafe; color: #1e40af; }
+    #talkStatus[data-state="dead"] { background: #fee2e2; color: #991b1b; }
+    #talkStatus[data-state="busy"] .talk-dot, #talkStatus[data-state="reading"] .talk-dot, #talkStatus[data-state="reading-conf"] .talk-dot { animation: blink 1s infinite; }
+    .big #talkStatus { zoom: 1.5; }
+    .viewer #talkStatus { display: none !important; }
+    /* Chữ đang được đọc: phần đã đọc mờ đi, từ đang đọc tô vàng */
+    .rd-done { opacity: .5; }
+    .rd-cur { background: #fde047; color: #111827; border-radius: 3px; box-shadow: 0 0 0 2px #fde047; }
     /* Chế độ hai ô trái/phải */
     .dual #dualHead { display: grid; }
     .dual #liveRow { display: none !important; }
@@ -300,6 +314,8 @@
     </div>
 
     <!-- Khung chat -->
+    <div id="talkStatus" data-state="" role="status" aria-live="polite"><span class="talk-dot"></span><span id="talkText"></span></div>
+
     <main id="histWrap" class="mt-1.5 min-h-0 flex-1 overflow-y-auto rounded-2xl bg-white/70 p-3 ring-1 ring-slate-200/80">
       <div id="dualHead" class="sticky top-0 z-10 -mx-3 -mt-3 mb-3 hidden grid-cols-2 gap-3 border-b border-slate-200 bg-white/95 px-3 py-2 text-sm font-semibold text-brand-700 backdrop-blur lg:gap-5">
         <div id="dualHeadL" class="truncate"></div>

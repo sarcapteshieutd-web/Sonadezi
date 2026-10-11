@@ -295,3 +295,15 @@ Dùng khi hai bên nói xen kẽ tiếng Việt và một ngoại ngữ (Anh, Tr
 
 ## 24. Nhật ký nghe/đọc để chẩn đoán lỗi micro
 Khi bật **Hiện độ trễ** (Cài đặt), thanh đỏ của Chế độ họp hiện thêm một khung chữ nhỏ ghi 10 sự kiện gần nhất, kèm giờ: mở phiên nghe, micro đã bật, lỗi nghe, đọc bản dịch (micro tạm nghỉ), đọc xong (trình duyệt báo kết thúc hay **hết giờ chờ**), bật lại micro, nghe được gì. Nếu micro không nghe lại sau khi đọc bản dịch, chụp màn hình khung này gửi người hỗ trợ: các dòng này cho biết micro dừng ở bước nào.
+
+## 25. Thanh tín hiệu và tô sáng chữ đang đọc (Chế độ họp, hội nghị, song ngữ)
+Trong lúc họp, một **thanh tín hiệu** nằm ngay trên khung chat (cũng hiện ở màn hình lớn) cho biết lúc nào được nói:
+- 🟢 **Sẵn sàng nói**: micro đang nghe.
+- 🟡 **Đang xử lý bản dịch…**: câu vừa nói đang được nhận dạng/dịch.
+- 🔵 **Đang đọc bản dịch · micro tạm nghỉ, chưa nói được** (họp thường), hoặc **micro vẫn nghe** (chế độ hội nghị).
+- 🔴 **Micro chưa nghe · đang mở lại…**: phiên nghe đã dừng; nếu thanh này đỏ kéo dài, hãy bấm Dừng họp rồi bật lại.
+
+Khi đọc bản dịch, **chữ trong bong bóng bản dịch đang đọc được tô sáng**: phần đã đọc mờ đi, từ đang đọc tô vàng; đọc xong thì trả về chữ bình thường.
+- Giọng thiết bị: tô theo từng từ nếu trình duyệt báo vị trí; nếu không, tô ước lượng theo thời gian.
+- Giọng Google WaveNet: tô theo tỷ lệ thời gian đã phát (xấp xỉ, không khớp từng từ).
+- Nếu việc đọc bị lỗi giữa chừng, ứng dụng vẫn tự bật lại micro để nghe tiếp (trước đây có thể bị kẹt).
