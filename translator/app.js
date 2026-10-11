@@ -54,7 +54,7 @@
     btnMeeting: $('btnMeeting'), btnConf: $('btnConf'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
     chkMeetingSpeak: $('chkMeetingSpeak'), chkConf: $('chkConf'), meetingSpeaking: $('meetingSpeaking'),
     chkAutoTurn: $('chkAutoTurn'), meetingLang: $('meetingLang'),
-    micLog: $('micLog'), talkStatus: $('talkStatus'), talkText: $('talkText'), chkBilingual: $('chkBilingual'), selMic: $('selMic'), selSttSpeed: $('selSttSpeed'), sttStatus: $('sttStatus'), sttLevel: $('sttLevel'), sttLevelBar: $('sttLevelBar'),
+    micWarn: $('micWarn'), btnMbOpts: $('btnMbOpts'), mbOpts: $('mbOpts'), micLogView: $('micLogView'), btnMicLogCopy: $('btnMicLogCopy'), talkStatus: $('talkStatus'), talkText: $('talkText'), chkBilingual: $('chkBilingual'), selMic: $('selMic'), selSttSpeed: $('selSttSpeed'), sttStatus: $('sttStatus'), sttLevel: $('sttLevel'), sttLevelBar: $('sttLevelBar'),
     app: $('app'), btnBig: $('btnBig'), btnBigExit: $('btnBigExit'), btnDual: $('btnDual'), btnFontMinus: $('btnFontMinus'), btnFontPlus: $('btnFontPlus'),
     dualHeadL: $('dualHeadL'), dualHeadR: $('dualHeadR'), liveDual: $('liveDual'),
     ldLLbl: $('ldLLbl'), ldLTxt: $('ldLTxt'), ldLRec: $('ldLRec'), ldRLbl: $('ldRLbl'), ldRTxt: $('ldRTxt'), ldRRec: $('ldRRec'), btnRoom: $('btnRoom'), roomDot: $('roomDot'),
@@ -869,7 +869,7 @@
       if (!('speechSynthesis' in window) || !text) { resolve(); return; }
       const us = buildUtterances(text, langKey, onProg);
       if (!us.length) { resolve(); return; }
-      const timer = setTimeout(() => { micLog('đọc xong do HẾT GIỜ CHỜ (trình duyệt không báo kết thúc)'); resolve(); }, Math.max(8000, text.length * 150));
+      const timer = setTimeout(() => { micLog('đọc xong do HẾT GIỜ CHỜ (trình duyệt không báo kết thúc)', true); resolve(); }, Math.max(8000, text.length * 150));
       const done = () => { clearTimeout(timer); micLog('đọc xong (trình duyệt báo kết thúc)'); resolve(); };
       us[us.length - 1].onend = done;
       us[us.length - 1].onerror = done;
@@ -881,7 +881,7 @@
     if (!cloudOn()) return speakAndWaitDevice(text, langKey, onProg);
     const my = speechToken;
     let timer;
-    const limit = new Promise(resolve => { timer = setTimeout(() => { micLog('đọc bằng Google HẾT GIỜ CHỜ'); resolve(); }, Math.max(20000, text.length * 200)); });
+    const limit = new Promise(resolve => { timer = setTimeout(() => { micLog('đọc bằng Google HẾT GIỜ CHỜ', true); resolve(); }, Math.max(20000, text.length * 200)); });
     try {
       await Promise.race([speakCloud(text, langKey, onProg), limit]);
     } catch (e) {
@@ -960,14 +960,19 @@
     beginSession();
   }
 
-  // Nhật ký nghe/đọc (chỉ hiện khi bật "Hiện độ trễ"): giúp biết micro bị tắt/bật lúc nào và vì sao khi chẩn đoán lỗi trên thiết bị thật
+  // Nhật ký nghe/đọc: lưu trong bộ nhớ, xem và sao chép ở Cài đặt; chỉ sự cố (warn) mới hiện một dòng cảnh báo ngắn trên thanh họp
   const micEvents = [];
-  function micLog(msg) {
+  let micWarnTimer = 0;
+  function micLog(msg, warn) {
     const t = new Date();
     micEvents.push(t.toLocaleTimeString('vi-VN', { hour12: false }) + '.' + String(t.getMilliseconds()).padStart(3, '0') + ' ' + msg);
-    if (micEvents.length > 10) micEvents.shift();
-    el.micLog.classList.toggle('hidden', !state.showLat);
-    if (state.showLat) el.micLog.textContent = micEvents.join('\n');
+    if (micEvents.length > 60) micEvents.shift();
+    if (warn) {
+      el.micWarn.textContent = '⚠ ' + msg;
+      el.micWarn.classList.remove('hidden');
+      clearTimeout(micWarnTimer);
+      micWarnTimer = setTimeout(() => el.micWarn.classList.add('hidden'), 10000);
+    }
   }
 
   function beginSession() {
@@ -995,7 +1000,7 @@
     };
 
     rec.onerror = ev => {
-      micLog('lỗi nghe: ' + ev.error);
+      micLog('lỗi nghe: ' + ev.error, true);
       if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
         wantListening = false;
         toast('Chưa được cấp quyền micro. Hãy cho phép micro trong cài đặt trình duyệt.');
@@ -1284,7 +1289,7 @@
   async function speakItem(item) {
     readStart(item.item, item.text);
     try { await speakAndWait(item.text, item.langKey, paintRead); }
-    catch (e) { micLog('lỗi khi đọc: ' + ((e && e.message) || e)); }
+    catch (e) { micLog('lỗi khi đọc: ' + ((e && e.message) || e), true); }
     finally { readEnd(); }
   }
   async function drainSpeech() {
@@ -1489,6 +1494,13 @@
     }
     syncBilingualUI();
   };
+  function applyMbOpts(open) {
+    el.mbOpts.classList.toggle('hidden', !open);
+    el.mbOpts.classList.toggle('flex', open);
+    el.btnMbOpts.setAttribute('aria-expanded', String(open));
+  }
+  applyMbOpts(store.get('mbOpts', '0') === '1');
+  el.btnMbOpts.onclick = () => { const open = el.mbOpts.classList.contains('hidden'); applyMbOpts(open); store.set('mbOpts', open ? '1' : '0'); };
   el.selSttSpeed.onchange = () => { state.sttSpeed = el.selSttSpeed.value; store.set('sttSpeed', state.sttSpeed); if (state.cloudActive) restartCloud(); };
   el.selMic.onchange = () => { state.micId = el.selMic.value; store.set('micId', state.micId); if (state.cloudActive) restartCloud(); };
   function startMeeting() {
@@ -1758,7 +1770,9 @@
     }
     speak(TEST_TEXT[k] || TEST_TEXT.en, k);
   };
+  el.btnMicLogCopy.onclick = async () => { try { await navigator.clipboard.writeText(micEvents.join('\n')); toast('Đã sao chép nhật ký'); } catch (_) { toast('Không sao chép được, hãy chọn và chép thủ công'); } };
   el.btnSettings.onclick = () => {
+    el.micLogView.textContent = micEvents.join('\n') || '(chưa có sự kiện nào)';
     loadVoices();
     el.chkIncr.checked = state.incr; el.selCut.value = String(state.cutMs); el.chkLat.checked = state.showLat;
     el.selVoiceLang.value = state.tgt;

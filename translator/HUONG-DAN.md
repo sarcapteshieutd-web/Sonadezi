@@ -294,7 +294,7 @@ Dùng khi hai bên nói xen kẽ tiếng Việt và một ngoại ngữ (Anh, Tr
 - Hạn mức tổng chỉ được áp cho chính quản trị viên; số phút của toàn hệ thống hiển thị ở thước đo "Google Speech-to-Text (phút)" để theo dõi. Số liệu do thiết bị tự báo nên chỉ để tham khảo; số liệu và tiền thật xem trên Google Cloud Console.
 
 ## 24. Nhật ký nghe/đọc để chẩn đoán lỗi micro
-Khi bật **Hiện độ trễ** (Cài đặt), thanh đỏ của Chế độ họp hiện thêm một khung chữ nhỏ ghi 10 sự kiện gần nhất, kèm giờ: mở phiên nghe, micro đã bật, lỗi nghe, đọc bản dịch (micro tạm nghỉ), đọc xong (trình duyệt báo kết thúc hay **hết giờ chờ**), bật lại micro, nghe được gì. Nếu micro không nghe lại sau khi đọc bản dịch, chụp màn hình khung này gửi người hỗ trợ: các dòng này cho biết micro dừng ở bước nào.
+Ứng dụng ghi lại 60 sự kiện gần nhất (giờ, mở phiên nghe, micro đã bật, lỗi nghe, đọc bản dịch, đọc xong hay **hết giờ chờ**, bật lại micro, nghe được gì). Xem và sao chép ở **Cài đặt → Nhật ký nghe/đọc → Sao chép nhật ký**. Khi có sự cố đáng chú ý (lỗi nghe, đọc hết giờ chờ, lỗi khi đọc), thanh họp hiện một dòng cảnh báo ngắn khoảng 10 giây. Nếu micro không nghe lại sau khi đọc bản dịch, hãy sao chép nhật ký này gửi người hỗ trợ.
 
 ## 25. Thanh tín hiệu và tô sáng chữ đang đọc (Chế độ họp, hội nghị, song ngữ)
 Trong lúc họp, một **thanh tín hiệu** nằm ngay trên khung chat (cũng hiện ở màn hình lớn) cho biết lúc nào được nói:
@@ -307,3 +307,6 @@ Khi đọc bản dịch, **chữ trong bong bóng bản dịch đang đọc đư
 - Giọng thiết bị: tô theo từng từ nếu trình duyệt báo vị trí; nếu không, tô ước lượng theo thời gian.
 - Giọng Google WaveNet: tô theo tỷ lệ thời gian đã phát (xấp xỉ, không khớp từng từ).
 - Nếu việc đọc bị lỗi giữa chừng, ứng dụng vẫn tự bật lại micro để nghe tiếp (trước đây có thể bị kẹt).
+
+## 26. Thanh họp gọn và nút ⚙ Tùy chọn
+Thanh họp chỉ còn một hàng: **giờ ghi · Đang nghe: (ngôn ngữ) · thanh tín hiệu · ⚙ Tùy chọn · Dừng**, để khung chat bắt đầu cao hơn và xem được nhiều bản dịch hơn. Bấm **⚙ Tùy chọn** để mở các ô ít đổi khi họp: *Tự đổi sau mỗi lượt, Song ngữ (kèm chọn micro và tốc độ ngắt câu), Đọc bản dịch ra loa, Chế độ hội nghị* và hướng dẫn đổi người nói. Trạng thái mở/đóng được nhớ cho lần sau.
