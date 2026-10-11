@@ -2677,6 +2677,30 @@
     form.appendChild(save);
     body.appendChild(form);
 
+    // Thử nhận dạng đám mây 5 giây cho từng cặp ngôn ngữ: kiểm tra khóa, dịch vụ và chất lượng trước khi dùng trong cuộc họp
+    const tf = node('div', 'mt-2 rounded-lg border border-slate-200 p-3');
+    tf.appendChild(node('label', 'block text-sm', 'Thử nhận dạng đám mây (nói một câu trong 5 giây)'));
+    const selPair = node('select', 'mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2');
+    for (const [f, t] of [['en', 'Anh – Việt'], ['zh', 'Trung – Việt'], ['ja', 'Nhật – Việt'], ['ko', 'Hàn – Việt']]) { const o = node('option', '', t); o.value = f; selPair.appendChild(o); }
+    const probeBtn = node('button', 'mt-2 w-full rounded-lg border border-brand-600 py-2 text-sm font-medium text-brand-600', 'Thử 5 giây'); probeBtn.type = 'button';
+    const probeOut = node('p', 'mt-2 text-xs text-slate-600', '');
+    probeBtn.onclick = async () => {
+      const key = inKey.value.trim() || g.key || cloudKey();
+      if (!window.CloudSTT) { probeOut.textContent = 'Chưa tải được thành phần nhận dạng đám mây'; return; }
+      if (!key) { probeOut.textContent = 'Chưa có khóa Google. Hãy nhập khóa ở trên'; return; }
+      probeBtn.disabled = true; probeOut.textContent = 'Đang thu 5 giây, hãy nói một câu…';
+      try {
+        const r = await window.CloudSTT.probe({ deviceId: state.micId || undefined, apiKey: key, pair: window.CloudSTT.pairFromLangs('vi', selPair.value) });
+        reportUsage('stt', r.seconds);
+        probeOut.textContent = r.text
+          ? `Nhận được: "${r.text}" · ngôn ngữ phát hiện: ${r.lang ? LANGS[r.lang].name : 'ngoài cặp đã chọn'} · ${r.seconds} giây tính phí`
+          : `Không nhận được chữ (${r.seconds} giây vẫn tính phí). Kiểm tra micro, âm lượng và cặp ngôn ngữ đã chọn`;
+      } catch (e) { probeOut.textContent = (e && e.message) || 'Lỗi khi thử nhận dạng'; }
+      probeBtn.disabled = false;
+    };
+    tf.append(selPair, probeBtn, probeOut);
+    body.appendChild(tf);
+
     // 1b) Gói Google Cloud của bạn: tín dụng, thời hạn, ước tính đã dùng
     const B = {
       creditUsd: bill.creditUsd == null ? 300 : bill.creditUsd, vndPerUsd: bill.vndPerUsd == null ? 25970 : bill.vndPerUsd,
