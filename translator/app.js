@@ -929,6 +929,7 @@
 
   function beginSession() {
     rec = new SR();
+    utt.forced = ''; // phiên nghe mới: văn bản cộng dồn bắt đầu lại từ đầu
     rec.lang = sttLocale(state.src);
     rec.continuous = true;
     rec.interimResults = true;
@@ -1120,7 +1121,10 @@
     if (!text || !state.meeting) return;
     queueMeeting(text, snapshotUtt());
     const keep = text;
-    resetUtt(); utt.forced = keep;
+    // Trình duyệt trả văn bản cộng dồn của cả phiên nghe: phải nhớ mọi đoạn đã chốt sớm, không chỉ đoạn gần nhất
+    const prev = utt.forced;
+    resetUtt();
+    utt.forced = prev && stripPrefix(keep, prev) === null ? prev + ' ' + keep : keep;
     el.src.value = ''; el.out.textContent = ''; updateCounter();
   }
   function commitFinal(f) {
