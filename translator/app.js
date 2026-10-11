@@ -927,6 +927,7 @@
 
   function beginSession() {
     rec = new SR();
+    utt.forced = ''; // phiên nghe mới: văn bản cộng dồn bắt đầu lại từ đầu
     rec.lang = sttLocale(state.src);
     rec.continuous = true;
     rec.interimResults = true;
@@ -1039,6 +1040,36 @@
     }
     return null;
   }
+  // Như stripPrefix nhưng chịu được trình duyệt sửa vài từ khi trả kết quả cuối (ví dụ "see at the top" -> "see the top")
+  function stripForced(raw, prefix) {
+    const exact = stripPrefix(raw, prefix);
+    if (exact !== null) return exact;
+    const sp = LANGS[state.src].sp;
+    const toks = s => {
+      const out = [], re = sp ? /\S+/g : /[\s\S]/gu; let m;
+      while ((m = re.exec(s))) { const n = normText(m[0]); if (n) out.push({ n, end: m.index + m[0].length }); }
+      return out;
+    };
+    const a = toks(prefix).map(t => t.n), b = toks(raw);
+    const n = a.length;
+    if (n < 3 || b.length < n - 2) return null; // quá ngắn: không đủ căn cứ coi là cùng một câu
+    const lim = Math.floor(n * 0.25) || 1; // cho phép sai khác tối đa 25% số từ
+    const dist = k => { // khoảng cách chỉnh sửa giữa prefix và k từ đầu của raw
+      let prev = Array.from({ length: k + 1 }, (_, j) => j);
+      for (let i = 1; i <= n; i++) {
+        const cur = [i];
+        for (let j = 1; j <= k; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1].n ? 0 : 1));
+        prev = cur;
+      }
+      return prev[k];
+    };
+    let best = null;
+    for (let k = Math.max(1, n - 3); k <= Math.min(b.length, n + 3); k++) {
+      const d = dist(k);
+      if (d <= lim && (!best || d < best.d)) best = { d, k };
+    }
+    return best ? raw.slice(b[best.k - 1].end).trim() : null;
+  }
   const newUtt = () => ({ consumed: '', parts: [], results: [], lastText: '', tLast: 0, forced: '', timer: null,
     tail: { text: '', done: '', result: null, seq: 0, at: 0, timer: null } });
   let utt = newUtt();
@@ -1118,13 +1149,16 @@
     if (!text || !state.meeting) return;
     queueMeeting(text, snapshotUtt());
     const keep = text;
-    resetUtt(); utt.forced = keep;
+    // Trình duyệt trả văn bản cộng dồn của cả phiên nghe: phải nhớ mọi đoạn đã chốt sớm, không chỉ đoạn gần nhất
+    const prev = utt.forced;
+    resetUtt();
+    utt.forced = prev && stripForced(keep, prev) === null ? prev + ' ' + keep : keep;
     el.src.value = ''; el.out.textContent = ''; updateCounter();
   }
   function commitFinal(f) {
     let text = f;
     if (utt.forced) {
-      const rest = stripPrefix(f, utt.forced);
+      const rest = stripForced(f, utt.forced);
       if (rest === '') { resetUtt(); return false; }          // trùng với câu đã chốt sớm
       if (rest !== null) text = rest;                          // chỉ thêm phần mới
     }
@@ -1180,7 +1214,7 @@
       const t = applyGlossary(heard(r).trim());
       if (r.isFinal) { if (t && commitFinal(t)) gotFinal = true; } else interim += t;
     }
-    if (utt.forced && interim) { const rest = stripPrefix(interim, utt.forced); if (rest !== null) interim = rest; }
+    if (utt.forced && interim) { const rest = stripForced(interim, utt.forced); if (rest !== null) interim = rest; }
     el.src.value = interim;
     updateCounter();
     if (interim && !gotFinal) {
