@@ -207,17 +207,17 @@ function create(cfg) {
       subscribeGoogleConfig(cb, onError) {
         return onSnapshot(googleCfgRef, s => cb(s.exists() ? s.data() : null), onError || (() => {}));
       },
-      // Khóa dùng chung, hạn mức tổng mỗi tháng (trLimit/ttsLimit) và giới hạn mỗi tài khoản VIP mỗi tháng (userTr/userTts); 0 = không giới hạn
-      async saveGoogleConfig({ key, trLimit, ttsLimit, userTr, userTts }) {
-        await setDoc(googleCfgRef, { key: key || '', trLimit: trLimit || 0, ttsLimit: ttsLimit || 0, userTr: userTr || 0, userTts: userTts || 0, updatedAt: Date.now() });
+      // Khóa dùng chung, hạn mức tổng mỗi tháng (trLimit/ttsLimit/sttLimit, sttLimit tính bằng phút) và giới hạn mỗi tài khoản VIP mỗi tháng (userTr/userTts/userStt); sttOver: 'fallback' hoặc 'continue' khi hết hạn mức; 0 = không giới hạn
+      async saveGoogleConfig({ key, trLimit, ttsLimit, userTr, userTts, sttLimit, userStt, sttOver }) {
+        await setDoc(googleCfgRef, { key: key || '', trLimit: trLimit || 0, ttsLimit: ttsLimit || 0, userTr: userTr || 0, userTts: userTts || 0, sttLimit: sttLimit || 0, userStt: userStt || 0, sttOver: sttOver === 'continue' ? 'continue' : 'fallback', updatedAt: Date.now() });
       },
       // Thông tin gói/ngân sách Google Cloud của chủ dự án (chỉ quản trị viên đọc/ghi)
       async getBillingConfig() {
         const s = await getDoc(billingRef);
         return s.exists() ? s.data() : null;
       },
-      async saveBillingConfig({ creditUsd, vndPerUsd, trialEndMs, trPrice, ttsPrice, ttsFree }) {
-        await setDoc(billingRef, { creditUsd, vndPerUsd, trialEndMs, trPrice, ttsPrice, ttsFree, updatedAt: Date.now() });
+      async saveBillingConfig({ creditUsd, vndPerUsd, trialEndMs, trPrice, ttsPrice, ttsFree, sttPrice }) {
+        await setDoc(billingRef, { creditUsd, vndPerUsd, trialEndMs, trPrice, ttsPrice, ttsFree, sttPrice: sttPrice || 0, updatedAt: Date.now() });
       },
       async listUsers() {
         const snap = await getDocs(collection(db, 'users'));
@@ -239,6 +239,7 @@ function create(cfg) {
         const upd = { lastSeen: Date.now() };
         if (d.tr) upd['usage.' + month + '.tr'] = increment(d.tr);
         if (d.tts) upd['usage.' + month + '.tts'] = increment(d.tts);
+        if (d.stt) upd['usage.' + month + '.stt'] = increment(d.stt); // giây nhận dạng đám mây
         await updateDoc(profileRef(u.uid), upd);
       }
     },

@@ -142,15 +142,18 @@ service cloud.firestore {
       allow get: if docId == 'billing' && isAdmin();
       allow list: if false;
       allow create, update: if docId == 'google' && isAdmin()
-        && request.resource.data.keys().hasOnly(['key', 'trLimit', 'ttsLimit', 'userTr', 'userTts', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['key', 'trLimit', 'ttsLimit', 'userTr', 'userTts', 'sttLimit', 'userStt', 'sttOver', 'updatedAt'])
         && request.resource.data.key is string && request.resource.data.key.size() <= 200
         && request.resource.data.trLimit is number && request.resource.data.ttsLimit is number
-        && request.resource.data.get('userTr', 0) is number && request.resource.data.get('userTts', 0) is number;
+        && request.resource.data.get('userTr', 0) is number && request.resource.data.get('userTts', 0) is number
+        && request.resource.data.get('sttLimit', 0) is number && request.resource.data.get('userStt', 0) is number
+        && request.resource.data.get('sttOver', 'fallback') in ['fallback', 'continue'];
       allow create, update: if docId == 'billing' && isAdmin()
-        && request.resource.data.keys().hasOnly(['creditUsd', 'vndPerUsd', 'trialEndMs', 'trPrice', 'ttsPrice', 'ttsFree', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['creditUsd', 'vndPerUsd', 'trialEndMs', 'trPrice', 'ttsPrice', 'ttsFree', 'sttPrice', 'updatedAt'])
         && request.resource.data.get('creditUsd', 0) is number && request.resource.data.get('vndPerUsd', 0) is number
         && request.resource.data.get('trialEndMs', 0) is number && request.resource.data.get('trPrice', 0) is number
-        && request.resource.data.get('ttsPrice', 0) is number && request.resource.data.get('ttsFree', 0) is number;
+        && request.resource.data.get('ttsPrice', 0) is number && request.resource.data.get('ttsFree', 0) is number
+        && request.resource.data.get('sttPrice', 0) is number;
       allow delete: if false;
     }
   }

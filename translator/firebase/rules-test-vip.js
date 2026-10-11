@@ -112,6 +112,20 @@ const t = (name, got, exp) => {
   t('Không đăng nhập không đọc được gói Google Cloud', await call('GET', '/config/billing', null), 'deny');
   t('Tài liệu config khác (không phải google/billing) bị chặn', await call('PATCH', '/config/khac', adm.tok, bill), 'deny');
 
+  console.log('--- Hạn mức nhận dạng đám mây Speech-to-Text (sttLimit, userStt, sttOver, sttPrice)');
+  const cfgStt = { ...cfg2, sttLimit: N(600), userStt: N(120), sttOver: S('fallback') };
+  t('Quản trị viên lưu hạn mức Speech-to-Text', await call('PATCH', '/config/google', adm.tok, cfgStt), 'ok');
+  t('Quản trị viên lưu sttOver = continue', await call('PATCH', '/config/google', adm.tok, { ...cfgStt, sttOver: S('continue') }), 'ok');
+  t('sttOver ngoài fallback/continue bị chặn', await call('PATCH', '/config/google', adm.tok, { ...cfgStt, sttOver: S('xyz') }), 'deny');
+  t('sttLimit kiểu chữ bị chặn', await call('PATCH', '/config/google', adm.tok, { ...cfgStt, sttLimit: S('nhieu') }), 'deny');
+  t('userStt kiểu chữ bị chặn', await call('PATCH', '/config/google', adm.tok, { ...cfgStt, userStt: S('nhieu') }), 'deny');
+  t('VIP không ghi được hạn mức Speech-to-Text', await call('PATCH', '/config/google', a.tok, cfgStt), 'deny');
+  t('Quản trị viên lưu lại cấu hình có stt để VIP đọc', await call('PATCH', '/config/google', adm.tok, cfgStt), 'ok');
+  t('VIP còn hạn đọc được hạn mức Speech-to-Text', await call('GET', '/config/google', a.tok), 'ok');
+  t('Quản trị viên lưu sttPrice (số thực)', await call('PATCH', '/config/billing', adm.tok, { ...bill, sttPrice: { doubleValue: 0.016 } }), 'ok');
+  t('sttPrice kiểu chữ bị chặn', await call('PATCH', '/config/billing', adm.tok, { ...bill, sttPrice: S('re') }), 'deny');
+  t('VIP không ghi được sttPrice', await call('PATCH', '/config/billing', a.tok, { ...bill, sttPrice: { doubleValue: 0.016 } }), 'deny');
+
   console.log('\nKẾT QUẢ: ' + pass + ' đạt, ' + fail + ' lỗi');
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error('LỖI KHI CHẠY', e); process.exit(2); });
