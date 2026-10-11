@@ -54,7 +54,7 @@
     btnMeeting: $('btnMeeting'), btnConf: $('btnConf'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
     chkMeetingSpeak: $('chkMeetingSpeak'), chkConf: $('chkConf'), meetingSpeaking: $('meetingSpeaking'),
     chkAutoTurn: $('chkAutoTurn'), meetingLang: $('meetingLang'),
-    chkBilingual: $('chkBilingual'), selMic: $('selMic'), sttStatus: $('sttStatus'),
+    chkBilingual: $('chkBilingual'), selMic: $('selMic'), sttStatus: $('sttStatus'), sttLevel: $('sttLevel'), sttLevelBar: $('sttLevelBar'),
     app: $('app'), btnBig: $('btnBig'), btnBigExit: $('btnBigExit'), btnDual: $('btnDual'), btnFontMinus: $('btnFontMinus'), btnFontPlus: $('btnFontPlus'),
     dualHeadL: $('dualHeadL'), dualHeadR: $('dualHeadR'), liveDual: $('liveDual'),
     ldLLbl: $('ldLLbl'), ldLTxt: $('ldLTxt'), ldLRec: $('ldLRec'), ldRLbl: $('ldRLbl'), ldRTxt: $('ldRTxt'), ldRRec: $('ldRRec'), btnRoom: $('btnRoom'), roomDot: $('roomDot'),
@@ -355,10 +355,11 @@
     el.ldLLbl.textContent = LANGS[l].name; el.ldRLbl.textContent = LANGS[r].name;
     el.ldLTxt.textContent = spokenLeft ? srcTxt : outTxt;
     el.ldRTxt.textContent = spokenLeft ? outTxt : srcTxt;
-    el.ldLRec.classList.toggle('hidden', !(state.listening && spokenLeft));
-    el.ldRRec.classList.toggle('hidden', !(state.listening && !spokenLeft));
-    el.ldLRec.classList.toggle('inline-flex', state.listening && spokenLeft);
-    el.ldRRec.classList.toggle('inline-flex', state.listening && !spokenLeft);
+    const recL = state.listening && (state.cloudActive || spokenLeft), recR = state.listening && (state.cloudActive || !spokenLeft); // nhận dạng đám mây nghe cả hai ngôn ngữ
+    el.ldLRec.classList.toggle('hidden', !recL);
+    el.ldRRec.classList.toggle('hidden', !recR);
+    el.ldLRec.classList.toggle('inline-flex', recL);
+    el.ldRRec.classList.toggle('inline-flex', recR);
   }
 
   function renderBubble(item) {
@@ -1276,9 +1277,12 @@
     let txt = '', warn = false;
     if (state.cloudActive) {
       txt = `Đang nghe bằng đám mây · đã dùng ${used.toFixed(1)}${lim > 0 ? ' / ' + fmtN(lim) : ''} phút`;
+      if (sttSending > 0) txt += ' · đang gửi…';
+      if (sttLastLang) txt += ` · Vừa nhận: ${LANGS[sttLastLang].name}`;
       warn = lim > 0 && used >= lim * 0.8;
     } else if (state.bilingual && state.meeting) { txt = bilingualBlock(); warn = !!txt; }
     el.chkAutoTurn.disabled = state.conf || state.cloudActive; // nhận dạng đám mây tự nhận ngôn ngữ nên không cần tự đổi lượt
+    el.sttLevel.classList.toggle('hidden', !state.cloudActive);
     el.sttStatus.textContent = txt;
     el.sttStatus.classList.toggle('font-semibold', warn);
   }
@@ -1299,7 +1303,9 @@
       el.selMic.value = list.some(d => d.id === state.micId) ? state.micId : '';
     } catch (_) { /* chưa có quyền micro: giữ danh sách rỗng, micro mặc định */ }
   }
-  let sttWarned = false, sttOverToast = '', sttErrToast = 0, sttLastLang = null;
+  let sttWarned = false, sttOverToast = '', sttErrToast = 0, sttLastLang = null, sttSending = 0;
+  // Cổng gửi: đếm số đoạn đang chờ Google trả về để hiện "đang gửi…"
+  const sttGateTracked = s => { const g = sttGate(s); if (g.allow) { sttSending++; renderSttStatus(); } return g; };
   function startCloud() {
     const pair = bilingualPair();
     state.cloudActive = true; state.cloudForeign = pair.foreign; sttLastLang = null;
@@ -1308,14 +1314,18 @@
     if (rec) { rec.onend = null; try { rec.abort(); } catch (_) {} }
     resetUtt(); el.src.value = ''; updateCounter();
     syncDual(); syncLangUI(); renderSttStatus();
-    window.CloudSTT.start({ deviceId: state.micId || undefined, apiKey: cloudKey(), pair, paused: state.speaking, gate: sttGate, onSegment: onCloudSegment, onBlocked: onCloudOver, onError: onCloudError })
+    setListeningUI(true); liveDualUpdate(); // nút micro đỏ, ô "Đang nghe" ở cả hai cột
+    window.CloudSTT.start({ deviceId: state.micId || undefined, apiKey: cloudKey(), pair, paused: state.speaking, gate: sttGateTracked, onLevel: lvl => { el.sttLevelBar.style.width = Math.min(100, Math.round(lvl * 400)) + '%'; }, onSegment: onCloudSegment, onBlocked: onCloudOver, onError: onCloudError })
       .then(fillMics)
       .catch(e => onCloudError(Object.assign(new Error('Không mở được micro: ' + (e && e.message ? e.message : e)), { status: -1 })));
   }
   function stopCloud() {
-    state.cloudActive = false;
+    state.cloudActive = false; sttSending = 0;
     window.CloudSTT.stop();
+    el.sttLevelBar.style.width = '0%';
     syncLangUI(); renderSttStatus();
+    if (!state.meeting) setListeningUI(false);
+    liveDualUpdate();
   }
   function restartCloud() {
     if (state.cloudActive) stopCloud();
@@ -1334,6 +1344,7 @@
     else if (!state.speaking) beginSession(); // đang đọc bản dịch thì để drainSpeech tự nghe lại sau khi đọc xong
   }
   function onCloudSegment(seg) {
+    if (sttSending > 0) sttSending--;
     const q = seg.quota;
     if (q && q.warn && !sttWarned) { sttWarned = true; toast('Đã dùng 80% hạn mức nhận dạng đám mây trong tháng'); }
     if (seg.text && seg.lang) {
@@ -1353,6 +1364,7 @@
     fallbackToBrowser('Đã hết hạn mức nhận dạng đám mây, chuyển sang nhận dạng của trình duyệt (một ngôn ngữ). Liên hệ quản trị viên để tăng hạn mức');
   }
   function onCloudError(e) {
+    if (sttSending > 0) sttSending--;
     const transient = e && (e.status === 0 || e.status === 429 || e.status >= 500);
     if (transient) { if (Date.now() - sttErrToast > 10000) { sttErrToast = Date.now(); toast(e.message); } return; }
     fallbackToBrowser((e && e.message) || 'Lỗi nhận dạng đám mây, chuyển sang nhận dạng của trình duyệt');
