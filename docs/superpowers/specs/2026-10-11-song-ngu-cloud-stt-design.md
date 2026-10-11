@@ -1,23 +1,23 @@
-# Thiết kế: Họp song ngữ tự phát hiện Anh/Việt bằng nhận dạng đám mây
+# Thiết kế: Họp song ngữ tự phát hiện ngôn ngữ (Anh/Trung/Nhật/Hàn – Việt) bằng nhận dạng đám mây
 
 Ngày: 11/10/2026 · Phạm vi mã: `translator/` · Nhánh đăng GitHub Pages: `claude/realtime-translation-app-68o1ik`
 
 ## 1. Mục tiêu
-Khi hai bên nói xen kẽ tiếng Anh và tiếng Việt trong cuộc họp, ứng dụng tự nhận biết **ngôn ngữ của từng câu**, đặt câu gốc vào đúng cột (Anh bên trái, Việt bên phải) và dịch sang ngôn ngữ còn lại, mà không ai phải bấm đổi người nói.
+Khi hai bên nói xen kẽ tiếng Việt và một ngoại ngữ (Anh, Trung, Nhật hoặc Hàn) trong cuộc họp, ứng dụng tự nhận biết **ngôn ngữ của từng câu**, đặt câu gốc vào đúng cột (ngoại ngữ bên trái, Việt bên phải) và dịch sang ngôn ngữ còn lại, mà không ai phải bấm đổi người nói.
 
 Nguyên nhân phải làm: nhận dạng giọng nói của trình duyệt chỉ nghe được **một ngôn ngữ mỗi lần** và không tự phát hiện ngôn ngữ; thử nghiệm trên iPad Chrome (trang `probe-stt.html`) cho thấy hai phiên song song **hủy lẫn nhau** (`aborted: Another request is started`). Vì vậy dùng dịch vụ nhận dạng đám mây hỗ trợ khai báo nhiều ngôn ngữ.
 
 ## 2. Phạm vi
 **Trong phạm vi**
 - Nút bật/tắt "Song ngữ (tự nhận Anh/Việt)" trong chế độ họp, chỉ cho tài khoản VIP và quản trị viên.
-- Nhận dạng đám mây Google Speech-to-Text, cặp cố định Anh (en-US) – Việt (vi-VN).
+- Nhận dạng đám mây Google Speech-to-Text cho bốn cặp thường dùng: Anh–Việt, Trung–Việt, Nhật–Việt, Hàn–Việt. Cặp lấy từ cặp ngôn ngữ đang chọn trong ứng dụng: ngôn ngữ không phải tiếng Việt là ngôn ngữ chính (`languageCode`), tiếng Việt (`vi-VN`) là ngôn ngữ phụ. Nếu cặp đang chọn không chứa tiếng Việt, nút song ngữ bị vô hiệu kèm lời giải thích.
 - Ô chọn micro (để chọn loa họp EMEET M0 Plus thay vì micro laptop), nhớ lựa chọn.
 - Đo số phút sử dụng, hạn mức tổng và hạn mức mỗi VIP do quản trị viên đặt, hành vi khi hết hạn mức (do quản trị viên chọn).
 - Nút "Thử 5 giây" trong bảng quản trị để kiểm tra khóa API và dịch vụ.
 
 **Ngoài phạm vi**
 - Chế độ hội nghị: giữ nguyên nhận dạng trình duyệt, một ngôn ngữ cố định; nút song ngữ bị vô hiệu khi bật hội nghị.
-- Cặp ngôn ngữ khác ngoài Anh–Việt; nhận diện danh tính người nói.
+- Cặp ngôn ngữ không chứa tiếng Việt, cặp ba ngôn ngữ trở lên; nhận diện danh tính người nói.
 - Chữ hiện dần khi đang nói (dịch vụ chỉ trả kết quả sau khi người nói ngắt).
 - Máy chủ trung gian; mọi thứ vẫn chạy hoàn toàn trên trình duyệt như hiện nay.
 
@@ -36,7 +36,8 @@ Nguyên nhân phải làm: nhận dạng giọng nói của trình duyệt chỉ
 Giao diện công khai (`window.CloudSTT`):
 ```
 CloudSTT.start({ deviceId, apiKey, onSegment, onLevel, onError })
-  // onSegment({ text, lang: 'en'|'vi', seconds, confidence })
+  // apiKey, primaryLang (vd. 'ja-JP'), altLang ('vi-VN')
+  // onSegment({ text, lang: khóa LANGS của ngôn ngữ được phát hiện, seconds, confidence })
 CloudSTT.pause() / CloudSTT.resume()   // tạm dừng khi ứng dụng đọc bản dịch ra loa
 CloudSTT.stop()
 CloudSTT.listDevices()                 // danh sách micro (cần quyền micro để có nhãn)
@@ -55,19 +56,21 @@ Các hàm thuần (cắt đoạn, mã hóa PCM, hạ tần số lấy mẫu, án
 ### 4.3. Gọi API
 `POST https://speech.googleapis.com/v1/speech:recognize?key=<khóa>` (V1, đúng mô hình khóa API như Translation và Text-to-Speech hiện có):
 ```
-config: { encoding: 'LINEAR16', sampleRateHertz: 16000, languageCode: 'en-US',
+config: { encoding: 'LINEAR16', sampleRateHertz: 16000, languageCode: <ngoại ngữ, vd. 'ja-JP'>,
           alternativeLanguageCodes: ['vi-VN'], enableAutomaticPunctuation: true }
 audio:  { content: <PCM base64> }
 ```
-Kết quả: `results[0].alternatives[0].transcript`, `results[0].languageCode` (ánh xạ tiền tố `en`/`vi`; ngôn ngữ ngoài cặp thì bỏ qua đoạn đó). Mỗi đoạn tối đa 25 s ≈ 0,8 MB PCM, nằm trong giới hạn của API đồng bộ.
+Mã ngôn ngữ nhận dạng lấy từ trường `stt` của `LANGS` hiện có (`en-US`, `zh-CN`, `ja-JP`, `ko-KR`, `vi-VN`). Riêng tiếng Trung: V1 có thể yêu cầu mã `cmn-Hans-CN` thay cho `zh-CN`; cần xác nhận khi thử, nên đặt ánh xạ mã nhận dạng thành bảng riêng trong `stt-cloud.js` để sửa dễ dàng.
+Kết quả: `results[0].alternatives[0].transcript`, `results[0].languageCode` (ánh xạ về khóa `LANGS` theo tiền tố; ngôn ngữ ngoài cặp thì bỏ qua đoạn đó). Với tiếng Trung, Nhật, Hàn, kết quả không có dấu cách giữa từ; phần dịch dùng luồng hiện có nên không đổi. Mỗi đoạn tối đa 25 s ≈ 0,8 MB PCM, nằm trong giới hạn của API đồng bộ.
 
 Khóa lấy từ `cloudKey()` hiện có (khóa dùng chung do quản trị viên nhập, hoặc khóa quản trị viên tự nhập). Khóa phải được bật cho dịch vụ Speech-to-Text trong phần "API restrictions".
 
-Chưa xác nhận: V1 có hỗ trợ tốt cặp Anh–Việt qua `alternativeLanguageCodes` hay không (tài liệu nêu tối đa 3 ngôn ngữ phụ). "Thử 5 giây" sinh ra để phát hiện sớm vấn đề này; nếu V1 không đạt, thiết kế chuyển sang V2 (cần sửa cách xác thực).
+Chưa xác nhận: V1 có hỗ trợ tốt từng cặp (Anh, Trung, Nhật, Hàn) với Việt qua `alternativeLanguageCodes` hay không. Tài liệu V1 không nêu giới hạn số ngôn ngữ; tài liệu V2 nêu tối đa 3 ngôn ngữ cho tự động nhận ngôn ngữ (`language_codes`). Một thảo luận cũ trên diễn đàn Google cho biết mã ngôn ngữ phụ bị bỏ qua với mô hình `latest_long` và chế độ nâng cao, nên thiết kế **dùng mô hình mặc định, không bật chế độ nâng cao**. "Thử 5 giây" sinh ra để phát hiện sớm vấn đề này; nếu V1 không đạt, thiết kế chuyển sang V2 (cần sửa cách xác thực).
 
 ### 4.4. Tích hợp `app.js`
+- Cặp song ngữ suy ra từ `state.src/state.tgt` khi bắt đầu họp (chứa `vi` và một ngoại ngữ); đổi cặp trong lúc họp thì khởi động lại `CloudSTT` với cặp mới.
 - `startMeeting()`: nếu `state.bilingual` bật và đủ điều kiện (VIP/quản trị viên, không `state.conf`, có khóa, chưa chặn vì hạn mức) thì dùng `CloudSTT.start(...)` thay cho `beginSession()`; ngược lại giữ luồng cũ.
-- Đặt `state.mine = 'en'` ở chế độ song ngữ để tiếng Anh nằm cột trái, tiếng Việt cột phải; mỗi mục lịch sử đã có `from/to` nên cột hiển thị theo từng câu (`renderDualItem` dùng `lang === item.from`).
+- Đặt `state.mine` là ngoại ngữ của cặp để ngoại ngữ nằm cột trái, tiếng Việt cột phải; mỗi mục lịch sử đã có `from/to` nên cột hiển thị theo từng câu (`renderDualItem` dùng `lang === item.from`).
 - `queueMeeting(text, pre, from, to)`: thêm hai tham số tùy chọn (mặc định `state.src/state.tgt`), nên luồng cũ không đổi. Đoạn nhận dạng đám mây gọi với `from` là ngôn ngữ phát hiện, `to` là ngôn ngữ còn lại.
 - Đọc bản dịch ra loa (`enqueueSpeech`) đã nhận ngôn ngữ đích qua tham số; khi đang đọc, gọi `CloudSTT.pause()` và `resume()` sau đó để không thu lại tiếng của chính ứng dụng.
 - Không dùng nhận dạng trình duyệt khi chạy song ngữ (một micro, một nguồn nhận dạng).
@@ -106,14 +109,15 @@ Chưa xác nhận: V1 có hỗ trợ tốt cặp Anh–Việt qua `alternativeLa
 - **Quy tắc Firestore:** mở rộng bộ kiểm thử; chỉ chạy được nếu môi trường có Firebase Emulator, nếu không sẽ ghi rõ là chưa chạy.
 - **Cú pháp** mọi tệp thay đổi, và xây lại bundle thành công.
 - **Thủ công (cần khóa thật và micro thật; tôi không thực hiện được):**
-  1. Nút "Thử 5 giây" thành công; đo độ chính xác Anh/Việt.
-  2. Họp thử với EMEET: nói xen kẽ Anh/Việt; câu vào đúng cột, dịch đúng chiều.
+  1. Nút "Thử 5 giây" thành công cho **từng cặp** (Anh–Việt, Trung–Việt, Nhật–Việt, Hàn–Việt); nút này có ô chọn cặp. Đo độ chính xác nhận dạng và độ chính xác phát hiện ngôn ngữ của từng cặp.
+  2. Họp thử với EMEET: nói xen kẽ Việt và ngoại ngữ; câu vào đúng cột, dịch đúng chiều.
   3. Đo độ trễ từ lúc ngắt nói đến lúc hiện chữ.
   4. Hạn mức: đặt hạn mức nhỏ, kiểm tra cảnh báo 80%, hết hạn mức ở cả hai chế độ.
   5. Bật đọc bản dịch ra loa: kiểm tra không thu lại tiếng đọc.
 
 ## 7. Rủi ro và điều chưa xác định
-- V1 có đủ tốt cho cặp Anh–Việt hay không (xem 4.3).
+- V1 có đủ tốt cho cả bốn cặp hay không, và mã tiếng Trung đúng (xem 4.3). Nếu một cặp không đạt, cặp đó dùng lại luồng cũ (nhận dạng trình duyệt, đổi bằng nút ⇄) và ghi rõ trong hướng dẫn.
+- Việc phát hiện ngôn ngữ đáng tin cậy tới đâu cho từng cặp chưa được đo; cần thử thực tế.
 - Giá thực tế và gói miễn phí hằng tháng chưa xác minh (nguồn thứ cấp mâu thuẫn về việc 60 phút miễn phí có áp dụng cho V2 hay không).
 - Độ trễ cao hơn hiện tại do phải chờ người nói ngắt; chưa đo.
 - Chế độ `continue` không có trần chi phí.
