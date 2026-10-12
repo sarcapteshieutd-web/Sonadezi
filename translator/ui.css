@@ -105,3 +105,23 @@ body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "S
 @media (min-width: 1024px) { #mbHead #talkStatus { min-width: 130px; } }
 #gate .gt-logo, #emptyHint img { mix-blend-mode: multiply; }
 @media (min-width: 640px) { #app > header h1 { font-size: .9375rem; } #app > header button { width: 42px; height: 42px; min-width: 42px; min-height: 42px; margin-left: 4px; } }
+
+/* ===== Bước 3: cửa sổ phụ (Cài đặt, Lưu chat, Quản trị, Ủng hộ, Phòng họp) ===== */
+#sheet, #sheetExport, #sheetAdmin, #sheetDonate, #sheetRoom { background: rgba(7,42,88,.45); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+#sheet > div, #sheetExport > div, #sheetAdmin > div, #sheetDonate > div, #sheetRoom > div { border-radius: 24px 24px 0 0; box-shadow: 0 -8px 30px rgba(7,42,88,.25); position: relative; }
+@media (min-width: 640px) { #sheet > div, #sheetExport > div, #sheetAdmin > div, #sheetDonate > div, #sheetRoom > div { border-radius: 24px; } }
+/* thanh kéo nhỏ phía trên (chỉ điện thoại) */
+@media (max-width: 639px) { #sheet > div::before, #sheetExport > div::before, #sheetAdmin > div::before, #sheetDonate > div::before, #sheetRoom > div::before { content: ""; display: block; width: 40px; height: 4px; border-radius: 4px; background: #cbd5e1; margin: -6px auto 12px; } }
+#sheet h2, #sheetExport h2, #sheetAdmin h2, #sheetDonate h2, #sheetRoom h2 { color: var(--brand-d); font-size: 1.125rem; font-weight: 700; }
+#sheet button[aria-label="Đóng"], #sheetExport button[aria-label="Đóng"], #sheetAdmin button[aria-label="Đóng"], #sheetDonate button[aria-label="Đóng"], #sheetRoom button[aria-label="Đóng"], #btnSheetClose { min-width: 44px; min-height: 44px; border-radius: 12px; background: #f1f5f9; }
+/* ô nhập, chọn, nút trong cửa sổ phụ đồng bộ với màn chính */
+#sheet select, #sheetExport select, #sheetAdmin select, #sheetRoom select,
+#sheet input:not([type=checkbox]):not([type=radio]):not([type=range]), #sheetAdmin input:not([type=checkbox]):not([type=radio]):not([type=range]), #sheetRoom input:not([type=checkbox]):not([type=radio]):not([type=range]),
+#sheet textarea, #sheetAdmin textarea { min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: #f8fafc; }
+#sheet select:focus, #sheet input:focus, #sheetAdmin input:focus, #sheetRoom input:focus, #sheet textarea:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(13,71,146,.15); background: #fff; outline: none; }
+#sheet button, #sheetExport button, #sheetAdmin button, #sheetDonate button, #sheetRoom button { min-height: 44px; border-radius: 12px; cursor: pointer; }
+#sheet input[type=range] { accent-color: var(--brand); }
+#sheet input[type=checkbox], #sheetAdmin input[type=checkbox] { accent-color: var(--brand); width: 20px; height: 20px; }
+#sheet details { border-radius: 12px; }
+#sheet summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; }
+#sheet .rounded-lg.border.bg-slate-50 { border-radius: 14px; background: #f8fafc; }
