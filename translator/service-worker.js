@@ -2,9 +2,9 @@
    - Tệp của ứng dụng: ưu tiên mạng (luôn lấy bản mới), mất mạng thì dùng bản đã lưu.
    - API dịch (MyMemory): luôn đi qua mạng, không cache.
 */
-const CACHE = 'translator-v62';
+const CACHE = 'translator-v63';
 const CORE = [
-  './', './index.html', './app.js', './stt-cloud.js', './config.js', './donate-qr.jpg', './styles.css', './manifest.json',
+  './', './index.html', './app.js', './stt-cloud.js', './config.js', './donate-qr.jpg', './styles.css', './ui.css', './manifest.json',
   './icons/icon-192.png', './icons/icon-512.png',
   './icons/icon-512-maskable.png', './icons/apple-touch-icon.png',
   './icons/logo-mark.png', './icons/logo-full.png'

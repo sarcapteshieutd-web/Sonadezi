@@ -19,6 +19,7 @@
   <link rel="preload" as="image" href="icons/logo-mark.png" />
 
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="ui.css" />
   <style>
     html, body { height: 100%; }
     body { -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
@@ -272,7 +273,7 @@
         <span class="flex items-center gap-1.5 whitespace-nowrap font-semibold"><span class="rec-blink inline-block h-2 w-2 rounded-full bg-red-600"></span><span id="meetingTime" class="tabular-nums">00:00</span></span>
         <span class="whitespace-nowrap">Đang nghe: <b id="meetingLang" class="text-base"></b></span>
         <div id="talkStatus" data-state="" role="status" aria-live="polite"><span class="talk-dot"></span><span id="talkText"></span><button id="btnReopenMic" type="button">Mở lại micro</button></div>
-        <button id="btnMbOpts" type="button" aria-expanded="false" class="whitespace-nowrap rounded-lg border border-red-300 px-2 py-0.5 text-xs font-semibold">⚙ Tùy chọn</button>
+        <button id="btnMbOpts" type="button" aria-label="Tùy chọn họp" aria-expanded="false" class="whitespace-nowrap rounded-lg border border-red-300 px-2 py-0.5 text-xs font-semibold">⚙<span class="lbl">&nbsp;Tùy chọn</span></button>
         <button id="btnMeetingStop" class="whitespace-nowrap rounded-lg border border-red-300 px-2 py-0.5 text-xs font-medium">Dừng</button>
       </div>
       <div id="micWarn" class="hidden w-full rounded-lg bg-red-100 px-2 py-1 text-xs font-medium" role="alert"></div>

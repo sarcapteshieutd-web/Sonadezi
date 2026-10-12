@@ -1,0 +1,35 @@
+/* Lớp giao diện (đặt sau styles.css): chỉ chỉnh hình thức, không đổi hành vi.
+   Bước 1: vùng chạm tối thiểu 44 px + thanh họp gọn một hàng. */
+:root { --tap: 44px; }
+
+/* Vùng chạm tối thiểu cho mọi nút điều khiển chính */
+#btnInstall:not(.hidden), #btnDonate, #btnExport, #btnClearHist, #btnSettings,
+#btnDual, #btnFontMinus, #btnFontPlus, #btnRoom, #btnBig,
+#btnMbOpts, #btnMeetingStop, #btnReopenMic, #btnConf, #btnMeeting {
+  min-width: var(--tap); min-height: var(--tap);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+}
+#btnClearHist, #btnDonate, #btnExport, #btnSettings { padding: 0; }
+#selSrcAcc, #selTgtVoice { min-height: var(--tap); }
+#chkAuto, #chkAutoTurn, #chkBilingual, #chkMeetingSpeak, #chkConf { min-width: 20px; min-height: 20px; }
+#chatBar { gap: 6px; }
+#chatBar button { padding: 0; }
+
+/* Thanh họp: một hàng gọn gàng */
+#mbHead { flex-wrap: nowrap; gap: 8px; }
+#mbHead > span:nth-child(2) { display: none; }                /* "Đang nghe: ngôn ngữ" đã có trên thanh trạng thái/tiêu đề */
+@media (min-width: 640px) { #mbHead > span:nth-child(2) { display: inline; } }
+#mbHead #talkStatus { flex: 1 1 0; min-width: 0; padding: 4px 10px; min-height: 36px; line-height: 1.2; font-size: .8125rem; }
+#talkText { min-width: 0; overflow-wrap: anywhere; }
+#btnMbOpts, #btnMeetingStop { padding: 0 12px; font-size: .8125rem; }
+#btnMbOpts .lbl { display: none; }
+@media (min-width: 480px) { #btnMbOpts .lbl { display: inline; } }
+
+/* Tôn trọng người dùng tắt hiệu ứng chuyển động */
+@media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+/* Viền focus rõ khi dùng bàn phím */
+button:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid #0d4792; outline-offset: 2px; }
+
+/* Nút thao tác nhỏ trong bong bóng (đọc lại, sao chép) */
+#history button, #liveRow button { min-width: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; }
+#history .mt-2 { gap: 4px; }
