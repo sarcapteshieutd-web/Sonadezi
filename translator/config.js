@@ -33,7 +33,13 @@ window.APP_CONFIG = {
       { to: 'KCN', variants: ['ka xê en', 'ca xê en', 'ka c n'] },
       { to: 'Sonadezi Long Thành', en: 'Sonadezi Long Thanh', variants: ['sonadezi long thanh', 'suna daisy long thing'] },
       { to: 'Sonadezi Châu Đức', en: 'Sonadezi Chau Duc', variants: ['sonadezi chau duc', 'sonadezi châu đức'] },
-      { to: 'Tổng công ty Sonadezi', variants: ['tong cong ty sonadezi'] }
+      { to: 'Tổng công ty Sonadezi', variants: ['tong cong ty sonadezi'] },
+      // Tên riêng lấy từ szl.com.vn; các cách nghe sai chỉ là dự đoán, hãy bổ sung theo kết quả thực tế
+      { to: 'SZL', variants: ['s z l', 'ét di eo', 'es zet el'] },
+      { to: 'Long Phước 1', variants: ['long phuoc 1', 'long phước một'] },
+      { to: 'Châu Đức', variants: ['chau duc'] },
+      { to: 'Biên Hòa', variants: ['bien hoa'] },
+      { to: 'Đồng Nai', variants: ['dong nai'] }
     ]
   },
   // Bảng thuật ngữ dịch: khi câu nói chứa cụm ở ngôn ngữ nguồn, bản dịch dùng đúng cụm ở ngôn ngữ đích.
@@ -51,6 +57,31 @@ window.APP_CONFIG = {
     { vi: 'Khu công nghiệp Châu Đức', en: 'Chau Duc Industrial Park', zh: '' },
     { vi: 'KCN Long Thành', en: 'Long Thanh Industrial Park', zh: '' },
     { vi: 'KCN Châu Đức', en: 'Chau Duc Industrial Park', zh: '' },
+    // Thông tin công ty và dự án, đối chiếu với szl.com.vn (bản tiếng Việt và tiếng Anh). Cột zh để trống vì chưa có tên tiếng Trung chính thức.
+    { vi: 'Công ty Cổ phần Sonadezi Long Thành', en: 'Sonadezi Long Thanh Joint Stock Company', zh: '' },
+    { vi: 'Sonadezi Long Thành', en: 'Sonadezi Long Thanh', zh: '' },
+    { vi: 'Cụm công nghiệp Long Phước 1', en: 'Long Phuoc 1 Industrial Cluster', zh: '' },
+    { vi: 'CCN Long Phước 1', en: 'Long Phuoc 1 Industrial Cluster', zh: '' },
+    { vi: 'Vùng kinh tế trọng điểm phía Nam', en: 'Southern Key Economic Region', zh: '' },
+    { vi: 'Thành phố Hồ Chí Minh', en: 'Ho Chi Minh City', zh: '' },
+    { vi: 'Bà Rịa – Vũng Tàu', en: 'Ba Ria – Vung Tau', zh: '' },
+    { vi: 'Biên Hòa', en: 'Bien Hoa', zh: '' },
+    { vi: 'Đồng Nai', en: 'Dong Nai', zh: '' },
+    { vi: 'bất động sản công nghiệp', en: 'industrial real estate', zh: '' },
+    { vi: 'bất động sản dân dụng', en: 'residential real estate', zh: '' },
+    { vi: 'cụm nhà xưởng cho thuê', en: 'factory cluster for lease', zh: '' },
+    { vi: 'nhà xưởng cho thuê', en: 'factory for lease', zh: '' },
+    { vi: 'nhà xưởng xây sẵn có văn phòng', en: 'ready-built factory with office', zh: '' },
+    { vi: 'nhà xưởng xây sẵn không văn phòng', en: 'ready-built factory without office', zh: '' },
+    { vi: 'nhà xưởng xây theo yêu cầu', en: 'build-to-suit factory', zh: '' },
+    { vi: 'trạm biến áp', en: 'transformer station', zh: '' },
+    { vi: 'hệ thống cấp nước', en: 'water supply system', zh: '' },
+    { vi: 'cấp nước sạch', en: 'clean water supply', zh: '' },
+    { vi: 'khu nhà ở công nhân', en: "workers' housing area", zh: '' },
+    { vi: 'khu dân cư', en: 'residential area', zh: '' },
+    { vi: 'trụ sở văn phòng', en: 'office headquarters', zh: '' },
+    { vi: 'xăng dầu', en: 'petroleum', zh: '' },
+    { vi: 'cổ đông', en: 'shareholder', zh: '' },
     // Thương thảo hợp đồng thuê đất
     { vi: 'hợp đồng thuê đất', en: 'land lease agreement', zh: '土地租赁合同' },
     { vi: 'thuê đất', en: 'land lease', zh: '土地租赁' },
