@@ -2309,7 +2309,7 @@
       } catch (e) { st.textContent = e && e.code === 'permission-denied' ? 'Không đủ quyền: cần xuất bản lại quy tắc Firestore (docs/FIREBASE-SETUP.md mục 9.6).' : 'Không đăng được: ' + ((e && (e.code || e.message)) || e); }
       bt.disabled = false;
     };
-    kit.getSummary(id).then(sm => { if (sm) { if (!ta.value) { ta.value = sm.text; room.sumDraft = sm.text; } if (LANGS[sm.lang]) sel.value = sm.lang; const d = new Date(sm.ts); st.textContent = `Bản đã đăng lúc ${pad(d.getHours())}:${pad(d.getMinutes())}.`; } }).catch(() => {});
+    (kit.getSummary ? kit.getSummary(id) : Promise.resolve(null)).then(sm => { if (sm) { if (!ta.value) { ta.value = sm.text; room.sumDraft = sm.text; } if (LANGS[sm.lang]) sel.value = sm.lang; const d = new Date(sm.ts); st.textContent = `Bản đã đăng lúc ${pad(d.getHours())}:${pad(d.getMinutes())}.`; } }).catch(() => {});
     box.append(sel, ta, bt, st);
     return box;
   }
