@@ -1008,7 +1008,8 @@
         toast('Chưa được cấp quyền micro. Hãy cho phép micro trong cài đặt trình duyệt.');
       } else if (ev.error === 'network') {
         const now = Date.now();
-        if (now - lastNetError < 3000) { wantListening = false; toast('Lỗi mạng khi nhận diện giọng nói'); }
+        if (state.meeting) { micFail++; setListeningUI(false); } // họp: đường truyền tới dịch vụ nhận dạng chập chờn, thử lại có giãn cách thay vì dừng họp
+        else if (now - lastNetError < 3000) { wantListening = false; toast('Lỗi mạng khi nhận diện giọng nói'); }
         lastNetError = now;
       } else if (ev.error === 'audio-capture') {
         if (state.meeting) { // trên thiết bị thật (nhất là iPad) micro thường bị ngắt thoáng qua: không dừng họp, thử mở lại có giãn cách
