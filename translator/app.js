@@ -54,7 +54,7 @@
     btnMeeting: $('btnMeeting'), btnConf: $('btnConf'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
     chkMeetingSpeak: $('chkMeetingSpeak'), chkConf: $('chkConf'), meetingSpeaking: $('meetingSpeaking'),
     chkAutoTurn: $('chkAutoTurn'), meetingLang: $('meetingLang'),
-    micWarn: $('micWarn'), btnMbOpts: $('btnMbOpts'), mbOpts: $('mbOpts'), micLogView: $('micLogView'), btnMicLogCopy: $('btnMicLogCopy'), talkStatus: $('talkStatus'), talkText: $('talkText'), chkBilingual: $('chkBilingual'), selMic: $('selMic'), selSttSpeed: $('selSttSpeed'), sttStatus: $('sttStatus'), sttLevel: $('sttLevel'), sttLevelBar: $('sttLevelBar'),
+    btnReopenMic: $('btnReopenMic'), micWarn: $('micWarn'), btnMbOpts: $('btnMbOpts'), mbOpts: $('mbOpts'), micLogView: $('micLogView'), btnMicLogCopy: $('btnMicLogCopy'), talkStatus: $('talkStatus'), talkText: $('talkText'), chkBilingual: $('chkBilingual'), selMic: $('selMic'), selSttSpeed: $('selSttSpeed'), sttStatus: $('sttStatus'), sttLevel: $('sttLevel'), sttLevelBar: $('sttLevelBar'),
     app: $('app'), btnBig: $('btnBig'), btnBigExit: $('btnBigExit'), btnDual: $('btnDual'), btnFontMinus: $('btnFontMinus'), btnFontPlus: $('btnFontPlus'),
     dualHeadL: $('dualHeadL'), dualHeadR: $('dualHeadR'), liveDual: $('liveDual'),
     ldLLbl: $('ldLLbl'), ldLTxt: $('ldLTxt'), ldLRec: $('ldLRec'), ldRLbl: $('ldRLbl'), ldRTxt: $('ldRTxt'), ldRRec: $('ldRRec'), btnRoom: $('btnRoom'), roomDot: $('roomDot'),
@@ -109,7 +109,7 @@
     ttsKey: (acct0Vip && !(acct0.info && acct0.info.admin)) ? '' : store.get('ttskey', ''),
     ttsLimit: Math.max(0, parseInt(store.get('ttsLimit', '4000000'), 10) || 0), // giới hạn ký tự giọng Google mỗi tháng (0 = không giới hạn)
     gLimit: Math.max(0, parseInt(store.get('gLimitM', '0'), 10) || 0), // giới hạn ký tự Google dịch mỗi tháng của quản trị viên tại máy này (0 = không giới hạn)
-    bilingual: store.get('bilingual', '0') === '1', micId: store.get('micId', ''), sttSpeed: ['fast', 'balanced', 'accurate'].includes(store.get('sttSpeed', 'balanced')) ? store.get('sttSpeed', 'balanced') : 'balanced', cloudActive: false, cloudForeign: '', sttSending: 0, pendingTr: 0, reading: false, // họp song ngữ bằng nhận dạng đám mây
+    bilingual: store.get('bilingual', '0') === '1', micId: store.get('micId', ''), sttSpeed: ['fast', 'balanced', 'accurate'].includes(store.get('sttSpeed', 'balanced')) ? store.get('sttSpeed', 'balanced') : 'balanced', cloudActive: false, cloudForeign: '', sttSending: 0, pendingTr: 0, reading: false, micGaveUp: false, // họp song ngữ bằng nhận dạng đám mây
     sttLimit: 0, sttOver: 'fallback', // hạn mức tổng nhận dạng đám mây (phút/tháng) và hành vi khi hết: 'fallback' hoặc 'continue'
     gFallback: store.get('gFallback', '1') === '1', // đạt giới hạn: tự chuyển sang MyMemory
     auto: store.get('auto', '1') === '1',
@@ -975,6 +975,8 @@
     }
   }
 
+  let micFail = 0, sessionStartAt = 0;
+  const MIC_MAX_FAIL = 6; // số lần micro lỗi liên tiếp trước khi dừng thử (giữ cuộc họp)
   function beginSession() {
     rec = new SR();
     utt.forced = ''; // phiên nghe mới: văn bản cộng dồn bắt đầu lại từ đầu
@@ -984,7 +986,7 @@
     rec.interimResults = true;
     rec.maxAlternatives = 1;
 
-    rec.onstart = () => { micLog('micro đã bật'); setListeningUI(true); };
+    rec.onstart = () => { sessionStartAt = Date.now(); state.micGaveUp = false; micLog('micro đã bật'); setListeningUI(true); };
 
     rec.onresult = ev => {
       if (state.meeting) { onMeetingResult(ev); return; }
@@ -1009,8 +1011,9 @@
         if (now - lastNetError < 3000) { wantListening = false; toast('Lỗi mạng khi nhận diện giọng nói'); }
         lastNetError = now;
       } else if (ev.error === 'audio-capture') {
-        wantListening = false;
-        toast('Không tìm thấy micro');
+        if (state.meeting) { // trên thiết bị thật (nhất là iPad) micro thường bị ngắt thoáng qua: không dừng họp, thử mở lại có giãn cách
+          micFail++; setListeningUI(false);
+        } else { wantListening = false; toast('Không tìm thấy micro'); }
       }
     };
 
@@ -1018,9 +1021,15 @@
       micLog('phiên nghe kết thúc' + (wantListening ? ', tự mở lại' : ''));
       // Chốt văn bản của phiên vừa kết thúc
       committed = el.src.value.trim();
-      if (wantListening) {
-        // Chrome tự ngắt sau một khoảng im lặng: khởi động lại để nghe liên tục
-        setTimeout(() => { if (wantListening) { try { beginSession(); } catch (_) { finish(); } } }, 250);
+      if (Date.now() - sessionStartAt > 8000) micFail = 0; // phiên đã chạy ổn định thì xóa đếm lỗi
+      if (wantListening && state.meeting && micFail >= MIC_MAX_FAIL) { // lỗi liên tiếp: dừng thử, giữ cuộc họp để người dùng bấm Mở lại micro
+        wantListening = false; state.micGaveUp = true; setListeningUI(false);
+        micLog('micro không mở lại được sau ' + micFail + ' lần liên tiếp', true);
+        toast('Micro bị ngắt. Bấm "Mở lại micro" để nghe tiếp');
+      } else if (wantListening) {
+        // Chrome tự ngắt sau một khoảng im lặng: khởi động lại để nghe liên tục (lỗi liên tiếp thì giãn cách tăng dần)
+        const delay = state.meeting && micFail ? Math.min(3000, 400 * 2 ** (micFail - 1)) : 250;
+        setTimeout(() => { if (wantListening) { try { beginSession(); } catch (_) { finish(); } } }, delay);
       } else {
         finish();
       }
@@ -1030,7 +1039,10 @@
   }
 
   function finish() {
-    if (state.meeting) { stopMeeting(); return; }
+    if (state.meeting) { // micro đã dừng (lỗi quyền, lỗi mạng, ngắt liên tiếp): giữ cuộc họp, người dùng bấm Mở lại micro
+      state.micGaveUp = true; setListeningUI(false);
+      return;
+    }
     clearTimeout(silenceTimer);
     setListeningUI(false);
     translateNow(true); // dịch bản cuối và tự động đọc
@@ -1231,7 +1243,7 @@
       if (state.reading) { st = state.conf ? 'reading-conf' : 'reading'; txt = state.conf ? 'Đang đọc bản dịch · micro vẫn nghe' : 'Đang đọc bản dịch · micro tạm nghỉ, chưa nói được'; }
       else if (state.pendingTr > 0 || state.sttSending > 0) { st = 'busy'; txt = 'Đang xử lý bản dịch…'; }
       else if (state.listening || state.cloudActive) { st = 'ready'; txt = 'Sẵn sàng nói'; }
-      else { st = 'dead'; txt = 'Micro chưa nghe · đang mở lại…'; }
+      else { st = 'dead'; txt = state.micGaveUp ? 'Micro đã dừng · bấm Mở lại micro' : 'Micro bị ngắt · đang thử mở lại…'; }
     }
     el.talkStatus.dataset.state = st;
     el.talkText.textContent = txt;
@@ -1327,6 +1339,7 @@
     }
   }
   function onMeetingResult(ev) {
+    micFail = 0; // nghe được thì micro đang ổn
     if (state.speaking) { micLog('bỏ qua kết quả nghe vì đang đọc'); return; } // đang đọc bản dịch: bỏ qua kết quả lẻ còn sót
     let interim = '';
     let gotFinal = false;
@@ -1500,6 +1513,13 @@
     el.btnMbOpts.setAttribute('aria-expanded', String(open));
   }
   applyMbOpts(store.get('mbOpts', '0') === '1');
+  el.btnReopenMic.onclick = () => {
+    if (!state.meeting) return;
+    micFail = 0; state.micGaveUp = false; wantListening = true;
+    micLog('người dùng bấm Mở lại micro');
+    if (state.cloudActive) restartCloud(); else if (!state.speaking) beginSession();
+    renderTalkStatus();
+  };
   el.btnMbOpts.onclick = () => { const open = el.mbOpts.classList.contains('hidden'); applyMbOpts(open); store.set('mbOpts', open ? '1' : '0'); };
   el.selSttSpeed.onchange = () => { state.sttSpeed = el.selSttSpeed.value; store.set('sttSpeed', state.sttSpeed); if (state.cloudActive) restartCloud(); };
   el.selMic.onchange = () => { state.micId = el.selMic.value; store.set('micId', state.micId); if (state.cloudActive) restartCloud(); };

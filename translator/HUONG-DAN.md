@@ -310,3 +310,6 @@ Khi đọc bản dịch, **chữ trong bong bóng bản dịch đang đọc đư
 
 ## 26. Thanh họp gọn và nút ⚙ Tùy chọn
 Thanh họp chỉ còn một hàng: **giờ ghi · Đang nghe: (ngôn ngữ) · thanh tín hiệu · ⚙ Tùy chọn · Dừng**, để khung chat bắt đầu cao hơn và xem được nhiều bản dịch hơn. Bấm **⚙ Tùy chọn** để mở các ô ít đổi khi họp: *Tự đổi sau mỗi lượt, Song ngữ (kèm chọn micro và tốc độ ngắt câu), Đọc bản dịch ra loa, Chế độ hội nghị* và hướng dẫn đổi người nói. Trạng thái mở/đóng được nhớ cho lần sau.
+
+## 27. Micro bị ngắt giữa cuộc họp (lỗi audio-capture)
+Trên một số thiết bị (đặc biệt iPad), trình duyệt đôi khi báo lỗi `audio-capture` (micro bị ngắt thoáng qua). Trước đây lỗi này làm **cả cuộc họp tự dừng** nên câu sau không được dịch. Nay ứng dụng giữ nguyên cuộc họp, thanh tín hiệu chuyển 🔴 **Micro bị ngắt · đang thử mở lại…** và tự mở lại micro với khoảng chờ tăng dần (0,4 → 0,8 → 1,6 → 3 giây). Sau **6 lần liên tiếp** không mở lại được, ứng dụng dừng thử nhưng **vẫn giữ cuộc họp** và hiện nút **Mở lại micro** trên thanh tín hiệu. Bấm nút này để nghe tiếp mà không mất các bản dịch đã có. Nếu lỗi lặp lại thường xuyên, hãy sao chép **Nhật ký nghe/đọc** (mục 24) để chẩn đoán.

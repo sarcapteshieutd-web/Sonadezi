@@ -36,6 +36,8 @@
     /* Thanh tín hiệu: sẵn sàng nói / đang xử lý / đang đọc bản dịch / micro không nghe */
     #talkStatus { display: none; align-items: center; justify-content: center; gap: 8px; margin: 0; padding: 3px 12px; border-radius: 9999px; font-size: .875rem; font-weight: 600; text-align: center; flex: 1 1 200px; min-width: 200px; }
     #talkStatus:not([data-state=""]) { display: flex; }
+    #btnReopenMic { display: none; flex: none; padding: 1px 10px; border: 1px solid currentColor; border-radius: 8px; font-size: .75rem; font-weight: 600; }
+    #talkStatus[data-state="dead"] #btnReopenMic { display: inline-block; }
     #talkStatus .talk-dot { flex: none; width: 12px; height: 12px; border-radius: 9999px; background: currentColor; }
     #talkStatus[data-state="ready"] { background: #dcfce7; color: #166534; }
     #talkStatus[data-state="busy"] { background: #fef3c7; color: #92400e; }
@@ -269,7 +271,7 @@
       <div id="mbHead" class="flex w-full flex-wrap items-center gap-x-3 gap-y-1.5">
         <span class="flex items-center gap-1.5 whitespace-nowrap font-semibold"><span class="rec-blink inline-block h-2 w-2 rounded-full bg-red-600"></span><span id="meetingTime" class="tabular-nums">00:00</span></span>
         <span class="whitespace-nowrap">Đang nghe: <b id="meetingLang" class="text-base"></b></span>
-        <div id="talkStatus" data-state="" role="status" aria-live="polite"><span class="talk-dot"></span><span id="talkText"></span></div>
+        <div id="talkStatus" data-state="" role="status" aria-live="polite"><span class="talk-dot"></span><span id="talkText"></span><button id="btnReopenMic" type="button">Mở lại micro</button></div>
         <button id="btnMbOpts" type="button" aria-expanded="false" class="whitespace-nowrap rounded-lg border border-red-300 px-2 py-0.5 text-xs font-semibold">⚙ Tùy chọn</button>
         <button id="btnMeetingStop" class="whitespace-nowrap rounded-lg border border-red-300 px-2 py-0.5 text-xs font-medium">Dừng</button>
       </div>
