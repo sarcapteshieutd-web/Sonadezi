@@ -2029,7 +2029,7 @@
   const newUttId = () => Math.random().toString(36).slice(2, 10);
   const room = { kit: null, id: null, expiresAtMs: 0, active: false, unsubViewers: null, viewers: [], allowed: [], recent: [], chain: Promise.resolve(),
     utt: newUttId(), noUtt: false, liveOff: false, liveKey: '', liveAt: 0, liveTimer: 0, writeMs: 0,
-    role: 'host', code: '', cohosts: [], unsubCo: null };
+    role: 'host', code: '', cohosts: [], unsubCo: null, lastReport: null, liveRep: null, sumDraft: '' };
 
   function loadScript(src) {
     return new Promise((resolve, reject) => {
@@ -2200,7 +2200,7 @@
     renderAll();
   }
   async function activateRoom(info) {
-    room.id = info.id; room.expiresAtMs = info.expiresAtMs; room.active = true;
+    room.id = info.id; room.expiresAtMs = info.expiresAtMs; room.active = true; room.liveRep = null; room.sumDraft = '';
     room.recent = []; room.allowed = []; room.viewers = []; room.utt = newUttId(); room.noUtt = false; room.liveOff = false; room.liveKey = '';
     if (room.unsubViewers) room.unsubViewers();
     room.unsubViewers = room.kit.subscribeViewers(room.id, onViewers, () => {});
@@ -2226,6 +2226,7 @@
   async function closeRoomNow(wipe) {
     if (!room.active) return;
     const id = room.id;
+    try { room.lastReport = { rep: await collectReport(room.kit, id), id, expiresAtMs: room.expiresAtMs, wiped: !!wipe, ts: Date.now() }; } catch (_) { room.lastReport = null; }
     if (room.unsubViewers) room.unsubViewers();
     if (room.unsubCo) { room.unsubCo(); room.unsubCo = null; }
     leaveTwoMode();
@@ -2251,7 +2252,84 @@
     } catch (_) { /* giữ nguyên, thử lại lần sau */ }
   }
 
+  // ----- Báo cáo phòng họp và tóm tắt sau họp (chủ phòng) -----
+  const RR = window.RoomReport;
+  const langName = l => (LANGS[l] ? LANGS[l].name : l);
+  async function collectReport(kit, id) {
+    const [viewers, messages] = await Promise.all([kit.listViewers(id), kit.getMessages(id)]);
+    return RR.buildReport({ viewers, messages });
+  }
+  function reportBlock(rep, ts) {
+    const box = node('div', 'mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3');
+    box.appendChild(node('h3', 'text-sm font-semibold text-brand-700', 'Báo cáo phòng họp'));
+    const grid = node('div', 'mt-2 grid grid-cols-2 gap-2');
+    for (const [v, l] of [[rep.viewers, 'Lượt người xem'], [RR.fmtDuration(rep.durationMs), 'Thời lượng'], [rep.sentences, 'Số câu'], [rep.languageCount, 'Ngôn ngữ người xem chọn']]) {
+      const k = node('div', 'rounded-lg bg-white p-2 ring-1 ring-slate-200');
+      k.appendChild(node('div', 'text-lg font-bold text-brand-700', String(v)));
+      k.appendChild(node('div', 'text-xs text-slate-500', l));
+      grid.appendChild(k);
+    }
+    box.appendChild(grid);
+    for (const x of rep.viewerLangs) {
+      const r = node('div', 'mt-2 text-sm');
+      const top = node('div', 'flex justify-between'); top.append(node('span', '', langName(x.lang)), node('span', 'text-slate-600', `${x.count} (${x.pct}%)`));
+      const bar = node('div', 'mt-0.5 h-2 overflow-hidden rounded bg-brand-100'); const fill = node('div', 'h-full bg-brand-600'); fill.style.width = x.pct + '%'; bar.appendChild(fill);
+      r.append(top, bar); box.appendChild(r);
+    }
+    box.appendChild(node('p', 'mt-2 text-[0.6875rem] text-slate-500', 'Lượt người xem là số phiên ẩn danh đã vào phòng; một người mở lại trình duyệt có thể được tính thêm. Báo cáo chỉ tồn tại đến khi phòng hết hạn, hãy tải về.'));
+    const dl = node('button', 'mt-2 w-full rounded-lg border border-brand-600 py-2 text-sm font-medium text-brand-600', 'Tải báo cáo (CSV, mở bằng Excel)');
+    dl.onclick = () => {
+      const d = new Date(ts || Date.now());
+      const title = `Phòng họp ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      download(new File([RR.toCsv(rep, langName, { title, ts: ts || Date.now() })], `Bao-cao-phong-hop-${fileStamp()}.csv`, { type: 'text/csv;charset=utf-8' }));
+    };
+    box.appendChild(dl);
+    return box;
+  }
+  function summaryBlock(kit, id, expiresAtMs) {
+    const box = node('div', 'mt-4 rounded-xl border border-slate-200 p-3');
+    box.appendChild(node('h3', 'text-sm font-semibold text-brand-700', 'Tóm tắt gửi người tham dự'));
+    box.appendChild(node('p', 'mt-1 text-xs text-slate-500', 'Tạo bản tóm tắt bằng Claude (nút "Sao chép lời nhắc tóm tắt bằng Claude" ở mục Lưu đoạn chat), rồi dán kết quả vào đây. Người xem sẽ thấy bản tóm tắt, tự dịch sang ngôn ngữ của họ.'));
+    const sel = node('select', 'mt-2 w-full rounded-lg border border-slate-300 px-2 py-2 text-sm');
+    sel.setAttribute('aria-label', 'Ngôn ngữ của bản tóm tắt');
+    for (const [k, v] of Object.entries(LANGS)) { const o = node('option', '', 'Viết bằng ' + v.name); o.value = k; sel.appendChild(o); }
+    sel.value = 'vi';
+    const ta = node('textarea', 'mt-2 min-h-[7rem] w-full rounded-lg border border-slate-300 p-2 text-sm');
+    ta.maxLength = 20000; ta.placeholder = 'Dán bản tóm tắt vào đây…';
+    ta.value = room.sumDraft; ta.oninput = () => { room.sumDraft = ta.value; };
+    const st = node('p', 'mt-1 text-xs text-slate-500');
+    const bt = node('button', 'mt-2 w-full rounded-xl bg-brand-600 py-2.5 text-sm font-medium text-white', 'Đăng tóm tắt cho người xem');
+    bt.onclick = async () => {
+      const text = ta.value.trim();
+      if (!text) { toast('Chưa có nội dung tóm tắt'); return; }
+      bt.disabled = true;
+      try {
+        await kit.setSummary(id, expiresAtMs, { text, lang: sel.value });
+        const d = new Date(); st.textContent = `Đã đăng lúc ${pad(d.getHours())}:${pad(d.getMinutes())}. Người xem sẽ thấy ngay.`;
+      } catch (e) { st.textContent = e && e.code === 'permission-denied' ? 'Không đủ quyền: cần xuất bản lại quy tắc Firestore (docs/FIREBASE-SETUP.md mục 9.6).' : 'Không đăng được: ' + ((e && (e.code || e.message)) || e); }
+      bt.disabled = false;
+    };
+    kit.getSummary(id).then(sm => { if (sm) { if (!ta.value) { ta.value = sm.text; room.sumDraft = sm.text; } if (LANGS[sm.lang]) sel.value = sm.lang; const d = new Date(sm.ts); st.textContent = `Bản đã đăng lúc ${pad(d.getHours())}:${pad(d.getMinutes())}.`; } }).catch(() => {});
+    box.append(sel, ta, bt, st);
+    return box;
+  }
+  function liveReportBlock() {
+    const wrap = node('div', 'mt-4');
+    const bt = node('button', 'w-full rounded-lg border border-brand-600 py-2 text-sm font-medium text-brand-600', 'Xem báo cáo phòng họp');
+    const show = () => { wrap.replaceChildren(reportBlock(room.liveRep.rep, room.liveRep.ts), bt); bt.textContent = 'Cập nhật báo cáo'; };
+    bt.onclick = async () => {
+      bt.disabled = true; bt.textContent = 'Đang tính…';
+      try { room.liveRep = { rep: await collectReport(room.kit, room.id), ts: Date.now() }; show(); }
+      catch (e) { bt.textContent = room.liveRep ? 'Cập nhật báo cáo' : 'Xem báo cáo phòng họp'; toast('Không tính được báo cáo: ' + ((e && (e.code || e.message)) || e)); }
+      bt.disabled = false;
+    };
+    if (room.liveRep) show(); else wrap.appendChild(bt);
+    return wrap;
+  }
+
   function renderRoom() {
+    const ae = document.activeElement;
+    if (ae && ae.tagName === 'TEXTAREA' && el.roomBody.contains(ae)) return; // đang gõ tóm tắt: giữ nguyên, tránh mất bàn phím và nội dung
     const b = el.roomBody;
     b.innerHTML = '';
     if (!roomEnabled) {
@@ -2260,6 +2338,14 @@
       return;
     }
     if (!room.active) {
+      const lr = room.lastReport;
+      if (lr) {
+        b.appendChild(node('p', 'text-sm font-medium text-slate-700', 'Phòng vừa kết thúc'));
+        b.appendChild(reportBlock(lr.rep, lr.ts));
+        if (!lr.wiped && lr.expiresAtMs > Date.now() && room.kit) b.appendChild(summaryBlock(room.kit, lr.id, lr.expiresAtMs));
+        else if (lr.wiped) b.appendChild(node('p', 'mt-3 text-xs text-slate-500', 'Nội dung phòng đã xóa nên người xem không còn xem lại hay nhận tóm tắt được.'));
+        b.appendChild(node('h3', 'mt-5 border-t border-slate-200 pt-3 text-sm font-semibold text-brand-700', 'Tạo phòng mới'));
+      }
       b.appendChild(node('p', 'text-sm text-slate-600', 'Tạo một phòng để người trong phòng họp quét mã QR bằng điện thoại, xem chữ gốc và chữ dịch theo thời gian thực và tự chọn ngôn ngữ hiển thị.'));
       b.appendChild(node('p', 'mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-800', 'Lưu ý: nội dung họp sẽ được lưu trên máy chủ Firebase tối đa 24 giờ. Chỉ chia sẻ mã QR cho người được phép xem. Người xem chỉ đọc, không gửi được nội dung.'));
       const bt = node('button', 'mt-4 w-full rounded-xl bg-brand-600 py-2.5 font-medium text-white', 'Tạo phòng họp');
@@ -2296,11 +2382,13 @@
     b.appendChild(node('p', 'mt-3 text-sm', `Đang xem: ${room.viewers.length} người${names.length ? ' (' + names.join(', ') + ')' : ''}`));
     if (room.writeMs) b.appendChild(node('p', 'text-xs text-slate-500', `Độ trễ gửi lên máy chủ gần nhất: ${room.writeMs} ms${room.liveOff ? ' · Chưa bật "đang nói" (cần xuất bản lại quy tắc Firestore)' : ''}`));
     b.appendChild(node('p', 'text-xs text-slate-500', `Phòng hết hạn lúc ${pad(exp.getHours())}:${pad(exp.getMinutes())} ngày ${pad(exp.getDate())}/${pad(exp.getMonth() + 1)}. Tối đa ${MAX_EXTRA} ngôn ngữ phụ được dịch thêm.`));
+    b.appendChild(liveReportBlock());
+    b.appendChild(summaryBlock(room.kit, room.id, room.expiresAtMs));
     const endWipe = node('button', 'mt-4 w-full rounded-xl bg-red-600 py-2 text-sm font-medium text-white', 'Kết thúc và xóa nội dung ngay');
-    endWipe.onclick = () => { if (confirm('Kết thúc phòng và XÓA toàn bộ nội dung trên máy chủ? Người xem sẽ không xem lại được. Không thể hoàn tác.')) closeRoomNow(true); };
+    endWipe.onclick = () => { if (confirm('Kết thúc phòng và XÓA toàn bộ nội dung trên máy chủ? Người xem sẽ không xem lại được và không nhận được tóm tắt. Báo cáo vẫn được giữ trên màn hình để tải về. Không thể hoàn tác.')) closeRoomNow(true); };
     b.appendChild(endWipe);
     const endKeep = node('button', 'mt-2 w-full rounded-xl border border-red-300 py-2 text-sm font-medium text-red-600', 'Kết thúc, giữ nội dung đến khi hết hạn');
-    endKeep.onclick = () => { if (confirm('Kết thúc phòng? Người xem sẽ không nhận thêm nội dung mới; nội dung vẫn xem được đến khi phòng hết hạn.')) closeRoomNow(false); };
+    endKeep.onclick = () => { if (confirm('Kết thúc phòng? Người xem sẽ không nhận thêm nội dung mới; nội dung và bản tóm tắt (nếu bạn đăng) vẫn xem và tải được đến khi phòng hết hạn.')) closeRoomNow(false); };
     b.appendChild(endKeep);
   }
   el.btnRoom.onclick = () => { renderRoom(); openModal(el.sheetRoom); };
@@ -2378,6 +2466,47 @@
     render = () => { baseRender(); renderLive(); };
     for (const slot of ['now', 'co']) kit.subscribeLive(id, slot, l => { lives[slot] = l; renderLive(); });
 
+    // Tóm tắt do chủ phòng đăng: hiện ở đầu khung chat, tự dịch sang ngôn ngữ của người xem
+    let sum = null;
+    const sumTr = {};
+    const sumBox = node('div', 'hidden mb-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm');
+    sumBox.style.borderLeft = '4px solid #0e7490';
+    el.hist.parentNode.insertBefore(sumBox, el.hist);
+    function renderSummary() {
+      if (!sum) { sumBox.classList.add('hidden'); return; }
+      sumBox.classList.remove('hidden');
+      let text = sum.text, note = '';
+      if (sum.lang !== lang) {
+        const key = sum.ts + '|' + lang;
+        if (sumTr[key] === undefined) {
+          sumTr[key] = null; note = `(đang dịch sang ${langName(lang)}…)`;
+          translateText(sum.text, sum.lang, lang).then(t => { sumTr[key] = t; renderSummary(); }).catch(() => { sumTr[key] = false; renderSummary(); });
+        } else if (sumTr[key]) text = sumTr[key];
+        else note = sumTr[key] === false ? `(chưa dịch được, hiển thị bản gốc ${langName(sum.lang)})` : `(đang dịch sang ${langName(lang)}…)`;
+      }
+      sumBox.replaceChildren(node('div', 'text-sm font-semibold text-brand-700', 'Tóm tắt cuộc họp'), node('div', 'mt-1 whitespace-pre-wrap break-words text-sm leading-snug text-slate-800', text));
+      if (note) sumBox.appendChild(node('div', 'mt-1 text-[0.6875rem] italic text-slate-400', note));
+    }
+    kit.subscribeSummary(id, sm => { sum = sm; renderSummary(); });
+    el.selViewerLang.addEventListener('change', renderSummary);
+
+    // Sau khi chủ phòng đóng phòng: vẫn xem lại và tải toàn văn đến khi phòng hết hạn
+    const endBox = node('div', 'mt-2 hidden rounded-xl bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200');
+    el.viewerBar.appendChild(endBox);
+    function showEnded(deleted) {
+      endBox.classList.remove('hidden');
+      if (deleted) { endBox.textContent = 'Chủ phòng đã kết thúc và xóa nội dung cuộc họp.'; return; }
+      const exp = new Date(info.expiresAtMs);
+      endBox.replaceChildren(node('div', '', `Cuộc họp đã kết thúc. Bạn vẫn xem lại được toàn văn đến ${pad(exp.getHours())}:${pad(exp.getMinutes())} ngày ${pad(exp.getDate())}/${pad(exp.getMonth() + 1)}.`));
+      const dl = node('button', 'mt-2 w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white', 'Tải toàn văn (.txt) bằng ' + langName(lang));
+      dl.onclick = () => {
+        const head = sumBox.classList.contains('hidden') ? '' : 'TÓM TẮT\n' + sumBox.children[1].textContent + '\n\nTOÀN VĂN\n';
+        const body = RR.toTranscript(msgs, lang, { title: 'Toàn văn cuộc họp' });
+        download(new File(['﻿' + head + body], `Toan-van-cuoc-hop-${fileStamp()}.txt`, { type: 'text/plain;charset=utf-8' }));
+      };
+      endBox.appendChild(dl);
+    }
+
     // Đọc bản dịch bằng tai nghe: chỉ đọc tin mới, bỏ qua lời cùng ngôn ngữ của người xem
     const EAR_WAIT_MS = 6000;
     let earOn = false, earSeen = null, earBusy = false;
@@ -2453,8 +2582,8 @@
     kit.subscribeMessages(id, list => { msgs = list; onMsgs(list); if (!ended) el.viewerStatus.textContent = 'Đang xem trực tiếp'; render(); },
       e => { el.viewerStatus.textContent = 'Mất kết nối: ' + (e.code || e.message); });
     kit.subscribeRoom(id, r => {
-      if (!r) { ended = true; el.viewerStatus.textContent = 'Chủ phòng đã kết thúc và xóa phòng họp'; }
-      else if (r.status === 'closed') { ended = true; el.viewerStatus.textContent = 'Chủ phòng đã kết thúc phòng họp'; }
+      if (!r) { ended = true; el.viewerStatus.textContent = 'Chủ phòng đã kết thúc và xóa phòng họp'; showEnded(true); }
+      else if (r.status === 'closed') { ended = true; el.viewerStatus.textContent = 'Chủ phòng đã kết thúc phòng họp'; showEnded(false); }
     }, () => {});
   }
 

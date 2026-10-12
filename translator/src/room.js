@@ -113,6 +113,7 @@ function create(cfg) {
       await deleteDoc(liveRef(id, 'now')).catch(() => {});
       await deleteDoc(liveRef(id, 'co')).catch(() => {});
       await deleteDoc(secretRef(id)).catch(() => {});
+      await deleteDoc(doc(db, 'rooms', id, 'summary', 'main')).catch(() => {});
       await pushAll(collection(db, 'rooms', id, 'cohosts')).catch(() => {});
       await pushAll(collection(db, 'rooms', id, 'viewers'));
       await Promise.all(batches);
@@ -153,6 +154,26 @@ function create(cfg) {
 
     async joinAsViewer(id, expiresAtMs, lang) {
       await setDoc(viewerRef(id, uid), { lang, ts: Date.now(), expiresAt: Timestamp.fromMillis(expiresAtMs) });
+    },
+    // Danh sách người xem kèm thời điểm vào (chủ phòng đọc để làm báo cáo)
+    async listViewers(id) {
+      const snap = await getDocs(collection(db, 'rooms', id, 'viewers'));
+      return snap.docs.map(d => ({ uid: d.id, lang: d.data().lang, ts: d.data().ts || 0 }));
+    },
+    async getMessages(id) {
+      const snap = await getDocs(query(msgs(id), orderBy('ts', 'asc')));
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    },
+    // Bản tóm tắt sau họp: một tài liệu duy nhất do chủ phòng đăng
+    async setSummary(id, expiresAtMs, { text, lang }) {
+      await setDoc(doc(db, 'rooms', id, 'summary', 'main'), { text, lang, ts: Date.now(), expiresAt: Timestamp.fromMillis(expiresAtMs) });
+    },
+    async getSummary(id) {
+      const s = await getDoc(doc(db, 'rooms', id, 'summary', 'main'));
+      return s.exists() ? s.data() : null;
+    },
+    subscribeSummary(id, cb) {
+      return onSnapshot(doc(db, 'rooms', id, 'summary', 'main'), snap => cb(snap.exists() ? snap.data() : null), () => {});
     },
     subscribeViewers(id, cb, onError) {
       return onSnapshot(collection(db, 'rooms', id, 'viewers'), snap => {

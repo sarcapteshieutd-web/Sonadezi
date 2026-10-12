@@ -320,3 +320,14 @@ Dùng khi một micro không đủ phủ cả phòng: máy chủ phòng nói m�
 - Vì micro máy này vẫn thu được tiếng bên kia và tiếng loa đọc dịch, ứng dụng **bỏ qua các câu độ tin cậy thấp (< 0,7)** và, ngay sau khi máy này gửi một câu, bỏ các câu độ tin cậy dưới 0,9 trong khoảng thời gian máy kia đang đọc bản dịch (nghi là tiếng vọng). Các lần bỏ câu được ghi trong **Nhật ký nghe/đọc** (dòng "hai máy: bỏ câu…"). Câu nói thật, rõ, gần micro không bị ảnh hưởng.
 - **Khuyến nghị:** nếu bật "Đọc bản dịch ra loa" thì để âm lượng vừa phải hoặc dùng **tai nghe/loa gần người nghe**, tránh loa hướng thẳng vào micro máy kia, nếu không bản dịch đọc to sẽ bị thu lại và dịch ngược (vòng lặp). Trình duyệt iPad/iPhone thường không báo độ tin cậy nên bộ lọc này không có tác dụng ở đó.
 - Chưa thể kiểm chứng bằng thử nghiệm âm thanh thật: nếu vẫn còn câu rác, hãy gửi lại ảnh Nhật ký ở cả hai máy để chỉnh ngưỡng.
+
+## 29. Báo cáo phòng họp, xem lại toàn văn và tóm tắt sau họp
+**Báo cáo (chủ phòng):** mở **Phòng họp xem chung** → bấm **Xem báo cáo phòng họp** để thấy lượt người xem, thời lượng, số câu, số ngôn ngữ người xem chọn (kèm tỷ lệ). Bấm **Tải báo cáo (CSV)** để lưu và mở bằng Excel. Khi bấm kết thúc phòng, báo cáo được chốt trước khi đóng/xóa và vẫn hiện ở cùng cửa sổ (mục "Phòng vừa kết thúc") để tải về.
+- "Lượt người xem" là số phiên ẩn danh đã vào phòng; một người mở lại trình duyệt có thể được tính thêm. Ứng dụng chưa đo thời gian xem của từng người.
+- Báo cáo và nội dung phòng chỉ tồn tại đến khi phòng hết hạn (tối đa 24 giờ): hãy tải ngay sau họp.
+
+**Người xem sau họp:** khi chủ phòng chọn *Kết thúc, giữ nội dung đến khi hết hạn*, người xem thấy thông báo "Cuộc họp đã kết thúc" kèm giờ được xem lại, và nút **Tải toàn văn (.txt)** bằng ngôn ngữ họ đang chọn (kèm bản tóm tắt nếu có). Chọn *Kết thúc và xóa nội dung* thì người xem không xem lại được.
+
+**Tóm tắt (chủ phòng):** trong **Phòng họp xem chung**, ô **Tóm tắt gửi người tham dự**: tạo bản tóm tắt bằng Claude (nút "Sao chép lời nhắc tóm tắt bằng Claude" ở Lưu đoạn chat, đính kèm tệp .txt), dán kết quả, chọn ngôn ngữ của bản tóm tắt, bấm **Đăng tóm tắt cho người xem**. Người xem thấy thẻ "Tóm tắt cuộc họp" ở đầu khung chat, tự dịch sang ngôn ngữ của họ (dịch bằng bộ dịch của ứng dụng). Có thể đăng cả sau khi đã kết thúc phòng (nếu giữ nội dung) và đăng lại để thay bản cũ.
+- Ứng dụng **không gọi AI tự động** nên không phát sinh chi phí và không gửi nội dung họp cho bên thứ ba.
+- Cần dán lại quy tắc Firestore mới (xem `docs/FIREBASE-SETUP.md` mục 9.6).
