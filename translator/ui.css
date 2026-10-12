@@ -125,3 +125,38 @@ body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "S
 #sheet details { border-radius: 12px; }
 #sheet summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; }
 #sheet .rounded-lg.border.bg-slate-50 { border-radius: 14px; background: #f8fafc; }
+
+/* ===== Bước 4: iPad/laptop dùng gần hết màn hình, khung chat rộng và cao hơn ===== */
+@media (min-width: 640px) {
+  #app { max-width: none; padding-left: 1.5rem; padding-right: 1.5rem; }
+  #app > header { margin-left: -1.5rem; margin-right: -1.5rem; padding-left: 1.5rem; padding-right: 1.5rem; }
+  #dock { margin-left: -1.5rem; margin-right: -1.5rem; padding-left: 1.5rem; padding-right: 1.5rem; }
+}
+@media (min-width: 768px) {
+  /* hàng trên cùng: ngôn ngữ, thanh họp và công cụ nằm cùng một hàng để nhường chiều cao cho khung chat */
+  #topRow { flex-direction: row; flex-wrap: wrap; align-items: center; gap: .75rem; }
+  #langBar { width: 26rem; max-width: 100%; }
+  #meetingBar { margin-top: 0; flex: 1 1 24rem; }
+  #chatBar { margin: 0 0 0 auto; }
+  /* dải dưới: ô nhập bên trái, điều khiển micro bên phải */
+  #dock { display: flex; align-items: center; gap: 1.5rem; }
+  #dock #inputRow { flex: 1; }
+  #dock > div:nth-child(2) { margin-top: 0; width: 26rem; flex: none; }
+  #micHint { display: none; }
+  #btnMic { width: 4.5rem; height: 4.5rem; }
+}
+/* bong bóng rộng hơn trên màn lớn, chữ dễ đọc từ xa */
+@media (min-width: 768px) {
+  #history > div > div { max-width: 78%; }
+  #history .font-semibold.text-base { font-size: 1.375rem; }
+  #history .text-\[0\.9375rem\] { font-size: 1.125rem; }
+  #histWrap { padding: 1rem 1.25rem; }
+}
+@media (min-width: 1280px) {
+  #history > div > div { max-width: 66%; }
+  #history .font-semibold.text-base { font-size: 1.5rem; }
+}
+@media (min-width: 768px) { #dock > div:nth-child(2) { width: min(24rem, 46%); } #meetingBar { flex: 1 1 18rem; min-width: 0; } }
+@media (min-width: 1024px) and (max-width: 1279px) { #mbHead > span:nth-child(2) { display: none; } }
+@media (min-width: 1280px) { #mbHead > span:nth-child(2) { display: inline; } }
+@media (min-width: 768px) and (max-width: 1023px) { #meetingBar { flex: 1 1 100%; order: 3; } #chatBar { align-self: flex-end; } }
