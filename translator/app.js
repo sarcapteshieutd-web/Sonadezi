@@ -1309,6 +1309,7 @@
     draining = true;
     state.reading = true; renderTalkStatus();
     if (state.conf) { // hội nghị: không tắt micro, đọc dồn thì tăng tốc để bắt kịp
+      micLog('hội nghị: bắt đầu đọc bản dịch (micro vẫn mở)');
       try {
         while (speechQueue.length && state.meeting) {
           const item = speechQueue.shift();
@@ -1319,6 +1320,10 @@
         speechBoost = 1;
         draining = false;
         state.reading = false; renderTalkStatus();
+        micLog('hội nghị: đọc xong, làm mới phiên nghe');
+        // Trên iPad/Safari, phát tiếng trong lúc đang nghe thường làm phiên nhận dạng "điếc" mà không báo lỗi:
+        // đọc xong thì mở phiên nghe mới để chắc chắn nhận được người nói tiếp theo
+        if (state.meeting && wantListening && !state.cloudActive) refreshSession();
       }
       return;
     }
@@ -1338,6 +1343,15 @@
       if (state.meeting) { if (state.cloudActive) window.CloudSTT.resume(); else beginSession(); } // đọc xong: nghe lại
     }
   }
+  // Đóng phiên nghe hiện tại (chốt phần đang nói dở) rồi mở phiên mới
+  function refreshSession() {
+    if (rec) { rec.onend = null; rec.onresult = null; try { rec.abort(); } catch (_) {} }
+    if (utt.lastText && utt.lastText.trim()) forceCommit();
+    micFail = 0;
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => { if (state.meeting && wantListening && !state.cloudActive && !state.speaking) beginSession(); }, 150);
+  }
+  let refreshTimer = 0;
   function onMeetingResult(ev) {
     micFail = 0; // nghe được thì micro đang ổn
     if (state.speaking) { micLog('bỏ qua kết quả nghe vì đang đọc'); return; } // đang đọc bản dịch: bỏ qua kết quả lẻ còn sót
