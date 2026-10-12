@@ -905,6 +905,8 @@
   // ---------- Cải thiện nhận diện: từ điển sửa lỗi và lọc độ tin cậy ----------
   const RCFG = (window.APP_CONFIG && window.APP_CONFIG.recognition) || {};
   const MIN_CONF = typeof RCFG.minConfidence === 'number' ? RCFG.minConfidence : 0;
+  const TWO_MIN_CONF = 0.7;
+  let twoEchoUntil = 0; // sau khi gửi một câu lên phòng, máy kia sẽ đọc to bản dịch: khoảng thời gian này câu độ tin cậy trung bình bị coi là tiếng vọng
   const escRe = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const GLOSSARY = (RCFG.glossary || []).flatMap(g =>
     (g.variants || []).filter(Boolean).map(v => ({ re: new RegExp('(^|[^\\p{L}\\p{N}])' + escRe(v.trim()).replace(/\s+/g, '\\s+') + '(?![\\p{L}\\p{N}])', 'giu'), to: g.to, alt: g.en }))
@@ -919,7 +921,13 @@
   // Bỏ câu đã chốt mà trình duyệt chấm độ tin cậy quá thấp (0 = trình duyệt không báo, giữ lại)
   function heard(result) {
     const alt = result[0];
-    if (result.isFinal && MIN_CONF > 0 && alt.confidence > 0 && alt.confidence < MIN_CONF) return '';
+    if (result.isFinal && alt.confidence > 0) {
+      if (MIN_CONF > 0 && alt.confidence < MIN_CONF) return '';
+      if (state.twoMode) { // hai máy đặt đối diện: micro máy này cũng thu tiếng người kia và tiếng loa đọc dịch, thường bị chấm điểm thấp
+        if (alt.confidence < TWO_MIN_CONF) { micLog('hai máy: bỏ câu độ tin cậy thấp (' + alt.confidence.toFixed(2) + '): ' + alt.transcript.slice(0, 20)); return ''; }
+        if (alt.confidence < 0.9 && Date.now() < twoEchoUntil) { micLog('hai máy: bỏ câu nghi là tiếng vọng từ loa máy kia: ' + alt.transcript.slice(0, 20)); return ''; }
+      }
+    }
     return alt.transcript;
   }
 
@@ -2111,6 +2119,7 @@
         } else throw e;
       }
       room.writeMs = Date.now() - t0;
+      if (state.twoMode) twoEchoUntil = Date.now() + 1500 + (item.out || '').length * 90;
       const rec = { id, src: item.src, out: item.out, from: item.from, to: item.to, tr: {} };
       room.recent.push(rec);
       if (room.recent.length > 40) room.recent.shift();

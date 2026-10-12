@@ -313,3 +313,10 @@ Thanh họp chỉ còn một hàng: **giờ ghi · Đang nghe: (ngôn ngữ) · 
 
 ## 27. Micro bị ngắt giữa cuộc họp (lỗi audio-capture)
 Trên một số thiết bị (đặc biệt iPad), trình duyệt đôi khi báo lỗi `audio-capture` (micro bị ngắt thoáng qua). Trước đây lỗi này làm **cả cuộc họp tự dừng** nên câu sau không được dịch. Nay ứng dụng giữ nguyên cuộc họp, thanh tín hiệu chuyển 🔴 **Micro bị ngắt · đang thử mở lại…** và tự mở lại micro với khoảng chờ tăng dần (0,4 → 0,8 → 1,6 → 3 giây). Sau **6 lần liên tiếp** không mở lại được, ứng dụng dừng thử nhưng **vẫn giữ cuộc họp** và hiện nút **Mở lại micro** trên thanh tín hiệu. Bấm nút này để nghe tiếp mà không mất các bản dịch đã có. Nếu lỗi lặp lại thường xuyên, hãy sao chép **Nhật ký nghe/đọc** (mục 24) để chẩn đoán.
+
+## 28. Hai laptop đặt đối diện (phòng họp lớn)
+Dùng khi một micro không đủ phủ cả phòng: máy chủ phòng nói một ngôn ngữ (ví dụ Anh), mở **Phòng họp** rồi quét mã/mở liên kết "máy thứ hai" trên laptop còn lại (ngôn ngữ tự đảo, ví dụ Việt). Bấm **Chế độ họp** trên **cả hai máy**.
+- Mỗi máy đặt **gần người nói ngôn ngữ của mình**, hai máy quay micro về hai phía; **chỉ có 1 người nói tại một thời điểm**.
+- Vì micro máy này vẫn thu được tiếng bên kia và tiếng loa đọc dịch, ứng dụng **bỏ qua các câu độ tin cậy thấp (< 0,7)** và, ngay sau khi máy này gửi một câu, bỏ các câu độ tin cậy dưới 0,9 trong khoảng thời gian máy kia đang đọc bản dịch (nghi là tiếng vọng). Các lần bỏ câu được ghi trong **Nhật ký nghe/đọc** (dòng "hai máy: bỏ câu…"). Câu nói thật, rõ, gần micro không bị ảnh hưởng.
+- **Khuyến nghị:** nếu bật "Đọc bản dịch ra loa" thì để âm lượng vừa phải hoặc dùng **tai nghe/loa gần người nghe**, tránh loa hướng thẳng vào micro máy kia, nếu không bản dịch đọc to sẽ bị thu lại và dịch ngược (vòng lặp). Trình duyệt iPad/iPhone thường không báo độ tin cậy nên bộ lọc này không có tác dụng ở đó.
+- Chưa thể kiểm chứng bằng thử nghiệm âm thanh thật: nếu vẫn còn câu rác, hãy gửi lại ảnh Nhật ký ở cả hai máy để chỉnh ngưỡng.
