@@ -51,7 +51,7 @@
     btnExport: $('btnExport'), btnDonate: $('btnDonate'), sheetExport: $('sheetExport'), sheetDonate: $('sheetDonate'),
     expInfo: $('expInfo'), expTxt: $('expTxt'), expCsv: $('expCsv'), expShare: $('expShare'), expAi: $('expAi'),
     donateBody: $('donateBody'), donateTitle: $('donateTitle'),
-    btnMeeting: $('btnMeeting'), btnConf: $('btnConf'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
+    btnMeeting: $('btnMeeting'), btnConf: $('btnConf'), btnModeChat: $('btnModeChat'), modeDesc: $('modeDesc'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
     chkMeetingSpeak: $('chkMeetingSpeak'), chkConf: $('chkConf'), meetingSpeaking: $('meetingSpeaking'),
     chkAutoTurn: $('chkAutoTurn'), meetingLang: $('meetingLang'),
     btnReopenMic: $('btnReopenMic'), micWarn: $('micWarn'), btnMbOpts: $('btnMbOpts'), mbOpts: $('mbOpts'), micLogView: $('micLogView'), btnMicLogCopy: $('btnMicLogCopy'), talkStatus: $('talkStatus'), talkText: $('talkText'), chkBilingual: $('chkBilingual'), selMic: $('selMic'), selSttSpeed: $('selSttSpeed'), sttStatus: $('sttStatus'), sttLevel: $('sttLevel'), sttLevelBar: $('sttLevelBar'),
@@ -1414,12 +1414,21 @@
     el.meetingBar.classList.toggle('hidden', !on);
     el.meetingBar.classList.toggle('flex', on);
     syncConfBtn();
-    el.btnMeeting.textContent = on ? 'Dừng họp' : 'Chế độ họp';
-    el.btnMeeting.classList.toggle('bg-red-600', on);
-    el.btnMeeting.classList.toggle('text-white', on);
-    el.btnMeeting.classList.toggle('border-red-600', on);
-    el.btnMeeting.classList.toggle('text-brand-600', !on);
-    el.btnMeeting.classList.toggle('border-brand-600', !on);
+    syncModeUI();
+  }
+  // Bộ chọn chế độ: Hội thoại / Họp / Hội nghị / Biên bản (chỉ đổi hình thức, hành vi giữ nguyên ở các nút)
+  function syncModeUI() {
+    const MODE_DESC = {
+      chat: 'Dịch từng câu: chạm micro để nói hoặc gõ văn bản.',
+      meeting: 'Tự nghe liên tục. Đổi người nói bằng ⇄ hoặc phím Space.',
+      conf: 'Nghe bản dịch bằng tai nghe; micro không tắt khi đọc.',
+      minutes: 'Chỉ ghi chữ tiếng Việt, không dịch. Bấm Dừng để lấy lời nhắc tóm tắt.'
+    };
+    const mode = state.minutes ? 'minutes' : !state.meeting ? 'chat' : state.conf ? 'conf' : 'meeting';
+    for (const [k, b] of [['chat', el.btnModeChat], ['meeting', el.btnMeeting], ['conf', el.btnConf], ['minutes', $('btnMinutes')]]) {
+      if (b) b.setAttribute('aria-pressed', String(k === mode));
+    }
+    if (el.modeDesc) el.modeDesc.textContent = MODE_DESC[mode];
   }
 
   // ----- Họp song ngữ: nhận dạng đám mây (Google Speech-to-Text) tự phát hiện ngôn ngữ từng câu -----
@@ -1625,10 +1634,8 @@
   };
   function syncConfBtn() {
     const on = state.meeting && state.conf;
-    el.btnConf.textContent = on ? '⏹ Dừng hội nghị' : '🎧 Hội nghị';
     el.btnConf.setAttribute('aria-label', on ? 'Dừng chế độ hội nghị' : 'Chế độ hội nghị: nghe bản dịch bằng tai nghe');
-    el.btnConf.classList.toggle('bg-red-600', on);
-    el.btnConf.classList.toggle('bg-brand-600', !on);
+    syncModeUI();
   }
   function syncConf() {
     if (state.conf) { state.autoTurn = false; el.chkAutoTurn.checked = false; }
@@ -1654,6 +1661,7 @@
     toast('Chế độ hội nghị: hãy cắm tai nghe và chọn làm thiết bị phát của máy');
   };
   el.btnMeeting.onclick = () => (state.meeting ? stopMeeting() : startMeeting());
+  el.btnModeChat.onclick = () => { if (state.meeting) stopMeeting(); };
   el.btnMeetingStop.onclick = stopMeeting;
 
   // ---------- Ghi biên bản: chế độ riêng, chỉ ghi chữ tiếng Việt, không dịch, không đẩy lên phòng họp ----------
@@ -1667,12 +1675,7 @@
     document.body.classList.toggle('minutes', on);
     mi.label.classList.toggle('hidden', !on);
     mi.hint.classList.toggle('hidden', !on);
-    mi.btn.textContent = on ? '⏹ Dừng ghi biên bản' : '📝 Ghi biên bản';
-    mi.btn.classList.toggle('bg-red-600', on);
-    mi.btn.classList.toggle('text-white', on);
-    mi.btn.classList.toggle('border-red-600', on);
-    mi.btn.classList.toggle('text-brand-600', !on);
-    mi.btn.classList.toggle('border-brand-600', !on);
+    syncModeUI();
   }
   function minutesItems(start, end) { return state.log.filter(i => i.minutes && i.ts >= start && i.ts <= end); }
   function buildMinutesPrompt(info, start, end, items) {

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Dịch Thời Gian Thực</title>
+  <title>Phiên dịch trực tuyến — Sonadezi Long Thành</title>
   <meta name="description" content="Dịch thời gian thực Anh - Trung - Việt bằng giọng nói và văn bản." />
 
   <!-- PWA -->
@@ -12,7 +12,7 @@
   <meta name="color-scheme" content="light" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="Dịch nhanh" />
+  <meta name="apple-mobile-web-app-title" content="Phiên dịch trực tuyến" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
@@ -55,13 +55,14 @@
     body:not(.dual) #liveDual { display: none !important; }
     .dual #liveDual:not(.hidden) { display: grid; }
     .big #chatBar { display: none; }
+    .big #modeBar { display: none; }
     /* Nút thoát màn hình lớn: chỉ hiện ở chế độ này (điện thoại không có phím ESC) */
     #btnBigExit { display: none; position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px); right: 10px; z-index: 60; align-items: center; gap: 6px; border: 0; border-radius: 9999px; background: rgba(15, 23, 42, .75); color: #fff; padding: 9px 14px; font-size: 14px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
     .big #btnBigExit { display: inline-flex; }
     .big #inputRow, .big #langBar, .big #viewerBar { display: none; }
     /* Chế độ người xem: chỉ đọc */
-    .viewer #btnDonate, .viewer #btnExport, .viewer #btnClearHist, .viewer #btnSettings, .viewer #btnInstall,
-    .viewer #langBar, .viewer #dock, .viewer #meetingBar, .viewer #btnRoom { display: none !important; }
+    .viewer #emptyTips, .viewer #btnDonate, .viewer #btnExport, .viewer #btnClearHist, .viewer #btnSettings, .viewer #btnInstall,
+    .viewer #langBar, .viewer #dock, .viewer #meetingBar, .viewer #modeBar, .viewer #btnRoom { display: none !important; }
     /* Chế độ ghi biên bản: chỉ ghi chữ tiếng Việt, không dịch */
     .minutes #langBar, .minutes #btnConf, .minutes #btnMeeting, .minutes #btnMbOpts, .minutes #mbOpts, .minutes [data-hide-minutes] { display: none !important; }
     /* Màn hình chờ đầu phiên: vòng quỹ đạo xoay quanh logo khoảng 3 giây rồi mờ dần vào màn chính */
@@ -193,9 +194,6 @@
       </div>
       <div class="flex shrink-0 items-center">
         <button id="btnInstall" class="hidden rounded-full bg-brand-600 px-3 py-1.5 text-sm font-medium text-white">Cài app</button>
-        <button id="btnDonate" aria-label="Ủng hộ nhà phát hành" class="rounded-full p-1.5 text-rose-500 hover:bg-slate-100">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg>
-        </button>
         <button id="btnExport" aria-label="Lưu đoạn chat" class="rounded-full p-1.5 text-slate-500 hover:bg-slate-100">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
         </button>
@@ -269,6 +267,17 @@
       </div>
     </section>
 
+    <!-- Chọn chế độ -->
+    <section id="modeBar" class="mt-2 shrink-0 lg:mt-0" aria-label="Chế độ sử dụng">
+      <div role="group" class="mode-grp">
+        <button id="btnModeChat" type="button" class="mode-seg" aria-pressed="true">Hội thoại</button>
+        <button id="btnMeeting" type="button" class="mode-seg" aria-pressed="false">Họp</button>
+        <button id="btnConf" type="button" class="mode-seg" aria-pressed="false" aria-label="Chế độ hội nghị: nghe bản dịch bằng tai nghe"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M21 15a2 2 0 0 1-2 2h-1v-5h3zM3 15a2 2 0 0 0 2 2h1v-5H3z"/></svg>Hội nghị</button>
+        <button id="btnMinutes" type="button" class="mode-seg" aria-pressed="false">Biên bản</button>
+      </div>
+      <p id="modeDesc" class="mode-desc"></p>
+    </section>
+
     <!-- Thanh trạng thái chế độ họp -->
     <div id="meetingBar" class="mt-2 hidden shrink-0 flex-col lg:mt-0 lg:flex-1 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-5 gap-1.5 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
       <div id="mbHead" class="flex w-full flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -326,9 +335,13 @@
         <div id="dualHeadL" class="truncate"></div>
         <div id="dualHeadR" class="truncate"></div>
       </div>
-      <div id="emptyHint" class="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-slate-400">
+      <div id="emptyHint" class="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-slate-600">
         <img src="icons/logo-full.png" alt="Sonadezi Long Thành" class="h-24 w-auto opacity-80 mix-blend-multiply" width="85" height="100" />
         <p>Bấm micro hoặc gõ văn bản để bắt đầu.<br />Bấm ⇄ để đổi người nói.</p>
+        <ul id="emptyTips" class="mt-1 space-y-1 text-left text-xs text-slate-600">
+          <li>• Họp: tự nghe liên tục, bản dịch hiện ngay.</li>
+          <li>• Biểu tượng QR: mời người khác cùng xem bản dịch.</li>
+        </ul>
       </div>
       <div id="history" class="space-y-3"></div>
       <div id="liveDual" class="mt-3 hidden grid-cols-2 gap-3 lg:gap-5">
@@ -382,11 +395,7 @@
             <svg id="icoStop" class="hidden" width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
           </button>
         </div>
-        <div class="flex min-w-0 flex-col items-stretch gap-1.5 justify-self-end">
-          <button id="btnConf" aria-label="Chế độ hội nghị: nghe bản dịch bằng tai nghe" class="whitespace-nowrap rounded-full bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white shadow-sm">🎧 Hội nghị</button>
-          <button id="btnMeeting" class="whitespace-nowrap rounded-full border border-brand-600 px-2.5 py-1.5 text-xs font-medium text-brand-600">Chế độ họp</button>
-          <button id="btnMinutes" class="whitespace-nowrap rounded-full border border-brand-600 px-2.5 py-1.5 text-xs font-medium text-brand-600">📝 Ghi biên bản</button>
-        </div>
+        <span aria-hidden="true"></span>
       </div>
       <p id="micHint" class="mt-1 text-center text-xs text-slate-500 lg:hidden">Chạm để nói</p>
     </div>
@@ -519,6 +528,11 @@
           <button id="btnMicLogCopy" type="button" class="mt-2 rounded-lg border border-slate-300 px-3 py-1 text-xs">Sao chép nhật ký</button>
         </details>
         <p class="mt-1 text-xs text-slate-500">Dịch theo cụm và dịch phần đuôi khi chưa dứt câu có thể kém chính xác hơn dịch cả câu, nhất là khi trật tự từ khác nhau (Việt, Trung); bản dịch tạm có thể đổi khi người nói nói thêm. Tự chốt câu có thể cắt câu giữa chừng nếu người nói ngừng giữa ý. Hãy thử và đối chiếu trước khi dùng cho họp quan trọng.</p>
+      </div>
+      <div class="mt-5 border-t border-slate-200 pt-4">
+        <h3 class="text-sm font-semibold">Giới thiệu</h3>
+        <p class="mt-1 text-xs text-slate-600">Phiên dịch trực tuyến — Sonadezi Long Thành. Dịch Anh – Trung – Việt bằng giọng nói và văn bản.</p>
+        <button id="btnDonate" type="button" class="mt-3 w-full rounded-xl border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50">Ủng hộ và gói sử dụng</button>
       </div>
       <button id="btnSave" class="mt-4 w-full rounded-xl bg-brand-600 py-2.5 font-medium text-white">Lưu</button>
     </div>

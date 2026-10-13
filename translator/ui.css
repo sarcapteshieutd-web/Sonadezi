@@ -43,7 +43,7 @@ body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "S
 #app > header h1 { color: #fff; font-size: .8125rem; }
 #app > header p { color: rgba(255,255,255,.72); }
 #app > header img { background: #fff; border-radius: 10px; padding: 3px 5px; height: 1.75rem; box-sizing: content-box; }
-#app > header button { color: #fff; background: rgba(255,255,255,.12); border-radius: 12px; margin-left: 4px; min-width: 38px; min-height: 38px; width: 38px; height: 38px; margin-left: 2px; transition: background .15s; }
+#app > header button { color: #fff; background: rgba(255,255,255,.12); border-radius: 12px; margin-left: 4px; min-width: 44px; min-height: 44px; width: 44px; height: 44px; margin-left: 2px; transition: background .15s; }
 #app > header button svg { width: 20px; height: 20px; }
 #app > header > div:first-child { min-width: 0; flex: 1 1 auto; }
 #app > header > div:last-child { flex: none; }
@@ -94,9 +94,6 @@ body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "S
 #btnClear, #btnSend { min-width: 48px; min-height: 48px; }
 #btnMic { box-shadow: 0 6px 18px rgba(13,71,146,.4); }
 #btnMic[aria-pressed="true"] { box-shadow: 0 0 0 8px rgba(220,38,38,.15), 0 6px 18px rgba(220,38,38,.35); }
-#btnConf { border-radius: 14px; font-weight: 600; }
-#btnMeeting { border-radius: 14px; font-weight: 600; }
-#btnMeeting:not(.bg-red-600) { background: #fff; }
 #micHint { color: #64748b; }
 #btnMbOpts { font-size: 1.125rem; }
 #app > header h1, #app > header p { overflow: hidden; text-overflow: ellipsis; }
@@ -104,7 +101,7 @@ body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "S
 #talkStatus .talk-dot { width: 10px; height: 10px; }
 @media (min-width: 1024px) { #mbHead #talkStatus { flex: 1 1 0; flex-wrap: nowrap; white-space: nowrap; min-width: 130px; } }
 #gate .gt-logo, #emptyHint img { mix-blend-mode: multiply; }
-@media (min-width: 640px) { #app > header h1 { font-size: .9375rem; } #app > header button { width: 42px; height: 42px; min-width: 42px; min-height: 42px; margin-left: 4px; } }
+@media (min-width: 640px) { #app > header h1 { font-size: .9375rem; } #app > header button { width: 44px; height: 44px; min-width: 44px; min-height: 44px; margin-left: 4px; } }
 
 /* ===== Bước 3: cửa sổ phụ (Cài đặt, Lưu chat, Quản trị, Ủng hộ, Phòng họp) ===== */
 #sheet, #sheetExport, #sheetAdmin, #sheetDonate, #sheetRoom { background: rgba(7,42,88,.45); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
@@ -160,3 +157,14 @@ body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "S
 @media (min-width: 1024px) and (max-width: 1279px) { #mbHead > span:nth-child(2) { display: none; } }
 @media (min-width: 1280px) { #mbHead > span:nth-child(2) { display: inline; } }
 @media (min-width: 768px) and (max-width: 1023px) { #meetingBar { flex: 1 1 100%; order: 3; } #chatBar { align-self: flex-end; } }
+
+/* ===== Bước 5: bộ chọn chế độ, trạng thái rỗng, nút Giới thiệu ===== */
+.mode-grp { display: flex; gap: 4px; padding: 4px; background: #e2e8f0; border-radius: 16px; }
+#modeBar .mode-seg { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: 0; border-radius: 12px; background: transparent; color: #475569; font-size: .875rem; font-weight: 600; white-space: nowrap; cursor: pointer; transition: background .15s, color .15s; }
+#modeBar .mode-seg:hover { background: rgba(255,255,255,.55); }
+#modeBar .mode-seg[aria-pressed="true"] { background: #fff; color: var(--brand); box-shadow: 0 1px 3px rgba(15,23,42,.15); }
+#modeBar .mode-seg[hidden] { display: none; }
+.mode-desc { margin: 4px 4px 0; font-size: .75rem; color: #475569; min-height: 1rem; }
+@media (min-width: 768px) { #modeBar { flex: 0 1 26rem; } .mode-desc { display: none; } }
+#btnDonate { min-height: 44px; }
