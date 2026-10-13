@@ -153,23 +153,30 @@
         <b>Tài khoản VIP</b>
         <span class="gt-line">Google Cloud Translation · Giọng Google WaveNet</span>
         <span class="gt-small">Lưu và xuất được đoạn chat · Có chế độ hội nghị · Dùng theo tháng, quản trị viên cấp quyền sau khi thanh toán</span>
+        <p id="gatePlan" class="gt-plan"></p>
         <form id="gateForm" autocomplete="on">
-          <input id="gateEmail" name="email" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Email" aria-label="Email" />
-          <input id="gatePass" name="password" type="password" autocomplete="current-password" placeholder="Mật khẩu" aria-label="Mật khẩu" />
+          <label class="gt-lab" for="gateEmail">Email</label>
+          <input id="gateEmail" name="email" type="email" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ten@congty.com" />
+          <label class="gt-lab" for="gatePass">Mật khẩu</label>
+          <div class="gt-pass"><input id="gatePass" name="password" type="password" autocomplete="current-password" /><button type="button" class="gt-eye" aria-pressed="false" aria-controls="gatePass" aria-label="Hiện mật khẩu">Hiện</button></div>
           <p id="gateErr" class="gt-err" role="alert"></p>
           <button id="gateLogin" type="submit" class="gt-btn">Đăng nhập VIP</button>
           <p class="gt-links"><button type="button" id="gateToReg" class="gt-link">Đăng ký tài khoản VIP</button> · <button type="button" id="gateForgot" class="gt-link">Quên mật khẩu</button></p>
         </form>
         <form id="regForm" hidden autocomplete="on">
-          <input id="regName" name="name" autocomplete="name" placeholder="Họ và tên" aria-label="Họ và tên" />
-          <input id="regEmail" name="email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="Email" aria-label="Email" />
-          <input id="regPass" name="password" type="password" autocomplete="new-password" placeholder="Mật khẩu (tối thiểu 8 ký tự)" aria-label="Mật khẩu" />
-          <input id="regPass2" name="password2" type="password" autocomplete="new-password" placeholder="Nhập lại mật khẩu" aria-label="Nhập lại mật khẩu" />
+          <label class="gt-lab" for="regName">Họ và tên</label>
+          <input id="regName" name="name" autocomplete="name" placeholder="Nguyễn Văn A" />
+          <label class="gt-lab" for="regEmail">Email</label>
+          <input id="regEmail" name="email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" placeholder="ten@congty.com" />
+          <label class="gt-lab" for="regPass">Mật khẩu <span class="gt-hint">(tối thiểu 8 ký tự)</span></label>
+          <div class="gt-pass"><input id="regPass" name="password" type="password" autocomplete="new-password" /><button type="button" class="gt-eye" aria-pressed="false" aria-controls="regPass" aria-label="Hiện mật khẩu">Hiện</button></div>
+          <label class="gt-lab" for="regPass2">Nhập lại mật khẩu</label>
+          <div class="gt-pass"><input id="regPass2" name="password2" type="password" autocomplete="new-password" /><button type="button" class="gt-eye" aria-pressed="false" aria-controls="regPass2" aria-label="Hiện mật khẩu">Hiện</button></div>
           <p id="regErr" class="gt-err" role="alert"></p>
           <button id="regSubmit" type="submit" class="gt-btn">Đăng ký</button>
           <p class="gt-links"><button type="button" id="regToLogin" class="gt-link">Đã có tài khoản? Đăng nhập</button></p>
         </form>
-        <div id="gateStatus" hidden>
+        <div id="gateStatus" hidden aria-live="polite">
           <p id="gsTitle" class="gs-title"></p>
           <p id="gsText" class="gs-text"></p>
           <div id="gsPay" class="gs-pay"></div>
@@ -178,7 +185,6 @@
           <p class="gt-links"><button type="button" id="gsLogout" class="gt-link">Đăng xuất</button></p>
         </div>
       </div>
-      <p id="gatePlan" class="gt-plan"></p>
     </div>
   </div>
 

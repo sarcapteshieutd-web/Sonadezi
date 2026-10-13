@@ -4,7 +4,8 @@
    - chuyển focus vào cửa sổ khi mở, giữ vòng Tab bên trong, trả focus về nút đã mở khi đóng
    - phím Esc đóng cửa sổ trên cùng
    - vô hiệu hóa nền phía sau (inert) khi có cửa sổ mở
-   - Cài đặt: báo "Có thay đổi chưa lưu" */
+   - Cài đặt: báo "Có thay đổi chưa lưu"
+   - Màn hình đăng nhập (#gate): khóa nền, chuyển focus, giữ vòng Tab; nút Hiện/Ẩn mật khẩu */
 (function () {
   'use strict';
   var sheets = Array.prototype.slice.call(document.querySelectorAll('#sheet, [data-modal]'));
@@ -36,6 +37,8 @@
     lastTrigger = e.target && e.target.closest ? e.target.closest('button,a,summary') : null;
   }, true);
 
+  var gate = document.getElementById('gate');
+  function gateOpen() { return !!gate && !gate.hidden; }
   var settings = document.getElementById('sheet');
   var dirtyNote = document.getElementById('dirtyNote');
   function setDirty(v) { if (dirtyNote) dirtyNote.classList.toggle('hidden', !v); }
@@ -51,7 +54,7 @@
       if (s === settings) setDirty(false);
     });
     var top = stack[stack.length - 1];
-    if (app) app.inert = stack.length > 0;
+    if (app) app.inert = stack.length > 0 || gateOpen();
     sheets.forEach(function (s) { s.inert = stack.length > 0 && s !== top; });
     document.body.classList.toggle('dlg-open', stack.length > 0);
     closed.forEach(function (s) {
@@ -68,15 +71,16 @@
 
   document.addEventListener('keydown', function (e) {
     var top = stack[stack.length - 1];
-    if (!top) return;
-    if (e.key === 'Escape') {
+    var gateBox = !top && gateOpen() ? gate.querySelector('.gt-box') : null;
+    if (!top && !gateBox) return;
+    if (e.key === 'Escape' && top) {
       e.preventDefault(); e.stopPropagation();
       var btn = top.querySelector('[data-close], #btnSheetClose');
       if (btn) btn.click(); else top.click();
       return;
     }
     if (e.key !== 'Tab') return;
-    var c = card(top), f = focusables(c), a = document.activeElement;
+    var c = top ? card(top) : gateBox, f = focusables(c), a = document.activeElement;
     if (!f.length) { e.preventDefault(); c.focus(); return; }
     var first = f[0], last = f[f.length - 1];
     if (!c.contains(a) || a === c) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
@@ -89,5 +93,29 @@
     settings.addEventListener('change', function () { setDirty(true); });
     var save = document.getElementById('btnSave');
     if (save) save.addEventListener('click', function () { setDirty(false); });
+  }
+
+  // ----- Màn hình đăng nhập: khóa nền, chuyển focus vào tiêu đề, nút Hiện/Ẩn mật khẩu -----
+  if (gate) {
+    var title = document.getElementById('gateTitle');
+    if (title) title.setAttribute('tabindex', '-1');
+    new MutationObserver(function () {
+      refresh();
+      if (gateOpen() && title) setTimeout(function () { if (gateOpen()) title.focus({ preventScroll: true }); }, 0);
+    }).observe(gate, { attributes: true, attributeFilter: ['hidden'] });
+    refresh();
+    if (gateOpen() && title) setTimeout(function () { title.focus({ preventScroll: true }); }, 0);
+    Array.prototype.forEach.call(gate.querySelectorAll('.gt-eye'), function (btn) {
+      btn.addEventListener('click', function () {
+        var input = document.getElementById(btn.getAttribute('aria-controls'));
+        if (!input) return;
+        var show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        btn.textContent = show ? 'Ẩn' : 'Hiện';
+        btn.setAttribute('aria-pressed', String(show));
+        btn.setAttribute('aria-label', show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu');
+        input.focus();
+      });
+    });
   }
 })();

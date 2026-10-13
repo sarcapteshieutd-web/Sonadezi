@@ -208,3 +208,32 @@ body.dlg-open #toast { bottom: auto; top: calc(12px + env(safe-area-inset-top));
 #sheet .set-about { border-top: 1px solid #e2e8f0; margin-top: .75rem; padding-top: 1rem; }
 #sheet .set-savebar { position: sticky; bottom: -1.25rem; margin: 1rem -1.25rem -1.25rem; padding: .75rem 1.25rem max(env(safe-area-inset-bottom), 1rem); background: #fff; border-top: 1px solid #e2e8f0; box-shadow: 0 -6px 12px rgba(15,23,42,.06); z-index: 2; }
 #sheet #dirtyNote { margin: 0 0 .5rem; font-size: .8125rem; font-weight: 600; color: #92400e; text-align: center; }
+
+/* ===== Bước 8: đăng nhập VIP và cửa sổ Quản trị ===== */
+#toast { z-index: 70; } /* thông báo luôn nằm trên màn hình đăng nhập và cửa sổ phụ */
+#gate .gt-lab { display: block; margin: .65rem 0 0; text-align: left; font-size: .8125rem; font-weight: 600; color: #334155; }
+#gate .gt-lab .gt-hint { font-weight: 400; color: #475569; }
+#gate .gt-lab + input, #gate .gt-lab + .gt-pass { margin-top: .25rem; }
+#gate .gt-pass { position: relative; }
+#gate .gt-pass input { padding-right: 4.5rem; margin-top: 0; }
+#gate .gt-eye { position: absolute; top: 0; right: 0; height: 100%; min-width: 4.25rem; min-height: 44px; border: 0; background: none; color: #0d4792; font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer; border-radius: 0 .6rem .6rem 0; }
+#gate .gt-links { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0 .25rem; color: #475569; }
+#gate .gt-link { min-height: 44px; padding: 0 .5rem; display: inline-flex; align-items: center; }
+#gate .gt-sub, #gate .gt-plan { color: #475569; }
+#gate .gt-card .gt-plan { margin: .5rem 0 0; font-size: .8125rem; font-weight: 600; color: #0d4792; }
+#gate .gs-pay > b:first-child { display: block; margin-bottom: .25rem; }
+#gate .gs-row { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "k k" "v c"; gap: 0 8px; align-items: center; padding: 6px 0; border-top: 1px solid #e2e8f0; }
+#gate .gs-k { grid-area: k; font-size: .75rem; color: #475569; }
+#gate .gs-pay .gs-v { grid-area: v; min-width: 0; text-align: left; font-size: .9375rem; overflow-wrap: anywhere; word-break: normal; }
+#gate .gs-row > .gs-v:last-child { grid-column: 1 / -1; }
+#gate .gs-copy { grid-area: c; min-height: 44px; padding: 0 .75rem; border: 1px solid #0d4792; border-radius: .6rem; background: #fff; color: #0d4792; font: inherit; font-size: .8125rem; font-weight: 600; cursor: pointer; }
+
+/* Quản trị: mục thu gọn (cùng kiểu với Cài đặt) */
+#sheetAdmin .adm-sec { border-top: 1px solid #e2e8f0; margin-top: .75rem; }
+#sheetAdmin .adm-sec > summary { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700; font-size: .9375rem; color: var(--brand-d); cursor: pointer; list-style: none; }
+#sheetAdmin .adm-sec > summary::-webkit-details-marker { display: none; }
+#sheetAdmin .adm-sec > summary::after { content: ""; width: 9px; height: 9px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); margin: -4px 4px 0 8px; flex: none; transition: transform .15s; }
+#sheetAdmin .adm-sec[open] > summary::after { transform: rotate(-135deg); margin-top: 4px; }
+#sheetAdmin .adm-body { padding-bottom: .5rem; }
+#sheetAdmin .adm-fmt { margin: .125rem 0 0; min-height: 1rem; font-size: .75rem; font-weight: 600; color: #0d4792; }
+#sheetAdmin button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }

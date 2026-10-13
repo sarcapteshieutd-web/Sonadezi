@@ -2807,7 +2807,11 @@
       'permission-denied': 'Không đủ quyền: quản trị viên cần cập nhật quy tắc Firestore theo hướng dẫn thiết lập',
       'unavailable': 'Không kết nối được máy chủ'
     };
-    return map[c] || (e && e.message) || 'Lỗi không rõ';
+    if (map[c]) return map[c];
+    const msg = String((e && e.message) || '');
+    if (c.indexOf('auth/') === 0) return 'Không thể đăng nhập lúc này. Vui lòng thử lại hoặc liên hệ quản trị viên.';
+    if (/^Firebase|firestore|FirebaseError/i.test(msg) || /^(auth|firestore)\//.test(c)) { console.warn(msg); return 'Không thực hiện được lúc này. Vui lòng thử lại sau.'; }
+    return msg || 'Lỗi không rõ';
   }
 
   let profUnsub = null, usageTimer = 0, sharedWarned = false, lapsedToast = false;
@@ -3015,12 +3019,23 @@
     if (!blocked) {
       const plan = (CFG.plans || []).find(x => x && x.name);
       const d = CFG.donate || {}, b = d.bank || {};
-      const line = (label, val, code) => { if (!val) return; const p = node('div', 'mt-1'); p.appendChild(document.createTextNode(label + ': ')); p.appendChild(node(code ? 'code' : 'b', '', val)); el.gsPay.appendChild(p); };
+      const line = (label, val, code, copy) => {
+        if (!val) return;
+        const p = node('div', 'gs-row');
+        p.appendChild(node('span', 'gs-k', label));
+        p.appendChild(node(code ? 'code' : 'b', 'gs-v', val));
+        if (copy) {
+          const cb = node('button', 'gs-copy', 'Sao chép'); cb.type = 'button'; cb.setAttribute('aria-label', 'Sao chép ' + label.toLowerCase());
+          cb.onclick = async () => { try { await navigator.clipboard.writeText(val); toast('Đã sao chép'); } catch (_) { toast('Không sao chép được, hãy chọn và sao chép thủ công'); } };
+          p.appendChild(cb);
+        }
+        el.gsPay.appendChild(p);
+      };
       el.gsPay.appendChild(node('b', '', 'Thanh toán gói VIP'));
       if (plan) line('Gói', plan.name + (plan.price ? ' · ' + plan.price : ''));
-      line('Ngân hàng', b.bankName); line('Số tài khoản', b.accountNumber); line('Chủ tài khoản', b.accountName);
-      line('Nội dung chuyển khoản', info.email, true);
-      line('Mã tài khoản', info.uid, true);
+      line('Ngân hàng', b.bankName); line('Số tài khoản', b.accountNumber, false, true); line('Chủ tài khoản', b.accountName);
+      line('Nội dung chuyển khoản', info.email, true, true);
+      line('Mã tài khoản', info.uid, true, true);
       if (d.qrImage) { const img = node('img'); img.src = d.qrImage; img.alt = 'Mã QR chuyển khoản'; el.gsPay.appendChild(img); }
     }
   }
@@ -3102,9 +3117,9 @@
   const STATUS_COLOR = { pending: '#b45309', active: '#15803d', expired: '#b91c1c', blocked: '#475569' };
   let adminFilter = '';
 
-  el.btnAdmin.onclick = () => { closeSheet(); openModal(el.sheetAdmin); loadAdmin(); };
+  el.btnAdmin.onclick = () => { closeSheet(); el.adminBody.textContent = ''; openModal(el.sheetAdmin); loadAdmin(); };
   async function loadAdmin() {
-    el.adminBody.textContent = 'Đang tải…';
+    if (!el.adminBody.firstChild) el.adminBody.textContent = 'Đang tải…'; // tải lại sau khi lưu: giữ nguyên nội dung và vị trí cuộn
     try {
       const kit = await getKit(false);
       const [users, g, bill] = await Promise.all([kit.acct.listUsers(), kit.acct.getGoogleConfig().catch(() => null), kit.acct.getBillingConfig().catch(() => null)]);
@@ -3119,29 +3134,55 @@
     head.appendChild(node('span', 'tabular-nums', limit > 0 ? `${fmtN(used)} / ${fmtN(limit)} (${pct}%)` : `${fmtN(used)} (chưa đặt hạn mức)`));
     w.appendChild(head);
     const track = node('div', 'mt-1 h-2 w-full overflow-hidden rounded bg-slate-200');
+    if (limit > 0) { track.setAttribute('role', 'progressbar'); track.setAttribute('aria-label', label); track.setAttribute('aria-valuemin', '0'); track.setAttribute('aria-valuemax', String(limit)); track.setAttribute('aria-valuenow', String(Math.min(used, limit))); }
     const fill = node('div', 'h-2');
     fill.style.width = pct + '%';
     fill.style.background = pct >= 100 ? '#dc2626' : pct >= 80 ? '#d97706' : '#0d4792';
     track.appendChild(fill); w.appendChild(track);
     return w;
   }
+  const admOpen = {};
+  function admSection(title, key) {
+    const d = node('details', 'adm-sec'); d.open = !!admOpen[key];
+    d.addEventListener('toggle', () => { admOpen[key] = d.open; });
+    d.appendChild(node('summary', '', title));
+    const inner = node('div', 'adm-body'); d.appendChild(inner);
+    return { d, inner };
+  }
+  // hiện số đã định dạng (2.000.000) dưới ô nhập số lớn để tránh nhầm số 0
+  function admFmtHint(i) {
+    const h = node('p', 'adm-fmt'); h.setAttribute('aria-hidden', 'true');
+    const up = () => { const v = +i.value; h.textContent = i.value !== '' && isFinite(v) && Math.abs(v) >= 1000 ? '= ' + fmtN(v) : ''; };
+    i.addEventListener('input', up); up(); i.after(h);
+  }
+  // gắn nhãn với ô nhập đứng ngay sau (nhãn được tạo bằng mã, không có for)
+  function admLinkLabels(root) {
+    let n = 0;
+    root.querySelectorAll('label:not([for])').forEach(l => {
+      const f = l.nextElementSibling;
+      if (f && /^(INPUT|SELECT|TEXTAREA)$/.test(f.tagName)) { if (!f.id) f.id = 'adm-f' + (++n); l.htmlFor = f.id; }
+    });
+  }
   function renderAdmin(kit, users, g, bill) {
     const body = el.adminBody;
+    const scroller = el.sheetAdmin.firstElementChild, keepScroll = scroller ? scroller.scrollTop : 0;
     body.textContent = '';
+    const accBox = node('div', '');
+    const secG = admSection('Hạn mức và khóa Google', 'g'), secB = admSection('Gói Google Cloud và đơn giá', 'b'), secV = admSection('Giới hạn mỗi tài khoản VIP', 'v');
+    const sG = secG.inner, sB = secB.inner, sV = secV.inner;
     const m = monthKey();
     const sum = k => users.reduce((a, u) => a + ((u.usage && u.usage[m] && u.usage[m][k]) || 0), 0);
 
     // 1) Hạn mức Google
-    body.appendChild(node('h3', 'mt-1 text-sm font-semibold', 'Hạn mức Google tháng này'));
-    body.appendChild(meter('Google Cloud Translation (ký tự)', sum('tr'), g.trLimit || 0));
-    body.appendChild(meter('Giọng Google WaveNet (ký tự)', sum('tts'), g.ttsLimit == null ? 4000000 : g.ttsLimit));
-    body.appendChild(meter('Google Speech-to-Text (phút)', Math.round(sum('stt') / 60), g.sttLimit || 0));
-    body.appendChild(node('p', 'mt-1 text-xs text-slate-500', 'Số liệu cộng từ các thiết bị VIP tự báo, chỉ mang tính tham khảo (thiết bị không báo được thì không tính). Số liệu chính xác và tiền thực tế xem tại Google Cloud Console → Billing và APIs & Services → Quotas. Ưu đãi miễn phí của Translation tính theo tín dụng hằng tháng, không phải số ký tự cố định, nên hạn mức dịch do bạn tự đặt.'));
+    sG.appendChild(meter('Google Cloud Translation (ký tự)', sum('tr'), g.trLimit || 0));
+    sG.appendChild(meter('Giọng Google WaveNet (ký tự)', sum('tts'), g.ttsLimit == null ? 4000000 : g.ttsLimit));
+    sG.appendChild(meter('Google Speech-to-Text (phút)', Math.round(sum('stt') / 60), g.sttLimit || 0));
+    sG.appendChild(node('p', 'mt-1 text-xs text-slate-500', 'Số liệu cộng từ các thiết bị VIP tự báo, chỉ mang tính tham khảo (thiết bị không báo được thì không tính). Số liệu chính xác và tiền thực tế xem tại Google Cloud Console → Billing và APIs & Services → Quotas. Ưu đãi miễn phí của Translation tính theo tín dụng hằng tháng, không phải số ký tự cố định, nên hạn mức dịch do bạn tự đặt.'));
     const form = node('div', 'mt-2 rounded-lg border border-slate-200 p-3');
     const mkInput = (label, type, val, ph) => {
       form.appendChild(node('label', 'mt-2 block text-sm first:mt-0', label));
       const i = node('input', 'mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2'); i.type = type; i.value = val; if (ph) i.placeholder = ph; i.autocomplete = 'off';
-      form.appendChild(i); return i;
+      form.appendChild(i); admFmtHint(i); return i;
     };
     const inTr = mkInput('Hạn mức dịch mỗi tháng (ký tự, 0 = chưa đặt)', 'number', String(g.trLimit || 0));
     const inTts = mkInput('Hạn mức giọng đọc mỗi tháng (ký tự)', 'number', String(g.ttsLimit == null ? 4000000 : g.ttsLimit));
@@ -3164,7 +3205,7 @@
       } catch (e) { toast(fbErr(e)); save.disabled = false; }
     };
     form.appendChild(save);
-    body.appendChild(form);
+    sG.appendChild(form);
 
     // Thử nhận dạng đám mây 5 giây cho từng cặp ngôn ngữ: kiểm tra khóa, dịch vụ và chất lượng trước khi dùng trong cuộc họp
     const tf = node('div', 'mt-2 rounded-lg border border-slate-200 p-3');
@@ -3188,7 +3229,7 @@
       probeBtn.disabled = false;
     };
     tf.append(selPair, probeBtn, probeOut);
-    body.appendChild(tf);
+    sG.appendChild(tf);
 
     // 1b) Gói Google Cloud của bạn: tín dụng, thời hạn, ước tính đã dùng
     const B = {
@@ -3205,7 +3246,6 @@
     const trialDays = B.trialEndMs > Date.now() ? daysLeft(B.trialEndMs) : 0;
     const usd = v => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const vnd = v => '₫' + Math.round(v * B.vndPerUsd).toLocaleString('vi-VN');
-    body.appendChild(node('h3', 'mt-5 text-sm font-semibold', 'Gói Google Cloud của bạn'));
     const plan = node('div', 'mt-2 rounded-lg border border-slate-200 p-3 text-sm');
     const prow = (label, val, warnRow) => { const r = node('div', 'flex justify-between gap-2 py-0.5'); r.appendChild(node('span', 'text-slate-600', label)); const v = node('span', 'text-right font-medium tabular-nums' + (warnRow ? ' text-red-600' : ''), val); r.appendChild(v); plan.appendChild(r); };
     prow('Tín dụng dùng thử', `${usd(B.creditUsd)} ≈ ${vnd(B.creditUsd)}`);
@@ -3213,13 +3253,13 @@
     prow('Ước tính còn lại', `${usd(remain)} ≈ ${vnd(remain)}`, remain < B.creditUsd * 0.2);
     prow('Hết hạn dùng thử', `${fmtDay(B.trialEndMs)}${trialDays ? ` (còn ${trialDays} ngày)` : ' (đã hết hạn)'}`, trialDays <= 14);
     plan.appendChild(meter('Tín dụng đã dùng, ước tính (USD)', Math.round(Math.min(spent, B.creditUsd) * 100) / 100, B.creditUsd));
-    body.appendChild(plan);
-    body.appendChild(node('p', 'mt-1 text-xs text-slate-500', 'Ước tính dựa trên số ký tự các thiết bị VIP tự báo và đơn giá bạn nhập bên dưới, nên chỉ để tham khảo; không gồm các khoản khác trong dự án. Số liệu thật xem tại Google Cloud Console → Billing → Overview/Reports. Khi hết thời hạn dùng thử, Google dừng tài nguyên nếu bạn chưa nâng cấp lên tài khoản trả phí; hãy nâng cấp và đặt Budget alert trước ngày đó.'));
+    sB.appendChild(plan);
+    sB.appendChild(node('p', 'mt-1 text-xs text-slate-500', 'Ước tính dựa trên số ký tự các thiết bị VIP tự báo và đơn giá bạn nhập bên dưới, nên chỉ để tham khảo; không gồm các khoản khác trong dự án. Số liệu thật xem tại Google Cloud Console → Billing → Overview/Reports. Khi hết thời hạn dùng thử, Google dừng tài nguyên nếu bạn chưa nâng cấp lên tài khoản trả phí; hãy nâng cấp và đặt Budget alert trước ngày đó.'));
     const bf = node('div', 'mt-2 rounded-lg border border-slate-200 p-3');
     const mkB = (label, type, val, step) => {
       bf.appendChild(node('label', 'mt-2 block text-sm first:mt-0', label));
       const i = node('input', 'mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2'); i.type = type; i.value = val; if (step) i.step = step; i.autocomplete = 'off';
-      bf.appendChild(i); return i;
+      bf.appendChild(i); if (i.type === 'number') admFmtHint(i); return i;
     };
     const bCredit = mkB('Tín dụng dùng thử (USD)', 'number', String(B.creditUsd), 'any');
     const bRate = mkB('Tỷ giá quy đổi (đồng cho 1 USD)', 'number', String(B.vndPerUsd), 'any');
@@ -3241,15 +3281,14 @@
       } catch (e) { toast(fbErr(e)); bSave.disabled = false; }
     };
     bf.appendChild(bSave);
-    body.appendChild(bf);
+    sB.appendChild(bf);
 
     // 1c) Giới hạn ký tự mỗi tài khoản VIP + gợi ý
-    body.appendChild(node('h3', 'mt-5 text-sm font-semibold', 'Giới hạn mỗi tài khoản VIP (mỗi tháng)'));
     const uf = node('div', 'mt-2 rounded-lg border border-slate-200 p-3');
     const mkU = (label, val) => {
       uf.appendChild(node('label', 'mt-2 block text-sm first:mt-0', label));
       const i = node('input', 'mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2'); i.type = 'number'; i.min = '0'; i.step = '10000'; i.value = String(val); i.autocomplete = 'off';
-      uf.appendChild(i); return i;
+      uf.appendChild(i); admFmtHint(i); return i;
     };
     const uTr = mkU('Dịch bằng Google (ký tự mỗi VIP mỗi tháng, 0 = không giới hạn)', g.userTr || 0);
     const uTts = mkU('Đọc bằng giọng WaveNet (ký tự mỗi VIP mỗi tháng, 0 = không giới hạn)', g.userTts || 0);
@@ -3288,28 +3327,28 @@
     };
     row.appendChild(apply); row.appendChild(uSave); uf.appendChild(row);
     uf.appendChild(node('p', 'mt-2 text-xs text-slate-500', 'Giới hạn tính theo số liệu hồ sơ trên máy chủ (gộp mọi thiết bị của cùng tài khoản). Khi hết giới hạn, ứng dụng của VIP tự chuyển sang MyMemory (dịch) hoặc giọng thiết bị (đọc). Quản trị viên không bị giới hạn. Việc áp dụng do ứng dụng trên thiết bị thực hiện nên chỉ là giới hạn "mềm", người rành kỹ thuật có thể vượt qua.'));
-    body.appendChild(uf);
+    sV.appendChild(uf);
 
     // 2) Danh sách tài khoản
     const counts = { pending: 0, active: 0, expired: 0, blocked: 0 };
     users.forEach(u => counts[effStatus(u)]++);
     if (!adminFilter) adminFilter = counts.pending ? 'pending' : 'all';
-    body.appendChild(node('h3', 'mt-5 text-sm font-semibold', `Tài khoản (${users.length})`));
+    accBox.appendChild(node('h3', 'mt-5 text-sm font-semibold', `Tài khoản (${users.length})`));
     const bar = node('div', 'mt-2 flex flex-wrap gap-1.5');
     const chips = [['pending', `Chờ duyệt (${counts.pending})`], ['active', `Đang hoạt động (${counts.active})`], ['expired', `Hết hạn (${counts.expired})`], ['blocked', `Bị khóa (${counts.blocked})`], ['all', 'Tất cả']];
     for (const [k, label] of chips) {
       const b = node('button', 'rounded-full border px-2.5 py-1 text-xs ' + (adminFilter === k ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 text-slate-700'), label);
-      b.type = 'button'; b.onclick = () => { adminFilter = k; renderAdmin(kit, users, g, bill); };
+      b.type = 'button'; b.setAttribute('aria-pressed', String(adminFilter === k)); b.onclick = () => { adminFilter = k; renderAdmin(kit, users, g, bill); };
       bar.appendChild(b);
     }
     const reload = node('button', 'rounded-full border border-slate-300 px-2.5 py-1 text-xs text-slate-700', 'Tải lại'); reload.type = 'button'; reload.onclick = loadAdmin;
     bar.appendChild(reload);
-    body.appendChild(bar);
+    accBox.appendChild(bar);
 
     const act = async (fn, okMsg) => { try { await fn(); toast(okMsg); loadAdmin(); } catch (e) { toast(fbErr(e)); } };
     const list = users.filter(u => adminFilter === 'all' || effStatus(u) === adminFilter)
       .sort((a, b) => (b.requestedAt || 0) - (a.requestedAt || 0));
-    if (!list.length) body.appendChild(node('p', 'mt-3 text-sm text-slate-500', 'Không có tài khoản nào trong mục này.'));
+    if (!list.length) accBox.appendChild(node('p', 'mt-3 text-sm text-slate-500', 'Không có tài khoản nào trong mục này.'));
     for (const u of list) {
       const st = effStatus(u);
       const card = node('div', 'mt-2 rounded-xl border border-slate-200 p-3');
@@ -3327,17 +3366,21 @@
       if (u.requestedAt) lines.push(`Đăng ký: ${fmtDay(u.requestedAt)}`);
       if (u.lastSeen) lines.push(`Dùng gần nhất: ${fmtDay(u.lastSeen)}`);
       card.appendChild(node('div', 'mt-1 text-xs text-slate-600', lines.join(' · ')));
-      const idr = node('div', 'mt-1 break-all text-[0.6875rem] text-slate-400', 'Mã: ' + u.uid); card.appendChild(idr);
+      const idr = node('div', 'mt-1 select-all break-all text-xs text-slate-600', 'Mã: ' + u.uid); card.appendChild(idr);
       const acts = node('div', 'mt-2 flex flex-wrap gap-1.5');
-      const btn = (label, primary, fn) => { const b = node('button', 'rounded-lg px-2.5 py-1 text-xs font-medium ' + (primary ? 'bg-brand-600 text-white' : 'border border-slate-300 text-slate-700'), label); b.type = 'button'; b.onclick = fn; acts.appendChild(b); };
+      const btn = (label, primary, fn, danger) => { const b = node('button', 'rounded-lg px-2.5 py-1 text-xs font-medium ' + (danger ? 'ml-auto border border-red-300 text-red-700' : primary ? 'bg-brand-600 text-white' : 'border border-slate-300 text-slate-700'), label); b.type = 'button'; b.onclick = fn; acts.appendChild(b); };
       if (st === 'pending') btn('Duyệt 1 tháng', true, () => act(() => kit.acct.setUser(u.uid, { status: 'active', expiresAtMs: addMonth(Date.now()), plan: planName() }), 'Đã duyệt 1 tháng'));
       if (st === 'active' || st === 'expired') btn('Gia hạn +1 tháng', true, () => act(() => kit.acct.setUser(u.uid, { status: 'active', expiresAtMs: addMonth(Math.max(Date.now(), u.expiresAtMs || 0)), plan: planName() }), 'Đã gia hạn 1 tháng'));
-      if (st !== 'blocked') btn('Khóa', false, () => act(() => kit.acct.setUser(u.uid, { status: 'blocked' }), 'Đã khóa tài khoản'));
+      if (st !== 'blocked') btn('Khóa', false, () => { if (confirm(`Khóa tài khoản ${u.email}? Người này sẽ mất quyền VIP ngay.`)) act(() => kit.acct.setUser(u.uid, { status: 'blocked' }), 'Đã khóa tài khoản'); });
       else btn('Mở khóa (về chờ duyệt)', false, () => act(() => kit.acct.setUser(u.uid, { status: 'pending' }), 'Đã mở khóa'));
-      btn('Xóa', false, () => { if (confirm(`Xóa hồ sơ của ${u.email}? Người này sẽ phải đăng ký lại.`)) act(() => kit.acct.deleteUser(u.uid), 'Đã xóa hồ sơ'); });
+      btn('Xóa', false, () => { if (confirm(`Xóa hồ sơ của ${u.email}? Người này sẽ phải đăng ký lại.`)) act(() => kit.acct.deleteUser(u.uid), 'Đã xóa hồ sơ'); }, true);
       card.appendChild(acts);
-      body.appendChild(card);
+      accBox.appendChild(card);
     }
+    // Thứ tự: tài khoản (việc làm hằng ngày) lên đầu, các mục cấu hình thu gọn phía dưới
+    body.append(accBox, secG.d, secB.d, secV.d);
+    admLinkLabels(body);
+    if (scroller) scroller.scrollTop = keepScroll;
   }
 
   {
