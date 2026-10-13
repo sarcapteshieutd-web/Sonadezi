@@ -19,7 +19,7 @@
 #mbHead { flex-wrap: nowrap; gap: 8px; }
 #mbHead > span:nth-child(2) { display: none; }                /* "Đang nghe: ngôn ngữ" đã có trên thanh trạng thái/tiêu đề */
 @media (min-width: 1024px) { #mbHead > span:nth-child(2) { display: inline; } }
-#mbHead #talkStatus { flex: 1 1 0; min-width: 0; white-space: nowrap; padding: 4px 10px; min-height: 36px; line-height: 1.2; font-size: .8125rem; }
+#mbHead #talkStatus { flex: 1 1 0; border-radius: 14px; min-width: 0; flex-wrap: wrap; white-space: normal; padding: 4px 10px; min-height: 36px; line-height: 1.2; font-size: .8125rem; } /* điện thoại: chữ và nút Mở lại micro tự xuống dòng, không chồng lên nhau */
 #talkText { min-width: 0; overflow-wrap: anywhere; }
 #btnMbOpts, #btnMeetingStop { padding: 0 12px; font-size: .8125rem; }
 #btnMbOpts .lbl { display: none; }
@@ -102,7 +102,7 @@ body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "S
 #app > header h1, #app > header p { overflow: hidden; text-overflow: ellipsis; }
 #app > header > div:first-child > div { min-width: 0; }
 #talkStatus .talk-dot { width: 10px; height: 10px; }
-@media (min-width: 1024px) { #mbHead #talkStatus { min-width: 130px; } }
+@media (min-width: 1024px) { #mbHead #talkStatus { flex: 1 1 0; flex-wrap: nowrap; white-space: nowrap; min-width: 130px; } }
 #gate .gt-logo, #emptyHint img { mix-blend-mode: multiply; }
 @media (min-width: 640px) { #app > header h1 { font-size: .9375rem; } #app > header button { width: 42px; height: 42px; min-width: 42px; min-height: 42px; margin-left: 4px; } }
 
