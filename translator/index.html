@@ -62,6 +62,8 @@
     /* Chế độ người xem: chỉ đọc */
     .viewer #btnDonate, .viewer #btnExport, .viewer #btnClearHist, .viewer #btnSettings, .viewer #btnInstall,
     .viewer #langBar, .viewer #dock, .viewer #meetingBar, .viewer #btnRoom { display: none !important; }
+    /* Chế độ ghi biên bản: chỉ ghi chữ tiếng Việt, không dịch */
+    .minutes #langBar, .minutes #btnConf, .minutes #btnMeeting, .minutes #btnMbOpts, .minutes #mbOpts, .minutes [data-hide-minutes] { display: none !important; }
     /* Màn hình chờ đầu phiên: vòng quỹ đạo xoay quanh logo khoảng 3 giây rồi mờ dần vào màn chính */
     #splash { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: #fff; transition: opacity .35s ease-in; }
     #splash.out { opacity: 0; pointer-events: none; }
@@ -270,12 +272,13 @@
     <!-- Thanh trạng thái chế độ họp -->
     <div id="meetingBar" class="mt-2 hidden shrink-0 flex-col lg:mt-0 lg:flex-1 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-5 gap-1.5 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
       <div id="mbHead" class="flex w-full flex-wrap items-center gap-x-3 gap-y-1.5">
-        <span class="flex items-center gap-1.5 whitespace-nowrap font-semibold"><span class="rec-blink inline-block h-2 w-2 rounded-full bg-red-600"></span><span id="meetingTime" class="tabular-nums">00:00</span></span>
+        <span class="flex items-center gap-1.5 whitespace-nowrap font-semibold"><span class="rec-blink inline-block h-2 w-2 rounded-full bg-red-600"></span><span id="meetingTime" class="tabular-nums">00:00</span><span id="meetingLabel" class="hidden whitespace-nowrap">· Ghi biên bản</span></span>
         <span class="whitespace-nowrap">Đang nghe: <b id="meetingLang" class="text-base"></b></span>
         <div id="talkStatus" data-state="" role="status" aria-live="polite"><span class="talk-dot"></span><span id="talkText"></span><button id="btnReopenMic" type="button">Mở lại micro</button></div>
         <button id="btnMbOpts" type="button" aria-label="Tùy chọn họp" aria-expanded="false" class="whitespace-nowrap rounded-lg border border-red-300 px-2 py-0.5 text-xs font-semibold">⚙<span class="lbl">&nbsp;Tùy chọn</span></button>
         <button id="btnMeetingStop" class="whitespace-nowrap rounded-lg border border-red-300 px-2 py-0.5 text-xs font-medium">Dừng</button>
       </div>
+      <div id="minutesHint" class="hidden w-full text-[0.6875rem] text-red-600/80">Chỉ ghi chữ tiếng Việt, không dịch. Bấm Dừng khi kết thúc để lấy lời nhắc tóm tắt.</div>
       <div id="micWarn" class="hidden w-full rounded-lg bg-red-100 px-2 py-1 text-xs font-medium" role="alert"></div>
       <div id="mbOpts" class="hidden w-full flex-col gap-1.5 rounded-lg bg-white/60 p-2">
         <label class="flex items-center gap-1.5 text-xs"><input id="chkAutoTurn" type="checkbox" class="h-4 w-4 accent-red-600" />Tự đổi sau mỗi lượt</label>
@@ -366,7 +369,7 @@
         </button>
       </div>
       <div class="mt-2 grid grid-cols-[1fr_auto_1fr] items-center lg:mt-0 lg:w-[28rem] lg:shrink-0">
-        <label class="flex items-center gap-1.5 text-xs text-slate-600">
+        <label data-hide-minutes class="flex items-center gap-1.5 text-xs text-slate-600">
           <input id="chkAuto" type="checkbox" class="h-4 w-4 accent-brand-600" checked />
           Tự đọc bản dịch
         </label>
@@ -382,6 +385,7 @@
         <div class="flex min-w-0 flex-col items-stretch gap-1.5 justify-self-end">
           <button id="btnConf" aria-label="Chế độ hội nghị: nghe bản dịch bằng tai nghe" class="whitespace-nowrap rounded-full bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white shadow-sm">🎧 Hội nghị</button>
           <button id="btnMeeting" class="whitespace-nowrap rounded-full border border-brand-600 px-2.5 py-1.5 text-xs font-medium text-brand-600">Chế độ họp</button>
+          <button id="btnMinutes" class="whitespace-nowrap rounded-full border border-brand-600 px-2.5 py-1.5 text-xs font-medium text-brand-600">📝 Ghi biên bản</button>
         </div>
       </div>
       <p id="micHint" class="mt-1 text-center text-xs text-slate-500 lg:hidden">Chạm để nói</p>
@@ -534,6 +538,50 @@
       <button id="expAi" class="mt-4 w-full rounded-xl border border-brand-600 bg-brand-50 py-2.5 font-medium text-brand-600">Sao chép lời nhắc tóm tắt bằng Claude</button>
       <p class="mt-1 text-xs text-slate-500">Cách làm: tải tệp .txt ở trên, mở Claude, đính kèm tệp rồi dán lời nhắc này để nhận bản tóm tắt và sơ đồ cây Mermaid theo chủ đề (dán mã Mermaid vào mermaid.live để xem sơ đồ).</p>
       <a id="expClaude" href="https://claude.ai/new" target="_blank" rel="noopener" class="mt-2 block w-full rounded-xl border border-slate-300 py-2.5 text-center text-sm font-medium text-slate-700">Mở Claude</a>
+      <button id="expMinutes" class="mt-2 hidden w-full rounded-xl border border-brand-600 py-2.5 font-medium text-brand-600">📝 Lời nhắc tóm tắt biên bản gần nhất</button>
+    </div>
+  </div>
+
+
+  <!-- Ghi biên bản: nhập ngữ cảnh trước khi ghi -->
+  <div id="sheetMinutesSetup" data-modal class="fixed inset-0 z-20 hidden items-end bg-black/40 sm:items-center sm:justify-center">
+    <div class="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-5 pb-[max(env(safe-area-inset-bottom),1.25rem)] sm:rounded-2xl">
+      <div class="mb-1 flex items-center justify-between">
+        <h2 class="text-base font-semibold">Ghi biên bản cuộc họp</h2>
+        <button data-close class="px-2 text-2xl leading-none" aria-label="Đóng">×</button>
+      </div>
+      <p class="mb-3 text-sm text-slate-500">Ghi chữ tiếng Việt liên tục, không dịch. Thông tin dưới đây giúp biên bản tóm tắt đúng ngữ cảnh, tên riêng và chức danh (không bắt buộc nhập đủ).</p>
+      <label class="mb-1 block text-sm font-medium text-slate-700" for="miTitle">Tiêu đề cuộc họp</label>
+      <input id="miTitle" type="text" maxlength="200" placeholder="Ví dụ: Trao đổi thuê nhà xưởng xây sẵn tại KCN Long Thành" class="mb-3 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[0.9375rem]" />
+      <label class="mb-1 block text-sm font-medium text-slate-700" for="miCustomer">Khách hàng / đơn vị làm việc</label>
+      <input id="miCustomer" type="text" maxlength="200" placeholder="Ví dụ: Công ty TNHH ABC (ngành cơ khí chính xác)" class="mb-3 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[0.9375rem]" />
+      <label class="mb-1 block text-sm font-medium text-slate-700" for="miAttendees">Thành phần tham dự (mỗi người một dòng)</label>
+      <textarea id="miAttendees" rows="4" maxlength="2000" placeholder="Nguyễn Văn A - Giám đốc, Công ty ABC&#10;Trần Thị B - Chuyên viên kinh doanh, Sonadezi Long Thành" class="mb-4 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-[0.9375rem]"></textarea>
+      <button id="miStart" class="w-full rounded-xl bg-brand-600 py-2.5 font-medium text-white">Bắt đầu ghi</button>
+    </div>
+  </div>
+
+  <!-- Ghi biên bản: lấy lời nhắc tóm tắt sau họp -->
+  <div id="sheetMinutesDone" data-modal class="fixed inset-0 z-20 hidden items-end bg-black/40 sm:items-center sm:justify-center">
+    <div class="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-5 pb-[max(env(safe-area-inset-bottom),1.25rem)] sm:rounded-2xl">
+      <div class="mb-1 flex items-center justify-between">
+        <h2 class="text-base font-semibold">Tóm tắt biên bản</h2>
+        <button data-close class="px-2 text-2xl leading-none" aria-label="Đóng">×</button>
+      </div>
+      <p id="mdInfo" class="mb-3 text-sm text-slate-500"></p>
+      <ol class="mb-3 list-decimal space-y-1 pl-5 text-sm text-slate-700">
+        <li>Bấm <b>Sao chép lời nhắc</b>.</li>
+        <li>Mở Claude hoặc ChatGPT, dán vào khung trò chuyện rồi gửi.</li>
+        <li>Rà soát lại số liệu và tên riêng trước khi ban hành.</li>
+      </ol>
+      <button id="mdCopy" class="w-full rounded-xl bg-brand-600 py-2.5 font-medium text-white">Sao chép lời nhắc</button>
+      <div class="mt-2 grid grid-cols-2 gap-2">
+        <a href="https://claude.ai/new" target="_blank" rel="noopener noreferrer" class="block rounded-xl border border-brand-600 py-2.5 text-center text-sm font-medium text-brand-600">Mở Claude</a>
+        <a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer" class="block rounded-xl border border-brand-600 py-2.5 text-center text-sm font-medium text-brand-600">Mở ChatGPT</a>
+      </div>
+      <button id="mdDownload" class="mt-2 w-full rounded-xl border border-slate-300 py-2.5 text-sm font-medium text-slate-700">Tải lời nhắc (.txt)</button>
+      <label class="mb-1 mt-3 block text-xs font-medium text-slate-500" for="mdPreview">Xem trước (có thể chọn và sao chép thủ công)</label>
+      <textarea id="mdPreview" rows="6" readonly class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs"></textarea>
     </div>
   </div>
 
