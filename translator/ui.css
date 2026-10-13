@@ -4,7 +4,7 @@
 
 /* Vùng chạm tối thiểu cho mọi nút điều khiển chính */
 #btnInstall:not(.hidden), #btnDonate, #btnExport, #btnClearHist, #btnSettings,
-#btnDual, #btnDensity, #btnFontMinus, #btnFontPlus, #btnRoom, #btnBig,
+#btnDual, #btnDensity, #btnFind, #btnFontMinus, #btnFontPlus, #btnRoom, #btnBig,
 #btnMbOpts, #btnMeetingStop, #btnReopenMic, #btnConf, #btnMeeting {
   min-width: var(--tap); min-height: var(--tap);
   display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
@@ -270,3 +270,16 @@ body.dlg-open #toast { bottom: auto; top: calc(12px + env(safe-area-inset-top));
   #btnMic { width: 4rem; height: 4rem; }
   #dock { padding-top: 8px; }
 }
+
+/* ===== Bước 10: tìm kiếm trong hội thoại ===== */
+#findBar { display: flex; align-items: center; gap: 4px; margin-top: .5rem; padding: 4px 4px 4px 12px; background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 1px 3px rgba(15,23,42,.08); }
+#findBar[hidden] { display: none; }
+#findInput { flex: 1 1 0; min-width: 0; min-height: 44px; border: 0; background: transparent; font: inherit; font-size: 1rem; color: #0f172a; outline: none; }
+#findInput::-webkit-search-cancel-button { display: none; }
+#findBar:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(13,71,146,.15); }
+#findCount { flex: none; min-width: 3.25rem; text-align: center; font-size: .8125rem; font-weight: 600; color: #475569; white-space: nowrap; }
+#findBar button { flex: none; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 10px; background: transparent; color: #334155; cursor: pointer; }
+#findBar button:hover { background: #f1f5f9; }
+::highlight(chat-find) { background-color: #fde68a; color: #0f172a; }
+::highlight(chat-find-cur) { background-color: #f59e0b; color: #0f172a; }
+#history .find-cur { outline: 2px solid #f59e0b; outline-offset: 1px; }

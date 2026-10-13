@@ -57,6 +57,7 @@
     .dual #liveDual:not(.hidden) { display: grid; }
     .big #chatBar { display: none; }
     .big #modeBar { display: none; }
+    .big #findBar { display: none !important; }
     /* Nút thoát màn hình lớn: chỉ hiện ở chế độ này (điện thoại không có phím ESC) */
     #btnBigExit { display: none; position: fixed; top: calc(env(safe-area-inset-top, 0px) + 10px); right: 10px; z-index: 60; align-items: center; gap: 6px; border: 0; border-radius: 9999px; background: rgba(15, 23, 42, .75); color: #fff; padding: 9px 14px; font-size: 14px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
     .big #btnBigExit { display: inline-flex; }
@@ -316,6 +317,7 @@
 
     <!-- Thanh công cụ khung chat -->
     <div id="chatBar" class="mt-2 flex shrink-0 items-center justify-end gap-1.5 lg:ml-auto lg:mt-0">
+        <button id="btnFind" type="button" aria-label="Tìm trong hội thoại" aria-pressed="false" aria-controls="findBar" title="Tìm trong hội thoại" class="rounded-full bg-white p-1.5 text-slate-500 shadow ring-1 ring-slate-200"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
         <button id="btnDensity" type="button" aria-label="Xem gọn" aria-pressed="false" title="Xem gọn / thoải mái" class="rounded-full bg-white p-1.5 text-slate-500 shadow ring-1 ring-slate-200"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg></button>
         <button id="btnDual" aria-label="Chia hai ô trái phải" title="Chia hai ô trái phải" class="rounded-full bg-white p-1.5 text-slate-500 shadow ring-1 ring-slate-200"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg></button>
         <button id="btnFontMinus" aria-label="Giảm cỡ chữ" title="Giảm cỡ chữ" class="rounded-full bg-white px-2 py-1 text-xs font-semibold text-slate-500 shadow ring-1 ring-slate-200">A−</button>
@@ -329,6 +331,16 @@
         </button>
     </div>
 
+    </div>
+
+    <!-- Tìm trong hội thoại -->
+    <div id="findBar" role="search" hidden>
+      <label for="findInput" class="sr-only">Tìm trong hội thoại</label>
+      <input id="findInput" type="search" placeholder="Tìm trong hội thoại (không cần gõ dấu)" autocomplete="off" enterkeyhint="search" spellcheck="false" />
+      <span id="findCount" role="status" aria-live="polite"></span>
+      <button id="findPrev" type="button" aria-label="Kết quả trước"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg></button>
+      <button id="findNext" type="button" aria-label="Kết quả sau"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+      <button id="findClose" type="button" aria-label="Đóng tìm kiếm"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
 
     <!-- Khung chat -->
@@ -659,5 +671,6 @@
   <script src="report.js"></script>
   <script src="app.js"></script>
   <script src="dialogs.js"></script>
+  <script src="find.js"></script>
 </body>
 </html>
