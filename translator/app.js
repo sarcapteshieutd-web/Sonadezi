@@ -55,7 +55,7 @@
     chkMeetingSpeak: $('chkMeetingSpeak'), chkConf: $('chkConf'), meetingSpeaking: $('meetingSpeaking'),
     chkAutoTurn: $('chkAutoTurn'), meetingLang: $('meetingLang'),
     btnReopenMic: $('btnReopenMic'), micWarn: $('micWarn'), btnMbOpts: $('btnMbOpts'), mbOpts: $('mbOpts'), micLogView: $('micLogView'), btnMicLogCopy: $('btnMicLogCopy'), talkStatus: $('talkStatus'), talkText: $('talkText'), chkBilingual: $('chkBilingual'), selMic: $('selMic'), selSttSpeed: $('selSttSpeed'), sttStatus: $('sttStatus'), sttLevel: $('sttLevel'), sttLevelBar: $('sttLevelBar'),
-    app: $('app'), btnBig: $('btnBig'), btnBigExit: $('btnBigExit'), btnDual: $('btnDual'), btnFontMinus: $('btnFontMinus'), btnFontPlus: $('btnFontPlus'),
+    app: $('app'), btnBig: $('btnBig'), btnBigExit: $('btnBigExit'), btnDual: $('btnDual'), btnDensity: $('btnDensity'), btnFontMinus: $('btnFontMinus'), btnFontPlus: $('btnFontPlus'),
     dualHeadL: $('dualHeadL'), dualHeadR: $('dualHeadR'), liveDual: $('liveDual'),
     ldLLbl: $('ldLLbl'), ldLTxt: $('ldLTxt'), ldLRec: $('ldLRec'), ldRLbl: $('ldRLbl'), ldRTxt: $('ldRTxt'), ldRRec: $('ldRRec'), btnRoom: $('btnRoom'), roomDot: $('roomDot'),
     sheetRoom: $('sheetRoom'), roomBody: $('roomBody'),
@@ -306,8 +306,11 @@
       const cell = document.createElement('div');
       cell.className = 'rounded-2xl px-3.5 py-2.5 shadow-sm ' + (spoken ? 'border-l-4 border-brand-600 bg-white' : 'bg-brand-50 ring-1 ring-brand-100');
       const meta = document.createElement('div');
-      meta.className = 'mb-0.5 text-[0.6875rem] font-medium ' + (spoken ? 'text-brand-700' : 'text-slate-500');
-      meta.textContent = (spoken ? '🎤 Nói' : 'Bản dịch') + ' · ' + time + (state.showLat && item.lat != null && !spoken ? ` · ⏱ ${(item.lat / 1000).toFixed(1)} s` : '');
+      meta.className = 'bl-meta mb-0.5 flex items-center gap-2 text-[0.6875rem] font-medium ' + (spoken ? 'text-brand-700' : 'text-slate-500');
+      const metaTxt = document.createElement('span');
+      metaTxt.className = 'min-w-0 flex-1';
+      metaTxt.textContent = (spoken ? '🎤 Nói' : 'Bản dịch') + ' · ' + time + (state.showLat && item.lat != null && !spoken ? ` · ⏱ ${(item.lat / 1000).toFixed(1)} s` : '');
+      meta.appendChild(metaTxt);
       const t = document.createElement('div');
       t.className = 'whitespace-pre-wrap break-words text-lg font-medium leading-snug text-slate-900';
       t.textContent = text == null ? '—' : text;
@@ -315,12 +318,12 @@
       cell.append(meta, t);
       if (text != null) {
         const tools = document.createElement('div');
-        tools.className = 'mt-1 flex gap-1 text-slate-500';
+        tools.className = 'bl-tools flex shrink-0 gap-1 text-slate-500';
         tools.append(
           iconBtn(svgSpeaker, 'Đọc lại', () => speak(text, lang), 'hover:bg-slate-100'),
           iconBtn(svgCopy, 'Sao chép', async () => { try { await navigator.clipboard.writeText(text); toast('Đã sao chép'); } catch (_) { toast('Không thể sao chép'); } }, 'hover:bg-slate-100')
         );
-        cell.appendChild(tools);
+        meta.appendChild(tools);
       }
       row.appendChild(cell);
     }
@@ -388,9 +391,11 @@
       (mine ? 'rounded-br-md bg-brand-600 text-white' : 'rounded-bl-md border border-slate-200 bg-white text-slate-900');
 
     const meta = document.createElement('div');
-    meta.className = 'mb-0.5 text-[0.6875rem] font-medium ' + (mine ? 'text-brand-100' : 'text-slate-500');
+    meta.className = 'bl-meta mb-0.5 flex items-center gap-2 text-[0.6875rem] font-medium ' + (mine ? 'text-brand-100' : 'text-slate-500');
     const time = new Date(item.ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    meta.textContent = `${LANGS[item.from].name} · ${time}` + (state.showLat && item.lat != null ? ` · ⏱ ${(item.lat / 1000).toFixed(1)} s` : '');
+    const metaTxt = document.createElement('span');
+    metaTxt.className = 'min-w-0 flex-1';
+    metaTxt.textContent = `${LANGS[item.from].name} → ${LANGS[item.to].name} · ${time}` + (state.showLat && item.lat != null ? ` · ⏱ ${(item.lat / 1000).toFixed(1)} s` : '');
 
     const orig = document.createElement('div');
     orig.className = 'whitespace-pre-wrap break-words text-[0.9375rem] leading-snug';
@@ -399,21 +404,22 @@
     const tr = document.createElement('div');
     tr.className = 'mt-2 border-t pt-2 ' + (mine ? 'border-white/25' : 'border-slate-200');
     const lbl = document.createElement('div');
-    lbl.className = 'text-[0.6875rem] font-medium ' + (mine ? 'text-brand-100' : 'text-brand-600');
+    lbl.className = 'bl-lbl text-[0.6875rem] font-medium ' + (mine ? 'text-brand-100' : 'text-brand-600');
     lbl.textContent = LANGS[item.to].name;
     const out = document.createElement('div');
     out.className = 'whitespace-pre-wrap break-words text-base font-semibold leading-snug';
     out.textContent = item.out;
     outEls.set(item, out);
     const tools = document.createElement('div');
-    tools.className = 'mt-1 flex gap-1 ' + (mine ? 'text-brand-100' : 'text-slate-500');
+    tools.className = 'bl-tools flex shrink-0 gap-1 ' + (mine ? 'text-brand-100' : 'text-slate-500');
     tools.append(
       iconBtn(svgSpeaker, 'Đọc lại', () => speak(item.out, item.to), mine ? 'hover:bg-white/15' : 'hover:bg-slate-100'),
       iconBtn(svgCopy, 'Sao chép', async () => {
         try { await navigator.clipboard.writeText(item.out); toast('Đã sao chép'); } catch (_) { toast('Không thể sao chép'); }
       }, mine ? 'hover:bg-white/15' : 'hover:bg-slate-100')
     );
-    tr.append(lbl, out, tools);
+    meta.append(metaTxt, tools);
+    tr.append(lbl, out);
     bub.append(meta, orig, tr);
     row.appendChild(bub);
     return row;
@@ -966,7 +972,7 @@
     el.btnMic.classList.toggle('bg-brand-600', !on);
     el.btnMic.setAttribute('aria-pressed', String(on));
     el.btnMic.setAttribute('aria-label', on ? 'Dừng nói' : 'Bắt đầu nói');
-    el.micHint.textContent = on ? 'Đang nghe… chạm để dừng' : 'Chạm để nói';
+    el.micHint.textContent = on ? 'Đang nghe… chạm để dừng' : '';
     updateCounter();
     renderTalkStatus();
   }
@@ -1435,7 +1441,7 @@
     for (const [k, b] of [['chat', el.btnModeChat], ['meeting', el.btnMeeting], ['conf', el.btnConf], ['minutes', $('btnMinutes')]]) {
       if (b) b.setAttribute('aria-pressed', String(k === mode));
     }
-    if (el.modeDesc) el.modeDesc.textContent = MODE_DESC[mode];
+    if (el.modeDesc) { el.modeDesc.textContent = MODE_DESC[mode]; el.modeDesc.hidden = mode === 'chat'; }
   }
 
   // ----- Họp song ngữ: nhận dạng đám mây (Google Speech-to-Text) tự phát hiện ngôn ngữ từng câu -----
@@ -1820,6 +1826,18 @@
   el.btnFontMinus.onclick = () => setScale(state.uiScale - 0.1);
   el.btnFontPlus.onclick = () => setScale(state.uiScale + 0.1);
   window.addEventListener('resize', applyScale);
+  // Mật độ khung chat: Gọn (nhiều tin hơn) / Thoải mái. Mặc định: gọn trên điện thoại, thoải mái trên màn hình lớn.
+  let density = store.get('density', '') || (window.innerWidth < 640 ? 'compact' : 'comfy');
+  function syncDensity() {
+    const on = density === 'compact';
+    el.app.classList.toggle('compact', on);
+    el.btnDensity.setAttribute('aria-pressed', String(on));
+    el.btnDensity.title = on ? 'Đang xem gọn. Bấm để xem thoải mái' : 'Đang xem thoải mái. Bấm để xem gọn';
+    el.btnDensity.classList.toggle('bg-brand-600', on); el.btnDensity.classList.toggle('text-white', on);
+    el.btnDensity.classList.toggle('bg-white', !on); el.btnDensity.classList.toggle('text-slate-500', !on);
+  }
+  el.btnDensity.onclick = () => { density = density === 'compact' ? 'comfy' : 'compact'; store.set('density', density); syncDensity(); scrollChat(); };
+  syncDensity();
   el.btnDual.onclick = () => { state.dual = !state.dual; store.set('dual', state.dual ? '1' : '0'); syncDual(); updateCounter(); };
 
   // ---------- Chế độ màn hình lớn (chiếu lên TV / máy chiếu) ----------

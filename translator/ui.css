@@ -4,7 +4,7 @@
 
 /* Vùng chạm tối thiểu cho mọi nút điều khiển chính */
 #btnInstall:not(.hidden), #btnDonate, #btnExport, #btnClearHist, #btnSettings,
-#btnDual, #btnFontMinus, #btnFontPlus, #btnRoom, #btnBig,
+#btnDual, #btnDensity, #btnFontMinus, #btnFontPlus, #btnRoom, #btnBig,
 #btnMbOpts, #btnMeetingStop, #btnReopenMic, #btnConf, #btnMeeting {
   min-width: var(--tap); min-height: var(--tap);
   display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
@@ -237,3 +237,36 @@ body.dlg-open #toast { bottom: auto; top: calc(12px + env(safe-area-inset-top));
 #sheetAdmin .adm-body { padding-bottom: .5rem; }
 #sheetAdmin .adm-fmt { margin: .125rem 0 0; min-height: 1rem; font-size: .75rem; font-weight: 600; color: #0d4792; }
 #sheetAdmin button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+/* ===== Bước 9: khung chat hiển thị được nhiều tin hơn ===== */
+#history .bl-meta { min-height: 1rem; }
+/* tiêu đề cột của chế độ hai ô dính đúng mép trên khung chat (trước đây lệch, lộ chữ phía trên) */
+#dualHead { top: -.75rem; }
+@media (min-width: 768px) { #dualHead { top: -1rem; margin-left: -1.25rem; margin-right: -1.25rem; margin-top: -1rem; padding-left: 1.25rem; padding-right: 1.25rem; } }
+
+/* Chế độ Gọn */
+#app.compact:not(.big) #history > div > div { padding: 8px 12px; }
+#app.compact:not(.big) #history.space-y-3 > :not([hidden]) ~ :not([hidden]) { margin-top: .5rem; }
+#app.compact:not(.big) #history .border-t { margin-top: .25rem; padding-top: .25rem; }
+#app.compact:not(.big) .bl-lbl { display: none; }
+#app.compact:not(.big) #history .bl-meta { margin-bottom: 0; }
+#app.compact:not(.big) #history .font-semibold.text-base { font-size: 1.0625rem; line-height: 1.3; }
+#app.compact:not(.big) #history .text-\[0\.9375rem\] { font-size: .875rem; }
+#app.compact:not(.big) #history .text-lg { font-size: 1rem; line-height: 1.35; }
+#app.compact:not(.big) #history .bl-tools button { min-width: 36px; min-height: 36px; padding: 0; margin: -4px 0; }
+#app.compact:not(.big) #history .bl-tools button svg { width: 15px; height: 15px; }
+@media (min-width: 768px) {
+  #app.compact:not(.big) #history .font-semibold.text-base { font-size: 1.1875rem; }
+  #app.compact:not(.big) #history .text-\[0\.9375rem\] { font-size: 1rem; }
+  #app.compact:not(.big) #history > div > div { max-width: 86%; }
+}
+@media (min-width: 1280px) { #app.compact:not(.big) #history .font-semibold.text-base { font-size: 1.25rem; } #app.compact:not(.big) #history > div > div { max-width: 78%; } }
+
+/* Điện thoại: nhường chỗ cho khung chat */
+#micHint:empty { display: none; }
+.mode-desc[hidden] { display: none; }
+@media (max-width: 639px) {
+  #app > header { padding-top: .375rem; padding-bottom: .375rem; }
+  #btnMic { width: 4rem; height: 4rem; }
+  #dock { padding-top: 8px; }
+}

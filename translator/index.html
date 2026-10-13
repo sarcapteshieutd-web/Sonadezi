@@ -266,12 +266,6 @@
         <select id="selTgt" aria-label="Ngôn ngữ đích" class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 text-center text-[0.9375rem] font-semibold text-brand-700"></select>
       </div>
       <p id="gUsage" class="mt-1.5 hidden text-center text-[0.6875rem] text-slate-500" aria-live="polite"></p>
-      <div id="accRow" class="mt-2 grid grid-cols-2 gap-2 text-xs">
-        <label class="min-w-0"><span class="block px-1 text-slate-500">Giọng nói vào</span>
-          <select id="selSrcAcc" aria-label="Giọng nói đầu vào" class="mt-0.5 w-full rounded-lg border border-slate-200 bg-slate-50 px-1 py-2 text-brand-700"></select></label>
-        <label class="min-w-0"><span class="block px-1 text-slate-500">Giọng đọc ra</span>
-          <select id="selTgtVoice" aria-label="Giọng đọc đầu ra" class="mt-0.5 w-full rounded-lg border border-slate-200 bg-slate-50 px-1 py-2 text-brand-700"></select></label>
-      </div>
     </section>
 
     <!-- Chọn chế độ -->
@@ -322,6 +316,7 @@
 
     <!-- Thanh công cụ khung chat -->
     <div id="chatBar" class="mt-2 flex shrink-0 items-center justify-end gap-1.5 lg:ml-auto lg:mt-0">
+        <button id="btnDensity" type="button" aria-label="Xem gọn" aria-pressed="false" title="Xem gọn / thoải mái" class="rounded-full bg-white p-1.5 text-slate-500 shadow ring-1 ring-slate-200"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg></button>
         <button id="btnDual" aria-label="Chia hai ô trái phải" title="Chia hai ô trái phải" class="rounded-full bg-white p-1.5 text-slate-500 shadow ring-1 ring-slate-200"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg></button>
         <button id="btnFontMinus" aria-label="Giảm cỡ chữ" title="Giảm cỡ chữ" class="rounded-full bg-white px-2 py-1 text-xs font-semibold text-slate-500 shadow ring-1 ring-slate-200">A−</button>
         <button id="btnFontPlus" aria-label="Tăng cỡ chữ" title="Tăng cỡ chữ" class="rounded-full bg-white px-2 py-1 text-sm font-semibold text-slate-500 shadow ring-1 ring-slate-200">A+</button>
@@ -404,7 +399,7 @@
         </div>
         <span aria-hidden="true"></span>
       </div>
-      <p id="micHint" class="mt-1 text-center text-xs text-slate-500 lg:hidden">Chạm để nói</p>
+      <p id="micHint" class="mt-1 text-center text-xs text-slate-500 lg:hidden"></p>
     </div>
   </div>
 
@@ -476,6 +471,12 @@
       <details class="set-sec">
         <summary>Giọng đọc</summary>
         <div class="set-body">
+      <div id="accRow" class="mt-1 grid grid-cols-1 gap-2 text-sm">
+        <label class="min-w-0"><span class="block text-slate-700">Giọng nói vào</span>
+          <select id="selSrcAcc" aria-label="Giọng nói đầu vào" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2"></select></label>
+        <label class="min-w-0"><span class="block text-slate-700">Giọng đọc ra</span>
+          <select id="selTgtVoice" aria-label="Giọng đọc đầu ra" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2"></select></label>
+      </div>
         <label class="mt-2 block text-sm" for="selVoiceLang">Ngôn ngữ</label>
         <select id="selVoiceLang" class="mt-1 w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2"></select>
         <div id="rowTtsMode">
