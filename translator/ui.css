@@ -36,7 +36,7 @@ button:focus-visible, select:focus-visible, textarea:focus-visible, summary:focu
 
 /* ===== Bước 2: diện mạo mới (theo bản xem trước đã duyệt) ===== */
 :root { --brand: #0d4792; --brand-d: #072a58; --line: #e2e8f0; --vi: #0e7490; --bg: #f4f7fb; }
-body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif; }
+body { background: var(--bg); font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif; }
 
 /* Đầu trang: nền xanh thương hiệu, logo đặt trong ô trắng để nổi trên nền xanh */
 #app > header { background: linear-gradient(135deg, var(--brand-d), var(--brand)); border-bottom: 0; box-shadow: 0 2px 10px rgba(7,42,88,.25); }
@@ -168,3 +168,14 @@ body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, "S
 .mode-desc { margin: 4px 4px 0; font-size: .75rem; color: #475569; min-height: 1rem; }
 @media (min-width: 768px) { #modeBar { flex: 0 1 26rem; } .mode-desc { display: none; } }
 #btnDonate { min-height: 44px; }
+
+/* ===== Bước 6: thanh họp màu thương hiệu (chấm ghi âm vẫn đỏ để nhận ra đang thu) ===== */
+#meetingBar { background: #eef4fc; border: 1px solid #dbe7f8; color: #072a58; }
+#meetingBar #meetingTime { color: var(--brand); }
+#meetingBar #btnMbOpts { background: #fff; border-color: #bcd0ee; color: var(--brand); }
+#meetingBar #btnMeetingStop { background: var(--brand); border-color: var(--brand); color: #fff; }
+#meetingBar #btnMeetingStop:hover { background: var(--brand-d); }
+#meetingBar #minutesHint { color: #475569; }
+#mbOpts { background: #fff; border: 1px solid #dbe7f8; }
+#sttLevelBar { background: var(--brand); }
+#sttLevel { background: #dbe7f8; }
