@@ -179,3 +179,8 @@ body { background: var(--bg); font-family: 'Be Vietnam Pro', -apple-system, Blin
 #mbOpts { background: #fff; border: 1px solid #dbe7f8; }
 #sttLevelBar { background: var(--brand); }
 #sttLevel { background: #dbe7f8; }
+
+/* ===== Sửa lỗi hiển thị: khi micro đã dừng, thanh tín hiệu + nút "Mở lại micro" xuống hàng riêng, không chồng lên các nút khác ===== */
+#mbHead:has(#talkStatus[data-state="dead"]) { flex-wrap: wrap; }
+#mbHead #talkStatus[data-state="dead"] { flex: 1 1 100%; order: 10; flex-wrap: wrap; white-space: normal; justify-content: flex-start; min-width: 0; }
+#meetingBar .text-red-600\/80 { color: #475569; }

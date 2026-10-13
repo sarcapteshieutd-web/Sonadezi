@@ -986,12 +986,12 @@
   // Nhật ký nghe/đọc: lưu trong bộ nhớ, xem và sao chép ở Cài đặt; chỉ sự cố (warn) mới hiện một dòng cảnh báo ngắn trên thanh họp
   const micEvents = [];
   let micWarnTimer = 0;
-  function micLog(msg, warn) {
+  function micLog(msg, warn, friendly) { // friendly: câu tiếng Việt dễ hiểu hiện cho người dùng; nhật ký vẫn giữ mã kỹ thuật
     const t = new Date();
     micEvents.push(t.toLocaleTimeString('vi-VN', { hour12: false }) + '.' + String(t.getMilliseconds()).padStart(3, '0') + ' ' + msg);
     if (micEvents.length > 60) micEvents.shift();
     if (warn) {
-      el.micWarn.textContent = '⚠ ' + msg;
+      el.micWarn.textContent = '⚠ ' + (friendly || msg);
       el.micWarn.classList.remove('hidden');
       clearTimeout(micWarnTimer);
       micWarnTimer = setTimeout(() => el.micWarn.classList.add('hidden'), 10000);
@@ -1025,7 +1025,14 @@
     };
 
     rec.onerror = ev => {
-      micLog('lỗi nghe: ' + ev.error, true);
+      const MIC_ERR_VI = {
+        'not-allowed': 'Trình duyệt chưa cấp quyền micro. Bấm biểu tượng ổ khóa cạnh thanh địa chỉ và cho phép micro.',
+        'service-not-allowed': 'Trình duyệt không cho dùng dịch vụ nhận diện giọng nói trên trang này.',
+        'network': 'Mạng tới dịch vụ nhận diện chập chờn, đang thử lại.',
+        'audio-capture': 'Không nhận được tín hiệu từ micro. Kiểm tra micro đã cắm và chưa bị ứng dụng khác chiếm.',
+        'no-speech': 'Chưa nghe thấy giọng nói.'
+      };
+      micLog('lỗi nghe: ' + ev.error, true, MIC_ERR_VI[ev.error] || ('Lỗi nhận diện giọng nói (' + ev.error + ')'));
       if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') {
         wantListening = false;
         toast('Chưa được cấp quyền micro. Hãy cho phép micro trong cài đặt trình duyệt.');
