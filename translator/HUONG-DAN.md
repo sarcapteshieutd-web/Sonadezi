@@ -163,12 +163,7 @@ Sau đó tăng số phiên bản `CACHE` trong `service-worker.js`.
 - Hội thoại tự được lưu trên thiết bị (tối đa 300 lượt gần nhất) nên tải lại trang vẫn còn; nút thùng rác xóa toàn bộ.
 - Nút **tải xuống** ở đầu trang mở hộp thoại lưu tệp: **.txt** (đọc nhanh) hoặc **.csv** (mở bằng Excel, đủ cột thời gian, ngôn ngữ, văn bản gốc và bản dịch). Trên điện thoại có thêm nút **Chia sẻ** (gửi qua Zalo, email…).
 - Dữ liệu chỉ nằm trên thiết bị người dùng, không gửi lên máy chủ nào ngoài dịch vụ dịch (MyMemory/Google).
-
-### Tóm tắt và sơ đồ cây bằng Claude (VIP và quản trị viên)
-- Trong hộp thoại lưu tệp có nút **Tóm tắt và sơ đồ cây (Claude)**: nội dung đoạn chat được gửi tới Claude (Anthropic) để tạo tiêu đề, đoạn tóm tắt, các ý chính và **sơ đồ cây Mermaid (mindmap) chia theo chủ đề**. Kết quả có thể sao chép, tải tệp **.md** (kèm khối mã Mermaid) hoặc tải ảnh sơ đồ **.svg**. Lần đầu có hộp xác nhận về việc gửi nội dung ra ngoài.
-- Đoạn chat dài chỉ gửi phần mới nhất (khoảng 24.000 ký tự). Khi lỗi, có nút sao chép nội dung để tự dán vào Claude.
-- Quản trị viên cấu hình tại **Cài đặt → Quản trị**, mục *Tóm tắt bằng Claude*: khóa Anthropic dùng chung, mô hình (Sonnet 5.5, Haiku 5.5 hoặc Opus 5.5) và giới hạn lượt mỗi VIP mỗi tháng (0 = không giới hạn). Quản trị viên không bị giới hạn lượt.
-- **Lưu ý bảo mật và chi phí:** khóa Anthropic được máy chủ chỉ trả cho quản trị viên và VIP còn hạn, nhưng ứng dụng gọi API trực tiếp từ trình duyệt nên VIP có thể thấy khóa bằng công cụ của trình duyệt. Hãy tạo khóa riêng cho ứng dụng, đặt giới hạn chi tiêu hằng tháng (Spend limit) tại Anthropic Console, đổi khóa khi cần. Chi phí mỗi lượt tùy mô hình và độ dài đoạn chat, chưa được xác minh: xem số liệu thật tại Anthropic Console → Usage. Cách chặn triệt để là đặt một máy chủ trung gian (Cloud Functions), chưa có trong bản này.
+- Nút **Sao chép lời nhắc tóm tắt bằng Claude**: tải tệp **.txt** của đoạn chat, bấm nút này để sao chép lời nhắc, rồi mở Claude (nút *Mở Claude*), đính kèm tệp và dán lời nhắc để nhận tóm tắt và sơ đồ cây Mermaid theo chủ đề; dán mã Mermaid vào mermaid.live để xem sơ đồ. Cách này không gọi API nên không phát sinh chi phí API; đoạn chat chỉ rời thiết bị khi bạn tự đính kèm vào Claude.
 
 ## 10. Nút Ủng hộ và gói sử dụng
 Nút trái tim ở đầu trang mở cửa sổ ủng hộ. Nội dung lấy từ `config.js`: QR chuyển khoản, thông tin tài khoản, liên kết thanh toán (chỉ nhận `https://`) và danh sách gói. Để trống thì mục tương ứng không hiện.
@@ -275,3 +270,64 @@ Dùng khi bạn đi dự hội nghị, người trình bày nói ngoại ngữ v
 - Nếu bản dịch dồn lại, app giữ tối đa 2 câu mới nhất và đọc nhanh hơn khoảng 25% để bắt kịp; câu cũ hơn có thể bị bỏ qua.
 - Dùng **tai nghe** để tiếng đọc không lọt vào micro. Nếu phát ra loa ngoài, tiếng đọc có thể bị micro thu lại và dịch nhầm.
 - Micro đặt gần nguồn âm (gần loa hội trường hoặc lấy tín hiệu từ bàn trộn âm thanh) cho kết quả tốt nhất. Chưa đo độ trễ thực tế tại hội nghị.
+
+## 23. Họp song ngữ: tự nhận ngôn ngữ từng câu (nhận dạng đám mây)
+Dùng khi hai bên nói xen kẽ tiếng Việt và một ngoại ngữ (Anh, Trung, Nhật hoặc Hàn) mà không muốn bấm đổi người nói. Chỉ dành cho tài khoản **VIP và quản trị viên**.
+1. Chọn cặp ngôn ngữ gồm tiếng Việt và một ngoại ngữ (ví dụ Tiếng Việt và Tiếng Nhật), rồi bấm **Chế độ họp**.
+2. Trong thanh chế độ họp, tích ô **Song ngữ: tự nhận ngôn ngữ từng câu (nhận dạng đám mây)**. Có thể chọn micro (ví dụ loa họp EMEET M0 Plus) trong danh sách bên cạnh; lựa chọn được nhớ cho lần sau.
+3. Mỗi câu hiện sau khi người nói ngắt hơi: ngoại ngữ nằm cột trái, tiếng Việt cột phải; câu được dịch sang ngôn ngữ còn lại. Không có chữ hiện dần khi đang nói.
+- Không dùng cùng **Chế độ hội nghị** (hội nghị vẫn dùng nhận dạng của trình duyệt, một ngôn ngữ cố định). Cặp ngôn ngữ không chứa tiếng Việt thì không dùng được.
+- Khi bật **Đọc bản dịch ra loa**, micro tạm nghỉ lúc ứng dụng đọc rồi tự nghe lại.
+- **Tốc độ hiện chữ:** nhận dạng đám mây không có chữ hiện dần; mỗi câu chỉ hiện sau khi người nói ngắt hơi, rồi mới gửi lên Google và dịch. Ô chọn **Tốc độ ngắt câu** cạnh ô Song ngữ cho phép đổi: *Nhanh* (ngắt sau 0,4 giây, đoạn tối đa 8 giây), *Cân bằng* (0,55 giây, 12 giây, mặc định), *Chính xác* (0,8 giây, 25 giây). Nhanh hiện chữ sớm hơn nhưng dễ cắt giữa câu khi người nói ngập ngừng; Chính xác ít cắt nhầm nhưng chữ hiện muộn hơn. Người nói liền một mạch nhiều câu dài thì nên chọn Nhanh.
+- Tùy chọn **Dịch chạy theo khi đang nói** (trong Cài đặt) chỉ có tác dụng với nhận dạng của trình duyệt, **không** áp dụng cho nhận dạng đám mây vì không có chữ hiện dần để dịch trước.
+- Muốn biết độ trễ thật: bật **Hiện độ trễ** trong Cài đặt. Nhãn ⏱ trên bản dịch đo từ lúc người nói ngừng đến lúc bản dịch hiện ra (gồm chờ ngắt câu, gửi âm thanh, nhận dạng và dịch).
+- Mỗi phút âm thanh gửi đi **có tính phí** theo bảng giá Google Cloud Speech-to-Text; ứng dụng chỉ gửi đoạn có tiếng nói. Mức đã dùng hiển thị ngay trên thanh chế độ họp.
+- Hết hạn mức tháng do quản trị viên đặt: theo cấu hình, ứng dụng **quay về nhận dạng của trình duyệt** (miễn phí, một ngôn ngữ, đổi bằng nút ⇄) hoặc **cho dùng tiếp** (có thể phát sinh thêm chi phí).
+- Đã kiểm thử bằng micro và dịch vụ giả lập; **chưa đo** độ chính xác nhận dạng, độ chính xác phát hiện ngôn ngữ và độ trễ thực tế với khóa Google thật và loa EMEET. Hãy dùng nút **Thử 5 giây** (mục dưới) cho từng cặp ngôn ngữ trước buổi họp quan trọng. Nếu một cặp nhận dạng kém, dùng luồng cũ (nhận dạng trình duyệt và nút ⇄) cho cặp đó.
+
+### Thiết lập cho quản trị viên
+1. Trong Google Cloud Console, bật **Cloud Speech-to-Text API** trên cùng dự án với khóa dùng chung, và thêm dịch vụ này vào mục **API restrictions** của khóa.
+2. Dán lại toàn bộ `firebase/firestore.rules` vào Firebase Console và bấm **Publish** (có thêm các trường `sttLimit`, `userStt`, `sttOver`, `sttPrice`). Chưa dán thì bảng quản trị báo "Không đủ quyền" khi lưu.
+3. Mở **Cài đặt → Quản trị tài khoản và hạn mức**: đặt hạn mức nhận dạng đám mây (phút mỗi tháng) và hạn mức mỗi VIP, chọn hành vi khi hết hạn mức, nhập đơn giá mỗi phút (mặc định 0,016 USD **chưa được xác minh**, hãy đối chiếu với trang giá của Google).
+4. Dùng **Thử 5 giây** cho từng cặp (Anh, Trung, Nhật, Hàn với Việt): nói một câu, đọc chữ nhận được và ngôn ngữ phát hiện. Lỗi 403 nghĩa là dịch vụ chưa bật hoặc khóa chưa cho phép Speech-to-Text. Tiếng Trung có thể cần mã `cmn-Hans-CN` thay cho `zh-CN`: nếu kết quả kém, sửa bảng `CODES` trong `stt-cloud.js`.
+- Chế độ "Cho dùng tiếp" **không có trần chi phí**: hãy đặt cảnh báo ngân sách (Budget alert) trong Google Cloud Billing.
+- Hạn mức tổng chỉ được áp cho chính quản trị viên; số phút của toàn hệ thống hiển thị ở thước đo "Google Speech-to-Text (phút)" để theo dõi. Số liệu do thiết bị tự báo nên chỉ để tham khảo; số liệu và tiền thật xem trên Google Cloud Console.
+
+## 24. Nhật ký nghe/đọc để chẩn đoán lỗi micro
+Ứng dụng ghi lại 60 sự kiện gần nhất (giờ, mở phiên nghe, micro đã bật, lỗi nghe, đọc bản dịch, đọc xong hay **hết giờ chờ**, bật lại micro, nghe được gì). Xem và sao chép ở **Cài đặt → Nhật ký nghe/đọc → Sao chép nhật ký**. Khi có sự cố đáng chú ý (lỗi nghe, đọc hết giờ chờ, lỗi khi đọc), thanh họp hiện một dòng cảnh báo ngắn khoảng 10 giây. Nếu micro không nghe lại sau khi đọc bản dịch, hãy sao chép nhật ký này gửi người hỗ trợ.
+
+## 25. Thanh tín hiệu và tô sáng chữ đang đọc (Chế độ họp, hội nghị, song ngữ)
+Trong lúc họp, một **thanh tín hiệu** nằm ngay trên khung chat (cũng hiện ở màn hình lớn) cho biết lúc nào được nói:
+- 🟢 **Sẵn sàng nói**: micro đang nghe.
+- 🟡 **Đang xử lý bản dịch…**: câu vừa nói đang được nhận dạng/dịch.
+- 🔵 **Đang đọc bản dịch · micro tạm nghỉ, chưa nói được** (họp thường), hoặc **micro vẫn nghe** (chế độ hội nghị).
+- 🔴 **Micro chưa nghe · đang mở lại…**: phiên nghe đã dừng; nếu thanh này đỏ kéo dài, hãy bấm Dừng họp rồi bật lại.
+
+Khi đọc bản dịch, **chữ trong bong bóng bản dịch đang đọc được tô sáng**: phần đã đọc mờ đi, từ đang đọc tô vàng; đọc xong thì trả về chữ bình thường.
+- Giọng thiết bị: tô theo từng từ nếu trình duyệt báo vị trí; nếu không, tô ước lượng theo thời gian.
+- Giọng Google WaveNet: tô theo tỷ lệ thời gian đã phát (xấp xỉ, không khớp từng từ).
+- Nếu việc đọc bị lỗi giữa chừng, ứng dụng vẫn tự bật lại micro để nghe tiếp (trước đây có thể bị kẹt).
+
+## 26. Thanh họp gọn và nút ⚙ Tùy chọn
+Thanh họp chỉ còn một hàng: **giờ ghi · Đang nghe: (ngôn ngữ) · thanh tín hiệu · ⚙ Tùy chọn · Dừng**, để khung chat bắt đầu cao hơn và xem được nhiều bản dịch hơn. Bấm **⚙ Tùy chọn** để mở các ô ít đổi khi họp: *Tự đổi sau mỗi lượt, Song ngữ (kèm chọn micro và tốc độ ngắt câu), Đọc bản dịch ra loa, Chế độ hội nghị* và hướng dẫn đổi người nói. Trạng thái mở/đóng được nhớ cho lần sau.
+
+## 27. Micro bị ngắt giữa cuộc họp (lỗi audio-capture)
+Trên một số thiết bị (đặc biệt iPad), trình duyệt đôi khi báo lỗi `audio-capture` (micro bị ngắt thoáng qua). Trước đây lỗi này làm **cả cuộc họp tự dừng** nên câu sau không được dịch. Nay ứng dụng giữ nguyên cuộc họp, thanh tín hiệu chuyển 🔴 **Micro bị ngắt · đang thử mở lại…** và tự mở lại micro với khoảng chờ tăng dần (0,4 → 0,8 → 1,6 → 3 giây). Sau **6 lần liên tiếp** không mở lại được, ứng dụng dừng thử nhưng **vẫn giữ cuộc họp** và hiện nút **Mở lại micro** trên thanh tín hiệu. Bấm nút này để nghe tiếp mà không mất các bản dịch đã có. Nếu lỗi lặp lại thường xuyên, hãy sao chép **Nhật ký nghe/đọc** (mục 24) để chẩn đoán.
+
+## 28. Hai laptop đặt đối diện (phòng họp lớn)
+Dùng khi một micro không đủ phủ cả phòng: máy chủ phòng nói một ngôn ngữ (ví dụ Anh), mở **Phòng họp** rồi quét mã/mở liên kết "máy thứ hai" trên laptop còn lại (ngôn ngữ tự đảo, ví dụ Việt). Bấm **Chế độ họp** trên **cả hai máy**.
+- Mỗi máy đặt **gần người nói ngôn ngữ của mình**, hai máy quay micro về hai phía; **chỉ có 1 người nói tại một thời điểm**.
+- Vì micro máy này vẫn thu được tiếng bên kia và tiếng loa đọc dịch, ứng dụng **bỏ qua các câu độ tin cậy thấp (< 0,7)** và, ngay sau khi máy này gửi một câu, bỏ các câu độ tin cậy dưới 0,9 trong khoảng thời gian máy kia đang đọc bản dịch (nghi là tiếng vọng). Các lần bỏ câu được ghi trong **Nhật ký nghe/đọc** (dòng "hai máy: bỏ câu…"). Câu nói thật, rõ, gần micro không bị ảnh hưởng.
+- **Khuyến nghị:** nếu bật "Đọc bản dịch ra loa" thì để âm lượng vừa phải hoặc dùng **tai nghe/loa gần người nghe**, tránh loa hướng thẳng vào micro máy kia, nếu không bản dịch đọc to sẽ bị thu lại và dịch ngược (vòng lặp). Trình duyệt iPad/iPhone thường không báo độ tin cậy nên bộ lọc này không có tác dụng ở đó.
+- Chưa thể kiểm chứng bằng thử nghiệm âm thanh thật: nếu vẫn còn câu rác, hãy gửi lại ảnh Nhật ký ở cả hai máy để chỉnh ngưỡng.
+
+## 29. Báo cáo phòng họp, xem lại toàn văn và tóm tắt sau họp
+**Báo cáo (chủ phòng):** mở **Phòng họp xem chung** → bấm **Xem báo cáo phòng họp** để thấy lượt người xem, thời lượng, số câu, số ngôn ngữ người xem chọn (kèm tỷ lệ). Bấm **Tải báo cáo (CSV)** để lưu và mở bằng Excel. Khi bấm kết thúc phòng, báo cáo được chốt trước khi đóng/xóa và vẫn hiện ở cùng cửa sổ (mục "Phòng vừa kết thúc") để tải về.
+- "Lượt người xem" là số phiên ẩn danh đã vào phòng; một người mở lại trình duyệt có thể được tính thêm. Ứng dụng chưa đo thời gian xem của từng người.
+- Báo cáo và nội dung phòng chỉ tồn tại đến khi phòng hết hạn (tối đa 24 giờ): hãy tải ngay sau họp.
+
+**Người xem sau họp:** khi chủ phòng chọn *Kết thúc, giữ nội dung đến khi hết hạn*, người xem thấy thông báo "Cuộc họp đã kết thúc" kèm giờ được xem lại, và nút **Tải toàn văn (.txt)** bằng ngôn ngữ họ đang chọn (kèm bản tóm tắt nếu có). Chọn *Kết thúc và xóa nội dung* thì người xem không xem lại được.
+
+**Tóm tắt (chủ phòng):** trong **Phòng họp xem chung**, ô **Tóm tắt gửi người tham dự**: tạo bản tóm tắt bằng Claude (nút "Sao chép lời nhắc tóm tắt bằng Claude" ở Lưu đoạn chat, đính kèm tệp .txt), dán kết quả, chọn ngôn ngữ của bản tóm tắt, bấm **Đăng tóm tắt cho người xem**. Người xem thấy thẻ "Tóm tắt cuộc họp" ở đầu khung chat, tự dịch sang ngôn ngữ của họ (dịch bằng bộ dịch của ứng dụng). Có thể đăng cả sau khi đã kết thúc phòng (nếu giữ nội dung) và đăng lại để thay bản cũ.
+- Ứng dụng **không gọi AI tự động** nên không phát sinh chi phí và không gửi nội dung họp cho bên thứ ba.
+- Cần dán lại quy tắc Firestore mới (xem `docs/FIREBASE-SETUP.md` mục 9.6).

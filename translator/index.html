@@ -19,6 +19,7 @@
   <link rel="preload" as="image" href="icons/logo-mark.png" />
 
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="ui.css" />
   <style>
     html, body { height: 100%; }
     body { -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
@@ -33,6 +34,21 @@
     @keyframes blink { 0%,100% { opacity: 1 } 50% { opacity: .45 } }
     /* Chế độ màn hình lớn: chữ phóng to, ẩn ô nhập */
     .big #history, .big #liveRow, .big #liveDual { zoom: 1.5; }
+    /* Thanh tín hiệu: sẵn sàng nói / đang xử lý / đang đọc bản dịch / micro không nghe */
+    #talkStatus { display: none; align-items: center; justify-content: center; gap: 8px; margin: 0; padding: 3px 12px; border-radius: 9999px; font-size: .875rem; font-weight: 600; text-align: center; flex: 1 1 200px; min-width: 200px; }
+    #talkStatus:not([data-state=""]) { display: flex; }
+    #btnReopenMic { display: none; flex: none; padding: 1px 10px; border: 1px solid currentColor; border-radius: 8px; font-size: .75rem; font-weight: 600; }
+    #talkStatus[data-state="dead"] #btnReopenMic { display: inline-block; }
+    #talkStatus .talk-dot { flex: none; width: 12px; height: 12px; border-radius: 9999px; background: currentColor; }
+    #talkStatus[data-state="ready"] { background: #dcfce7; color: #166534; }
+    #talkStatus[data-state="busy"] { background: #fef3c7; color: #92400e; }
+    #talkStatus[data-state="reading"], #talkStatus[data-state="reading-conf"] { background: #dbeafe; color: #1e40af; }
+    #talkStatus[data-state="dead"] { background: #fee2e2; color: #991b1b; }
+    #talkStatus[data-state="busy"] .talk-dot, #talkStatus[data-state="reading"] .talk-dot, #talkStatus[data-state="reading-conf"] .talk-dot { animation: blink 1s infinite; }
+    .viewer #talkStatus { display: none !important; }
+    /* Chữ đang được đọc: phần đã đọc mờ đi, từ đang đọc tô vàng */
+    .rd-done { opacity: .5; }
+    .rd-cur { background: #fde047; color: #111827; border-radius: 3px; box-shadow: 0 0 0 2px #fde047; }
     /* Chế độ hai ô trái/phải */
     .dual #dualHead { display: grid; }
     .dual #liveRow { display: none !important; }
@@ -253,13 +269,26 @@
 
     <!-- Thanh trạng thái chế độ họp -->
     <div id="meetingBar" class="mt-2 hidden shrink-0 flex-col lg:mt-0 lg:flex-1 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-5 gap-1.5 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
-      <div class="flex items-center justify-between">
-        <span class="flex items-center gap-2"><span class="rec-blink inline-block h-2 w-2 rounded-full bg-red-600"></span>Đang ghi · <span id="meetingTime" class="tabular-nums">00:00</span></span>
-        <button id="btnMeetingStop" class="rounded-lg border border-red-300 px-2 py-0.5 text-xs font-medium">Dừng</button>
+      <div id="mbHead" class="flex w-full flex-wrap items-center gap-x-3 gap-y-1.5">
+        <span class="flex items-center gap-1.5 whitespace-nowrap font-semibold"><span class="rec-blink inline-block h-2 w-2 rounded-full bg-red-600"></span><span id="meetingTime" class="tabular-nums">00:00</span></span>
+        <span class="whitespace-nowrap">Đang nghe: <b id="meetingLang" class="text-base"></b></span>
+        <div id="talkStatus" data-state="" role="status" aria-live="polite"><span class="talk-dot"></span><span id="talkText"></span><button id="btnReopenMic" type="button">Mở lại micro</button></div>
+        <button id="btnMbOpts" type="button" aria-label="Tùy chọn họp" aria-expanded="false" class="whitespace-nowrap rounded-lg border border-red-300 px-2 py-0.5 text-xs font-semibold">⚙<span class="lbl">&nbsp;Tùy chọn</span></button>
+        <button id="btnMeetingStop" class="whitespace-nowrap rounded-lg border border-red-300 px-2 py-0.5 text-xs font-medium">Dừng</button>
       </div>
-      <div class="flex items-center justify-between gap-2">
-        <span>Đang nghe: <b id="meetingLang" class="text-base"></b></span>
+      <div id="micWarn" class="hidden w-full rounded-lg bg-red-100 px-2 py-1 text-xs font-medium" role="alert"></div>
+      <div id="mbOpts" class="hidden w-full flex-col gap-1.5 rounded-lg bg-white/60 p-2">
         <label class="flex items-center gap-1.5 text-xs"><input id="chkAutoTurn" type="checkbox" class="h-4 w-4 accent-red-600" />Tự đổi sau mỗi lượt</label>
+      <div id="bilingualRow" class="flex flex-wrap items-center justify-between gap-2">
+        <label class="flex items-center gap-1.5 text-xs"><input id="chkBilingual" type="checkbox" class="h-4 w-4 accent-red-600" />Song ngữ: tự nhận ngôn ngữ từng câu (nhận dạng đám mây)</label>
+        <select id="selSttSpeed" aria-label="Tốc độ ngắt câu" title="Tốc độ ngắt câu: nhanh hiện chữ sớm hơn nhưng dễ cắt giữa câu" class="hidden rounded border border-red-300 bg-transparent px-1 py-0.5 text-xs">
+          <option value="fast">Nhanh (ngắt câu sớm)</option>
+          <option value="balanced">Cân bằng</option>
+          <option value="accurate">Chính xác (ngắt câu muộn)</option>
+        </select>
+        <select id="selMic" aria-label="Chọn micro" class="hidden max-w-[16rem] truncate rounded border border-red-300 bg-transparent px-1 py-0.5 text-xs"></select>
+        <span id="sttLevel" class="hidden h-1.5 w-16 shrink-0 overflow-hidden rounded bg-red-100" aria-hidden="true"><span id="sttLevelBar" class="block h-full bg-red-600" style="width:0%"></span></span>
+        <span id="sttStatus" class="text-[0.6875rem]"></span>
       </div>
       <div class="flex items-center justify-between gap-2">
         <label class="flex items-center gap-1.5 text-xs"><input id="chkMeetingSpeak" type="checkbox" class="h-4 w-4 accent-red-600" />Đọc bản dịch ra loa</label>
@@ -267,6 +296,7 @@
         <span id="meetingSpeaking" class="hidden rounded bg-red-100 px-1.5 py-0.5 text-[0.6875rem] font-medium">Đang đọc · micro tạm nghỉ</span>
       </div>
       <div class="text-[0.6875rem] text-red-600/80">Đổi người nói: bấm ⇄ hoặc phím Space.</div>
+      </div>
     </div>
 
     <button id="btnBigExit" type="button" aria-label="Thoát màn hình lớn">✕ Thu nhỏ</button>
@@ -349,9 +379,9 @@
             <svg id="icoStop" class="hidden" width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
           </button>
         </div>
-        <div class="flex flex-col items-end gap-1.5 justify-self-end">
-          <button id="btnConf" aria-label="Chế độ hội nghị: nghe bản dịch bằng tai nghe" class="rounded-full bg-brand-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm">🎧 Hội nghị</button>
-          <button id="btnMeeting" class="rounded-full border border-brand-600 px-3 py-1.5 text-xs font-medium text-brand-600">Chế độ họp</button>
+        <div class="flex min-w-0 flex-col items-stretch gap-1.5 justify-self-end">
+          <button id="btnConf" aria-label="Chế độ hội nghị: nghe bản dịch bằng tai nghe" class="whitespace-nowrap rounded-full bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white shadow-sm">🎧 Hội nghị</button>
+          <button id="btnMeeting" class="whitespace-nowrap rounded-full border border-brand-600 px-2.5 py-1.5 text-xs font-medium text-brand-600">Chế độ họp</button>
         </div>
       </div>
       <p id="micHint" class="mt-1 text-center text-xs text-slate-500 lg:hidden">Chạm để nói</p>
@@ -480,6 +510,10 @@
           <option value="4000">4 giây</option>
         </select>
         <label class="mt-3 flex items-center gap-2 text-sm"><input id="chkLat" type="checkbox" class="h-4 w-4 accent-brand-600" />Hiện độ trễ trên từng bong bóng (để so sánh)</label>
+        <details class="mt-3 rounded-lg border border-slate-200 p-2 text-sm"><summary class="cursor-pointer font-medium">Nhật ký nghe/đọc (để chẩn đoán lỗi micro)</summary>
+          <pre id="micLogView" class="mt-2 max-h-40 overflow-auto whitespace-pre-wrap font-mono text-[0.625rem] leading-tight text-slate-700"></pre>
+          <button id="btnMicLogCopy" type="button" class="mt-2 rounded-lg border border-slate-300 px-3 py-1 text-xs">Sao chép nhật ký</button>
+        </details>
         <p class="mt-1 text-xs text-slate-500">Dịch theo cụm và dịch phần đuôi khi chưa dứt câu có thể kém chính xác hơn dịch cả câu, nhất là khi trật tự từ khác nhau (Việt, Trung); bản dịch tạm có thể đổi khi người nói nói thêm. Tự chốt câu có thể cắt câu giữa chừng nếu người nói ngừng giữa ý. Hãy thử và đối chiếu trước khi dùng cho họp quan trọng.</p>
       </div>
       <button id="btnSave" class="mt-4 w-full rounded-xl bg-brand-600 py-2.5 font-medium text-white">Lưu</button>
@@ -497,34 +531,9 @@
       <button id="expTxt" class="w-full rounded-xl bg-brand-600 py-2.5 font-medium text-white">Tải tệp văn bản (.txt)</button>
       <button id="expCsv" class="mt-2 w-full rounded-xl border border-brand-600 py-2.5 font-medium text-brand-600">Tải tệp Excel (.csv)</button>
       <button id="expShare" class="mt-2 hidden w-full rounded-xl border border-slate-300 py-2.5 font-medium text-slate-700">Chia sẻ…</button>
-      <button id="expAi" class="mt-4 w-full rounded-xl border border-brand-600 bg-brand-50 py-2.5 font-medium text-brand-600">Tóm tắt và sơ đồ cây (Claude)</button>
-      <p class="mt-1 text-xs text-slate-500">Gửi nội dung đoạn chat tới Claude (Anthropic) để tóm tắt và vẽ sơ đồ cây theo chủ đề. Mỗi lần thực hiện tính vào giới hạn của tài khoản.</p>
-    </div>
-  </div>
-
-  <!-- Tóm tắt và sơ đồ cây do Claude tạo -->
-  <div id="sheetAi" data-modal class="fixed inset-0 z-30 hidden items-end bg-black/40 sm:items-center sm:justify-center">
-    <div class="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl bg-white p-5 pb-[max(env(safe-area-inset-bottom),1.25rem)] sm:rounded-2xl">
-      <div class="mb-1 flex items-center justify-between">
-        <h2 class="text-base font-semibold">Tóm tắt và sơ đồ cây</h2>
-        <button data-close class="px-2 text-2xl leading-none" aria-label="Đóng">×</button>
-      </div>
-      <p id="aiStatus" class="text-sm text-slate-500"></p>
-      <div id="aiOut" class="hidden">
-        <h3 id="aiTitle" class="mt-2 text-sm font-semibold"></h3>
-        <p id="aiSummary" class="mt-1 whitespace-pre-line text-sm text-slate-700"></p>
-        <ul id="aiPoints" class="mt-2 list-disc space-y-0.5 pl-5 text-sm text-slate-700"></ul>
-        <h3 class="mt-4 text-sm font-semibold">Sơ đồ cây theo chủ đề</h3>
-        <div id="aiDiagram" class="mt-1 overflow-x-auto rounded-lg border border-slate-200 p-2"></div>
-        <pre id="aiCode" class="mt-2 hidden max-h-48 overflow-auto rounded-lg bg-slate-50 p-2 text-xs"></pre>
-        <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
-          <button id="aiCopySum" class="rounded-xl border border-slate-300 py-2">Sao chép tóm tắt</button>
-          <button id="aiCopyMmd" class="rounded-xl border border-slate-300 py-2">Sao chép mã Mermaid</button>
-          <button id="aiDlMd" class="rounded-xl bg-brand-600 py-2 font-medium text-white">Tải tệp (.md)</button>
-          <button id="aiDlSvg" class="rounded-xl border border-brand-600 py-2 font-medium text-brand-600">Tải sơ đồ (.svg)</button>
-        </div>
-      </div>
-      <button id="aiCopyPrompt" class="mt-3 hidden w-full rounded-xl border border-slate-300 py-2 text-sm">Sao chép nội dung để tự dán vào Claude</button>
+      <button id="expAi" class="mt-4 w-full rounded-xl border border-brand-600 bg-brand-50 py-2.5 font-medium text-brand-600">Sao chép lời nhắc tóm tắt bằng Claude</button>
+      <p class="mt-1 text-xs text-slate-500">Cách làm: tải tệp .txt ở trên, mở Claude, đính kèm tệp rồi dán lời nhắc này để nhận bản tóm tắt và sơ đồ cây Mermaid theo chủ đề (dán mã Mermaid vào mermaid.live để xem sơ đồ).</p>
+      <a id="expClaude" href="https://claude.ai/new" target="_blank" rel="noopener" class="mt-2 block w-full rounded-xl border border-slate-300 py-2.5 text-center text-sm font-medium text-slate-700">Mở Claude</a>
     </div>
   </div>
 
@@ -564,6 +573,8 @@
   <div id="toast" class="pointer-events-none fixed bottom-6 left-1/2 z-30 hidden -translate-x-1/2 rounded-full bg-slate-900 px-4 py-2 text-sm text-white shadow-lg"></div>
 
   <script src="config.js"></script>
+  <script src="stt-cloud.js"></script>
+  <script src="report.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -97,20 +97,6 @@ const t = (name, got, exp) => {
   t('Người thường xóa hồ sơ người khác bị chặn', await call('DELETE', '/users/' + c.uid, b.tok), 'deny');
   t('Quản trị viên xóa hồ sơ C', await call('DELETE', '/users/' + c.uid, adm.tok), 'ok');
 
-  console.log('--- Khóa Claude (config/ai)');
-  const ai = { key: S('sk-ant-test'), model: S('claude-sonnet-5-5'), userAi: N(20), updatedAt: N(now) };
-  t('Người thường không ghi được cấu hình Claude', await call('PATCH', '/config/ai', a.tok, ai), 'deny');
-  t('Quản trị viên lưu cấu hình Claude', await call('PATCH', '/config/ai', adm.tok, ai), 'ok');
-  t('Quản trị viên lưu thừa trường bị chặn', await call('PATCH', '/config/ai', adm.tok, { ...ai, extra: S('x') }), 'deny');
-  t('Quản trị viên lưu userAi sai kiểu bị chặn', await call('PATCH', '/config/ai', adm.tok, { ...ai, userAi: S('20') }), 'deny');
-  t('Quản trị viên đọc cấu hình Claude', await call('GET', '/config/ai', adm.tok), 'ok');
-  t('VIP còn hạn đọc được khóa Claude', await call('GET', '/config/ai', a.tok), 'ok');
-  t('Không đăng nhập không đọc được khóa Claude', await call('GET', '/config/ai', null), 'deny');
-  t('Tài khoản bị khóa không đọc được khóa Claude', await call('GET', '/config/ai', b.tok), 'deny');
-  t('Tài khoản hết hạn không đọc được khóa Claude', await call('GET', '/config/ai', exp.tok), 'deny');
-  t('Tài khoản chờ duyệt không đọc được khóa Claude', await call('GET', '/config/ai', c.tok), 'deny');
-  t('VIP báo lượt tóm tắt (usage.ai)', await call('PATCH', '/users/' + a.uid, a.tok, { usage: M({ m202610: M({ ai: N(1) }) }), lastSeen: N(now) }, ['usage', 'lastSeen']), 'ok');
-
   console.log('--- Giới hạn mỗi VIP (config/google) và gói Google Cloud (config/billing)');
   const cfg2 = { key: S('AIzaFAKE'), trLimit: N(500000), ttsLimit: N(4000000), userTr: N(300000), userTts: N(600000), updatedAt: N(now) };
   const bill = { creditUsd: N(300), vndPerUsd: N(25970), trialEndMs: N(now + 89 * DAY), trPrice: N(20), ttsPrice: N(4), ttsFree: N(4000000), updatedAt: N(now) };
@@ -125,6 +111,20 @@ const t = (name, got, exp) => {
   t('VIP không ghi được gói Google Cloud', await call('PATCH', '/config/billing', a.tok, bill), 'deny');
   t('Không đăng nhập không đọc được gói Google Cloud', await call('GET', '/config/billing', null), 'deny');
   t('Tài liệu config khác (không phải google/billing) bị chặn', await call('PATCH', '/config/khac', adm.tok, bill), 'deny');
+
+  console.log('--- Hạn mức nhận dạng đám mây Speech-to-Text (sttLimit, userStt, sttOver, sttPrice)');
+  const cfgStt = { ...cfg2, sttLimit: N(600), userStt: N(120), sttOver: S('fallback') };
+  t('Quản trị viên lưu hạn mức Speech-to-Text', await call('PATCH', '/config/google', adm.tok, cfgStt), 'ok');
+  t('Quản trị viên lưu sttOver = continue', await call('PATCH', '/config/google', adm.tok, { ...cfgStt, sttOver: S('continue') }), 'ok');
+  t('sttOver ngoài fallback/continue bị chặn', await call('PATCH', '/config/google', adm.tok, { ...cfgStt, sttOver: S('xyz') }), 'deny');
+  t('sttLimit kiểu chữ bị chặn', await call('PATCH', '/config/google', adm.tok, { ...cfgStt, sttLimit: S('nhieu') }), 'deny');
+  t('userStt kiểu chữ bị chặn', await call('PATCH', '/config/google', adm.tok, { ...cfgStt, userStt: S('nhieu') }), 'deny');
+  t('VIP không ghi được hạn mức Speech-to-Text', await call('PATCH', '/config/google', a.tok, cfgStt), 'deny');
+  t('Quản trị viên lưu lại cấu hình có stt để VIP đọc', await call('PATCH', '/config/google', adm.tok, cfgStt), 'ok');
+  t('VIP còn hạn đọc được hạn mức Speech-to-Text', await call('GET', '/config/google', a.tok), 'ok');
+  t('Quản trị viên lưu sttPrice (số thực)', await call('PATCH', '/config/billing', adm.tok, { ...bill, sttPrice: { doubleValue: 0.016 } }), 'ok');
+  t('sttPrice kiểu chữ bị chặn', await call('PATCH', '/config/billing', adm.tok, { ...bill, sttPrice: S('re') }), 'deny');
+  t('VIP không ghi được sttPrice', await call('PATCH', '/config/billing', a.tok, { ...bill, sttPrice: { doubleValue: 0.016 } }), 'deny');
 
   console.log('\nKẾT QUẢ: ' + pass + ' đạt, ' + fail + ' lỗi');
   process.exit(fail ? 1 : 0);

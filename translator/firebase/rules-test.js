@@ -66,11 +66,22 @@ let pass=0,fail=0; const t=(name,got,exp)=>{ const ok=exp==='ok'?got===200:got==
  t('Chủ kéo dài hạn phòng bị chặn',await call('PATCH','/rooms/'+id,A.tok,{expiresAt:T(now+48*3600e3)},['expiresAt']),'deny');
  t('Người khác đóng phòng bị chặn',await call('PATCH','/rooms/'+id,Bv.tok,{status:S('closed')},['status']),'deny');
  t('Chủ đóng phòng',await call('PATCH','/rooms/'+id,A.tok,{status:S('closed')},['status']),'ok');
+ // tóm tắt sau họp
+ const sum={text:S('Tóm tắt cuộc họp'),lang:S('vi'),ts:I(now),expiresAt:T(now+24*3600e3)};
+ t('Người xem ghi tóm tắt bị chặn',await call('PATCH','/rooms/'+id+'/summary/main',Bv.tok,sum),'deny');
+ t('Chủ đăng tóm tắt (kể cả khi phòng đã đóng)',await call('PATCH','/rooms/'+id+'/summary/main',A.tok,sum),'ok');
+ t('Người xem đọc tóm tắt',await call('GET','/rooms/'+id+'/summary/main',Bv.tok),'ok');
+ t('Không đăng nhập đọc tóm tắt bị chặn',await call('GET','/rooms/'+id+'/summary/main',null),'deny');
+ t('Tóm tắt có trường lạ bị chặn',await call('PATCH','/rooms/'+id+'/summary/main',A.tok,{...sum,evil:S('x')}),'deny');
+ t('Tóm tắt quá 20000 ký tự bị chặn',await call('PATCH','/rooms/'+id+'/summary/main',A.tok,{...sum,text:S('a'.repeat(20001))}),'deny');
+ t('Tóm tắt tài liệu khác tên main bị chặn',await call('PATCH','/rooms/'+id+'/summary/other',A.tok,sum),'deny');
+ t('Người xem xóa tóm tắt bị chặn',await call('DELETE','/rooms/'+id+'/summary/main',Bv.tok),'deny');
  // phòng hết hạn
  const id2='expiredroom12345678ab';
  t('Tạo phòng hết hạn sau 2 giờ (để thử hết hạn)',await call('PATCH','/rooms/'+id2,A.tok,room(now+2*3600e3)),'ok');
  t('Chủ rút ngắn hạn về quá khứ',await call('PATCH','/rooms/'+id2,A.tok,{expiresAt:T(now-1000)},['expiresAt']),'ok');
  t('Phòng hết hạn: người xem không đọc được',await call('GET','/rooms/'+id2,Bv.tok),'deny');
+ t('Phòng hết hạn: chủ không đăng tóm tắt',await call('PATCH','/rooms/'+id2+'/summary/main',A.tok,sum),'deny');
  t('Phòng hết hạn: chủ không ghi thêm tin',await call('PATCH','/rooms/'+id2+'/messages/m1',A.tok,msg),'deny');
  console.log(`\nKẾT QUẢ: ${pass} đạt, ${fail} lỗi`);
 })();

@@ -62,6 +62,16 @@ service cloud.firestore {
         allow delete: if isHost(roomId);
       }
 
+      // Bản tóm tắt sau cuộc họp: một tài liệu duy nhất (summary/main), chỉ chủ phòng ghi, người trong phòng đọc
+      match /summary/{docId} {
+        allow get: if signedIn() && alive(roomId) && docId == 'main';
+        allow create, update: if isHost(roomId) && alive(roomId) && docId == 'main'
+          && request.resource.data.keys().hasOnly(['text', 'lang', 'ts', 'expiresAt'])
+          && request.resource.data.text is string && request.resource.data.text.size() <= 20000
+          && request.resource.data.lang is string && request.resource.data.lang.size() <= 4;
+        allow delete: if isHost(roomId);
+      }
+
       // Mã mời máy thứ hai: chỉ chủ phòng đọc/ghi; quy tắc cohosts đối chiếu mã này
       match /secret/{docId} {
         allow get, delete: if isHost(roomId) && docId == 'code';
@@ -138,26 +148,22 @@ service cloud.firestore {
     match /config/{docId} {
       // google: khóa dùng chung + hạn mức tổng + giới hạn mỗi tài khoản VIP (VIP còn hạn cần đọc để tự áp dụng)
       allow get: if docId == 'google' && (isAdmin() || vipActive());
-      // ai: khóa Claude (Anthropic) + mô hình + giới hạn lượt tóm tắt mỗi VIP; cùng quyền đọc với google
-      allow get: if docId == 'ai' && (isAdmin() || vipActive());
       // billing: thông tin gói/ngân sách Google Cloud của chủ dự án, chỉ quản trị viên đọc và ghi
       allow get: if docId == 'billing' && isAdmin();
       allow list: if false;
       allow create, update: if docId == 'google' && isAdmin()
-        && request.resource.data.keys().hasOnly(['key', 'trLimit', 'ttsLimit', 'userTr', 'userTts', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['key', 'trLimit', 'ttsLimit', 'userTr', 'userTts', 'sttLimit', 'userStt', 'sttOver', 'updatedAt'])
         && request.resource.data.key is string && request.resource.data.key.size() <= 200
         && request.resource.data.trLimit is number && request.resource.data.ttsLimit is number
-        && request.resource.data.get('userTr', 0) is number && request.resource.data.get('userTts', 0) is number;
-      allow create, update: if docId == 'ai' && isAdmin()
-        && request.resource.data.keys().hasOnly(['key', 'model', 'userAi', 'updatedAt'])
-        && request.resource.data.key is string && request.resource.data.key.size() <= 300
-        && request.resource.data.model is string && request.resource.data.model.size() <= 80
-        && request.resource.data.userAi is number;
+        && request.resource.data.get('userTr', 0) is number && request.resource.data.get('userTts', 0) is number
+        && request.resource.data.get('sttLimit', 0) is number && request.resource.data.get('userStt', 0) is number
+        && request.resource.data.get('sttOver', 'fallback') in ['fallback', 'continue'];
       allow create, update: if docId == 'billing' && isAdmin()
-        && request.resource.data.keys().hasOnly(['creditUsd', 'vndPerUsd', 'trialEndMs', 'trPrice', 'ttsPrice', 'ttsFree', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['creditUsd', 'vndPerUsd', 'trialEndMs', 'trPrice', 'ttsPrice', 'ttsFree', 'sttPrice', 'updatedAt'])
         && request.resource.data.get('creditUsd', 0) is number && request.resource.data.get('vndPerUsd', 0) is number
         && request.resource.data.get('trialEndMs', 0) is number && request.resource.data.get('trPrice', 0) is number
-        && request.resource.data.get('ttsPrice', 0) is number && request.resource.data.get('ttsFree', 0) is number;
+        && request.resource.data.get('ttsPrice', 0) is number && request.resource.data.get('ttsFree', 0) is number
+        && request.resource.data.get('sttPrice', 0) is number;
       allow delete: if false;
     }
   }

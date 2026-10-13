@@ -47,7 +47,6 @@ function create(cfg) {
   const profileRef = u => doc(db, 'users', u);
   const adminRef = u => doc(db, 'admins', u);
   const googleCfgRef = doc(db, 'config', 'google');
-  const aiCfgRef = doc(db, 'config', 'ai');
   const billingRef = doc(db, 'config', 'billing');
   onAuthStateChanged(auth, u => { if (u) uid = u.uid; }); // giữ uid của phòng họp khớp với tài khoản đang đăng nhập
 
@@ -114,6 +113,7 @@ function create(cfg) {
       await deleteDoc(liveRef(id, 'now')).catch(() => {});
       await deleteDoc(liveRef(id, 'co')).catch(() => {});
       await deleteDoc(secretRef(id)).catch(() => {});
+      await deleteDoc(doc(db, 'rooms', id, 'summary', 'main')).catch(() => {});
       await pushAll(collection(db, 'rooms', id, 'cohosts')).catch(() => {});
       await pushAll(collection(db, 'rooms', id, 'viewers'));
       await Promise.all(batches);
@@ -154,6 +154,26 @@ function create(cfg) {
 
     async joinAsViewer(id, expiresAtMs, lang) {
       await setDoc(viewerRef(id, uid), { lang, ts: Date.now(), expiresAt: Timestamp.fromMillis(expiresAtMs) });
+    },
+    // Danh sách người xem kèm thời điểm vào (chủ phòng đọc để làm báo cáo)
+    async listViewers(id) {
+      const snap = await getDocs(collection(db, 'rooms', id, 'viewers'));
+      return snap.docs.map(d => ({ uid: d.id, lang: d.data().lang, ts: d.data().ts || 0 }));
+    },
+    async getMessages(id) {
+      const snap = await getDocs(query(msgs(id), orderBy('ts', 'asc')));
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    },
+    // Bản tóm tắt sau họp: một tài liệu duy nhất do chủ phòng đăng
+    async setSummary(id, expiresAtMs, { text, lang }) {
+      await setDoc(doc(db, 'rooms', id, 'summary', 'main'), { text, lang, ts: Date.now(), expiresAt: Timestamp.fromMillis(expiresAtMs) });
+    },
+    async getSummary(id) {
+      const s = await getDoc(doc(db, 'rooms', id, 'summary', 'main'));
+      return s.exists() ? s.data() : null;
+    },
+    subscribeSummary(id, cb) {
+      return onSnapshot(doc(db, 'rooms', id, 'summary', 'main'), snap => cb(snap.exists() ? snap.data() : null), () => {});
     },
     subscribeViewers(id, cb, onError) {
       return onSnapshot(collection(db, 'rooms', id, 'viewers'), snap => {
@@ -208,25 +228,17 @@ function create(cfg) {
       subscribeGoogleConfig(cb, onError) {
         return onSnapshot(googleCfgRef, s => cb(s.exists() ? s.data() : null), onError || (() => {}));
       },
-      // Khóa dùng chung, hạn mức tổng mỗi tháng (trLimit/ttsLimit) và giới hạn mỗi tài khoản VIP mỗi tháng (userTr/userTts); 0 = không giới hạn
-      async saveGoogleConfig({ key, trLimit, ttsLimit, userTr, userTts }) {
-        await setDoc(googleCfgRef, { key: key || '', trLimit: trLimit || 0, ttsLimit: ttsLimit || 0, userTr: userTr || 0, userTts: userTts || 0, updatedAt: Date.now() });
-      },
-      // Cấu hình Claude (tóm tắt + sơ đồ cây): khóa Anthropic, mô hình, giới hạn lượt mỗi VIP mỗi tháng (0 = không giới hạn)
-      async getAiConfig() {
-        const s = await getDoc(aiCfgRef);
-        return s.exists() ? s.data() : null;
-      },
-      async saveAiConfig({ key, model, userAi }) {
-        await setDoc(aiCfgRef, { key: key || '', model: model || '', userAi: userAi || 0, updatedAt: Date.now() });
+      // Khóa dùng chung, hạn mức tổng mỗi tháng (trLimit/ttsLimit/sttLimit, sttLimit tính bằng phút) và giới hạn mỗi tài khoản VIP mỗi tháng (userTr/userTts/userStt); sttOver: 'fallback' hoặc 'continue' khi hết hạn mức; 0 = không giới hạn
+      async saveGoogleConfig({ key, trLimit, ttsLimit, userTr, userTts, sttLimit, userStt, sttOver }) {
+        await setDoc(googleCfgRef, { key: key || '', trLimit: trLimit || 0, ttsLimit: ttsLimit || 0, userTr: userTr || 0, userTts: userTts || 0, sttLimit: sttLimit || 0, userStt: userStt || 0, sttOver: sttOver === 'continue' ? 'continue' : 'fallback', updatedAt: Date.now() });
       },
       // Thông tin gói/ngân sách Google Cloud của chủ dự án (chỉ quản trị viên đọc/ghi)
       async getBillingConfig() {
         const s = await getDoc(billingRef);
         return s.exists() ? s.data() : null;
       },
-      async saveBillingConfig({ creditUsd, vndPerUsd, trialEndMs, trPrice, ttsPrice, ttsFree }) {
-        await setDoc(billingRef, { creditUsd, vndPerUsd, trialEndMs, trPrice, ttsPrice, ttsFree, updatedAt: Date.now() });
+      async saveBillingConfig({ creditUsd, vndPerUsd, trialEndMs, trPrice, ttsPrice, ttsFree, sttPrice }) {
+        await setDoc(billingRef, { creditUsd, vndPerUsd, trialEndMs, trPrice, ttsPrice, ttsFree, sttPrice: sttPrice || 0, updatedAt: Date.now() });
       },
       async listUsers() {
         const snap = await getDocs(collection(db, 'users'));
@@ -248,7 +260,7 @@ function create(cfg) {
         const upd = { lastSeen: Date.now() };
         if (d.tr) upd['usage.' + month + '.tr'] = increment(d.tr);
         if (d.tts) upd['usage.' + month + '.tts'] = increment(d.tts);
-        if (d.ai) upd['usage.' + month + '.ai'] = increment(d.ai);
+        if (d.stt) upd['usage.' + month + '.stt'] = increment(d.stt); // giây nhận dạng đám mây
         await updateDoc(profileRef(u.uid), upd);
       }
     },
