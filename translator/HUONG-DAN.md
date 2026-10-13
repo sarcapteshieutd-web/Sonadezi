@@ -331,3 +331,13 @@ Dùng khi một micro không đủ phủ cả phòng: máy chủ phòng nói m�
 **Tóm tắt (chủ phòng):** trong **Phòng họp xem chung**, ô **Tóm tắt gửi người tham dự**: tạo bản tóm tắt bằng Claude (nút "Sao chép lời nhắc tóm tắt bằng Claude" ở Lưu đoạn chat, đính kèm tệp .txt), dán kết quả, chọn ngôn ngữ của bản tóm tắt, bấm **Đăng tóm tắt cho người xem**. Người xem thấy thẻ "Tóm tắt cuộc họp" ở đầu khung chat, tự dịch sang ngôn ngữ của họ (dịch bằng bộ dịch của ứng dụng). Có thể đăng cả sau khi đã kết thúc phòng (nếu giữ nội dung) và đăng lại để thay bản cũ.
 - Ứng dụng **không gọi AI tự động** nên không phát sinh chi phí và không gửi nội dung họp cho bên thứ ba.
 - Cần dán lại quy tắc Firestore mới (xem `docs/FIREBASE-SETUP.md` mục 9.6).
+
+## 30. Ghi biên bản (chỉ ghi chữ tiếng Việt, không dịch)
+Chế độ riêng, độc lập với Chế độ họp, Hội nghị và Phòng họp chia sẻ. Dùng khi họp với khách hàng Việt Nam và cần biên bản chuyên nghiệp sau cuộc họp.
+1. Bấm **📝 Ghi biên bản** (góc dưới bên phải). Nhập **tiêu đề**, **khách hàng/đơn vị** và **thành phần tham dự** (mỗi người một dòng, nên ghi họ tên - chức vụ - đơn vị) rồi bấm **Bắt đầu ghi**. Các trường đều không bắt buộc; khách hàng và thành phần tham dự được nhớ cho lần sau.
+2. Chữ tiếng Việt chạy liên tục theo giờ. Không dịch, không đọc ra loa, không đẩy lên phòng họp chung.
+3. Bấm **Dừng** khi kết thúc. Hộp **Tóm tắt biên bản** hiện ra: bấm **Sao chép lời nhắc**, mở Claude hoặc ChatGPT, dán và gửi. Có thể tải lời nhắc về dạng .txt. Tài khoản VIP mở lại được lời nhắc của buổi gần nhất ở hộp Lưu đoạn chat, nút "Lời nhắc tóm tắt biên bản gần nhất".
+- Lời nhắc có sẵn vai trò thư ký, thông tin cuộc họp, quy tắc "không suy đoán, thiếu thì ghi Chưa ghi nhận, số liệu nghi sai đánh dấu cần xác nhận lại" và cấu trúc biên bản 7 phần (thông tin chung, tóm tắt điều hành, thảo luận chính, đã thống nhất, tồn đọng, công việc tiếp theo, điểm cần kiểm tra lại).
+- Chi phí: nhận diện giọng nói của trình duyệt không tính phí và chế độ này không gọi dịch vụ dịch. Phần tóm tắt thực hiện trên tài khoản Claude/ChatGPT của bạn, theo gói bạn đang dùng.
+- Giới hạn: bản ghi không phân biệt người nói và có thể sai tên riêng, số liệu; bạn cần rà soát trước khi ban hành. Không lưu file âm thanh. Cần mạng, để ứng dụng ở phía trước và giữ màn hình sáng. Tài khoản Miễn phí không lưu đoạn chat nên cần lấy lời nhắc ngay sau khi dừng.
+- Bản ghi sẽ được gửi sang dịch vụ AI mà bạn dán vào; cân nhắc tính bảo mật của cuộc họp trước khi dùng.
