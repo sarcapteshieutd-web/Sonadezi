@@ -2174,7 +2174,7 @@
       has = true;
       const c = node('div', 'mt-3 rounded-xl bg-slate-50 p-3 text-sm');
       [['Ngân hàng', b.bankName], ['Số tài khoản', b.accountNumber], ['Chủ tài khoản', b.accountName], ['Nội dung', b.note]]
-        .filter(r => r[1]).forEach(r => { const row = node('div', 'flex justify-between gap-3'); row.append(node('span', 'text-slate-500', r[0]), node('span', 'font-medium text-right', r[1])); c.appendChild(row); });
+        .filter(r => r[1]).forEach(r => { const row = node('div', 'flex justify-between gap-3'); row.append(node('span', 'shrink-0 whitespace-nowrap text-slate-500', r[0]), node('span', 'font-medium text-right', r[1])); c.appendChild(row); });
       if (b.accountNumber) {
       const cp = node('button', 'mt-2 w-full rounded-lg border border-brand-600 py-1.5 font-medium text-brand-600', 'Sao chép số tài khoản');
       cp.onclick = async () => { try { await navigator.clipboard.writeText(b.accountNumber); toast('Đã sao chép số tài khoản'); } catch (_) { toast('Không thể sao chép'); } };

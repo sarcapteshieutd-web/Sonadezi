@@ -184,3 +184,27 @@ body { background: var(--bg); font-family: 'Be Vietnam Pro', -apple-system, Blin
 #mbHead:has(#talkStatus[data-state="dead"]) { flex-wrap: wrap; }
 #mbHead #talkStatus[data-state="dead"] { flex: 1 1 100%; order: 10; flex-wrap: wrap; white-space: normal; justify-content: flex-start; min-width: 0; }
 #meetingBar .text-red-600\/80 { color: #475569; }
+
+/* ===== Bước 7: tiếp cận cửa sổ phụ + Cài đặt chia mục, nút Lưu cố định đáy ===== */
+.dlg-x { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; border-radius: 12px; color: #334155; background: #f1f5f9; cursor: pointer; flex: none; }
+.dlg-x:hover { background: #e2e8f0; }
+[role="dialog"]:focus { outline: none; }
+input::placeholder, textarea::placeholder { color: #64748b; opacity: 1; }
+#sheetMinutesSetup button, #sheetMinutesDone button, #sheetExport button { min-height: 44px; border-radius: 12px; cursor: pointer; }
+#sheetMinutesSetup button.dlg-x, #sheetMinutesDone button.dlg-x { padding: 0; }
+/* thông báo nhỏ không đè lên cửa sổ đang mở: đưa lên đầu màn hình */
+body.dlg-open #toast { bottom: auto; top: calc(12px + env(safe-area-inset-top)); z-index: 60; }
+
+/* Cài đặt: các mục thu gọn được */
+#sheet summary { list-style: none; }
+#sheet summary::-webkit-details-marker { display: none; }
+#sheet .set-sec { border-top: 1px solid #e2e8f0; margin-top: .75rem; }
+#sheet .set-sec > summary { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700; font-size: .9375rem; color: var(--brand-d); cursor: pointer; }
+#sheet .set-sec > summary::after, #sheet .help > summary::after { content: ""; width: 9px; height: 9px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); margin: -4px 4px 0 8px; flex: none; transition: transform .15s; }
+#sheet .set-sec[open] > summary::after, #sheet .help[open] > summary::after { transform: rotate(-135deg); margin-top: 4px; }
+#sheet .set-body { padding-bottom: .5rem; }
+#sheet .help { margin-top: .25rem; border: 0; }
+#sheet .help > summary { min-height: 44px; display: flex; align-items: center; justify-content: flex-start; font-size: .8125rem; font-weight: 600; color: var(--brand); cursor: pointer; }
+#sheet .set-about { border-top: 1px solid #e2e8f0; margin-top: .75rem; padding-top: 1rem; }
+#sheet .set-savebar { position: sticky; bottom: -1.25rem; margin: 1rem -1.25rem -1.25rem; padding: .75rem 1.25rem max(env(safe-area-inset-bottom), 1rem); background: #fff; border-top: 1px solid #e2e8f0; box-shadow: 0 -6px 12px rgba(15,23,42,.06); z-index: 2; }
+#sheet #dirtyNote { margin: 0 0 .5rem; font-size: .8125rem; font-weight: 600; color: #92400e; text-align: center; }
