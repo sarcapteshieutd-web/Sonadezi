@@ -1548,7 +1548,7 @@
   el.selMic.onchange = () => { state.micId = el.selMic.value; store.set('micId', state.micId); if (state.cloudActive) restartCloud(); };
   function startMeeting() {
     const useCloud = state.bilingual && !bilingualBlock();
-    if (!SR && !useCloud) { toast('Trình duyệt không hỗ trợ nhận diện giọng nói. Dùng Chrome (Android) hoặc Safari (iOS 14.5+).'); return; }
+    if (!SR && !useCloud) { toast('Trình duyệt không hỗ trợ nhận diện giọng nói. Dùng Chrome (Android) hoặc Safari (iOS 14.5+).'); return false; }
     if (state.listening || wantListening) stopListening();
     archiveTurn();
     unlockTTS();
@@ -1566,7 +1566,9 @@
     if (useCloud) startCloud(); else beginSession();
     syncBilingualUI();
     renderTalkStatus();
+    return true;
   }
+  let confViaBtn = false; // chế độ hội nghị được bật tạm bằng nút 🎧 (không lưu lâu dài)
   function stopMeeting() {
     if (!state.meeting) return;
     const rest = el.src.value.trim();
@@ -1585,6 +1587,7 @@
     setListeningUI(false);
     setMeetingUI(false);
     if (wakeLock) { try { wakeLock.release(); } catch (_) {} wakeLock = null; }
+    if (confViaBtn) { confViaBtn = false; state.conf = false; store.set('conf', '0'); syncConf(); }
     toast('Đã dừng chế độ họp');
   }
   document.addEventListener('keydown', e => {
@@ -1606,6 +1609,7 @@
   function syncConfBtn() {
     const on = state.meeting && state.conf;
     el.btnConf.textContent = on ? '⏹ Dừng hội nghị' : '🎧 Hội nghị';
+    el.btnConf.setAttribute('aria-label', on ? 'Dừng chế độ hội nghị' : 'Chế độ hội nghị: nghe bản dịch bằng tai nghe');
     el.btnConf.classList.toggle('bg-red-600', on);
     el.btnConf.classList.toggle('bg-brand-600', !on);
   }
@@ -1625,8 +1629,11 @@
   el.btnConf.onclick = () => {
     if (!isVip()) { vipOnly(); return; }
     if (state.meeting && state.conf) { stopMeeting(); return; }
-    state.conf = true; store.set('conf', '1'); syncConf();
-    if (!state.meeting) startMeeting();
+    if (state.meeting) { toast('Đang họp ở chế độ thường. Hãy dừng họp rồi bấm Hội nghị để chuyển chế độ.'); return; }
+    const prev = state.conf;
+    state.conf = true; syncConf();
+    if (!startMeeting()) { state.conf = prev; syncConf(); return; }
+    confViaBtn = !prev; store.set('conf', '1');
     toast('Chế độ hội nghị: hãy cắm tai nghe và chọn làm thiết bị phát của máy');
   };
   el.btnMeeting.onclick = () => (state.meeting ? stopMeeting() : startMeeting());
