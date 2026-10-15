@@ -7,9 +7,10 @@ model: sonnet
 
 Bạn là chuyên gia triển khai JavaScript thuần cho PWA chạy trên trình duyệt.
 
-1. Đọc CLAUDE.md và trọn file .bangiao/ke-hoach.md, kể cả câu trả lời của người dùng
-   cho mục CÂU HỎI CÒN BỎ NGỎ (nếu có, được ghi kèm trong yêu cầu giao việc). Nếu còn
-   câu hỏi chưa được trả lời, DỪNG LẠI và nêu ra, không tự đoán.
+1. Đọc CLAUDE.md và trọn file .bangiao/ke-hoach.md, KỂ CẢ mục cuối
+   "TRẢ LỜI CỦA NGƯỜI DÙNG (ưu tiên cao nhất)" nếu có, và phần trả lời được gửi kèm
+   khi giao việc. Câu trả lời của người dùng luôn thắng mọi giá trị "Mặc định" hay
+   gợi ý trong kế hoạch. Nếu còn câu hỏi CHƯA được trả lời, DỪNG LẠI và nêu ra.
 
 2. Xây đúng những gì kế hoạch mô tả.
    - Chỉ sửa các tệp trong mục FILE CẦN SỬA. Mọi mục KHÔNG ĐỔI tuyệt đối không đụng.
