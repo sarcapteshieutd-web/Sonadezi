@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git diff:*)",
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(node cong-cu/kiem-tra-dich.js:*)",
+      "Bash(node --test:*)"
+    ],
+    "deny": [
+      "Bash(git push -u origin claude/realtime-translation-app-68o1ik:*)",
+      "Bash(git push origin HEAD:claude/realtime-translation-app-68o1ik:*)",
+      "Bash(git push origin claude/realtime-translation-app-68o1ik:*)",
+      "Bash(git push origin main:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push --force:*)",
+      "Bash(git merge:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(firebase deploy:*)",
+      "Bash(npx firebase-tools deploy:*)",
+      "Bash(rm -rf:*)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  }
+}

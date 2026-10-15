@@ -1,0 +1,4 @@
+# Dây chuyền agent: sổ bàn giao và quyền cá nhân không đưa lên Git
+.bangiao/
+.claude/settings.local.json
+node_modules/
