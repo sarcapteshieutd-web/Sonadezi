@@ -1,6 +1,14 @@
+import re
+
+import yaml
+
 from conftest import SKILL_DIR
 
 REF = SKILL_DIR / "references"
+
+
+def referenced_files(skill_md_text: str) -> set:
+    return set(re.findall(r"(?:references|scripts)/[\w.-]+", skill_md_text))
 
 
 def test_mau_tom_tat_has_three_templates():
@@ -37,3 +45,30 @@ def test_glossary_table():
         assert len(cells) == 6 and all(cells[:5]), r
     vi = {r.split("|")[1].strip() for r in rows}
     assert {"Nhà xưởng xây sẵn", "Phí quản lý", "Tỷ lệ lấp đầy", "Thuê lại đất", "Hạ tầng kỹ thuật"} <= vi
+
+
+def test_frontmatter():
+    fm = yaml.safe_load((SKILL_DIR / "SKILL.md").read_text().split("---")[1])
+    assert fm["name"] == "xu-ly-pdf-szl"
+    for kw in ["tóm tắt", "Word", "dịch", "PDF"]:
+        assert kw in fm["description"]
+    assert len(fm["description"]) <= 1024
+
+
+def test_skill_md_links_resolve():
+    refs = referenced_files((SKILL_DIR / "SKILL.md").read_text())
+    assert {"references/mau-tom-tat.md", "references/chuyen-word.md", "references/quy-tac-dich.md",
+            "references/thuat-ngu-kcn.md", "references/giong-van-szl.md", "scripts/pdf_to_docx.py"} <= refs
+    for r in refs:
+        assert (SKILL_DIR / r).exists(), r
+
+
+def test_skill_md_rules_and_errors():
+    t = (SKILL_DIR / "SKILL.md").read_text()
+    for s in ["[CẦN KIỂM TRA]", "(tr. ", "Cho lãnh đạo", "mật khẩu", "tách", "không bẻ khóa"]:
+        assert s in t
+
+
+def test_huong_dan_examples():
+    t = (SKILL_DIR / "HUONG-DAN.md").read_text()
+    assert t.count("> ") >= 3 and "[CẦN KIỂM TRA]" in t and "thuat-ngu-kcn.md" in t
