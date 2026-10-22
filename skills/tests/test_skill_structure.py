@@ -25,3 +25,15 @@ def test_quy_tac_dich_rules():
 
 def test_giong_van_is_exact_copy():
     assert (REF / "giong-van-szl.md").read_bytes() == (SKILL_DIR.parents[1] / "giong-van-szl.md").read_bytes()
+
+
+def test_glossary_table():
+    t = (REF / "thuat-ngu-kcn.md").read_text()
+    assert "bản khởi tạo do AI soạn, cần Phòng KD-TH rà soát" in t
+    rows = [l for l in t.splitlines() if l.startswith("|") and not set(l) <= set("|-: ")][1:]
+    assert len(rows) >= 40
+    for r in rows:
+        cells = [c.strip() for c in r.strip("|").split("|")]
+        assert len(cells) == 6 and all(cells[:5]), r
+    vi = {r.split("|")[1].strip() for r in rows}
+    assert {"Nhà xưởng xây sẵn", "Phí quản lý", "Tỷ lệ lấp đầy", "Thuê lại đất", "Hạ tầng kỹ thuật"} <= vi
