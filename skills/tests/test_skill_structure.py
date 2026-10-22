@@ -1,14 +1,13 @@
-import re
+import sys
 
 import yaml
 
 from conftest import SKILL_DIR
 
+sys.path.insert(0, str(SKILL_DIR.parent))
+from dong_goi import referenced_files  # noqa: E402
+
 REF = SKILL_DIR / "references"
-
-
-def referenced_files(skill_md_text: str) -> set:
-    return set(re.findall(r"(?:references|scripts)/[\w.-]+", skill_md_text))
 
 
 def test_mau_tom_tat_has_three_templates():
