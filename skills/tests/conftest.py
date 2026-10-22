@@ -62,3 +62,28 @@ def tep_khong_phai_pdf(tmp_path):
     path = tmp_path / "gia.pdf"
     path.write_text("khong phai pdf")
     return str(path)
+
+
+@pytest.fixture
+def pdf_khoa_quyen(pdf_chu, tmp_path):
+    """PDF chỉ hạn chế quyền (mật khẩu mở rỗng)."""
+    path = tmp_path / "han-che-quyen.pdf"
+    writer = PdfWriter()
+    for page in PdfReader(pdf_chu).pages:
+        writer.add_page(page)
+    writer.encrypt(user_password="", owner_password="chu-so-huu")
+    with open(path, "wb") as f:
+        writer.write(f)
+    return str(path)
+
+
+@pytest.fixture
+def pdf_hon_hop(pdf_chu, pdf_scan, tmp_path):
+    """Trang 1 có chữ, trang 2 là bản scan."""
+    path = tmp_path / "hon-hop.pdf"
+    writer = PdfWriter()
+    writer.add_page(PdfReader(pdf_chu).pages[0])
+    writer.add_page(PdfReader(pdf_scan).pages[0])
+    with open(path, "wb") as f:
+        writer.write(f)
+    return str(path)

@@ -71,3 +71,8 @@ def test_skill_md_rules_and_errors():
 def test_huong_dan_examples():
     t = (SKILL_DIR / "HUONG-DAN.md").read_text()
     assert t.count("> ") >= 3 and "[CẦN KIỂM TRA]" in t and "thuat-ngu-kcn.md" in t
+
+
+def test_word_workflow_writable_output_and_mixed_scan():
+    for t in [(REF / "chuyen-word.md").read_text(), (SKILL_DIR / "SKILL.md").read_text()]:
+        assert "<thư mục ghi được>" in t and "scan_pages" in t

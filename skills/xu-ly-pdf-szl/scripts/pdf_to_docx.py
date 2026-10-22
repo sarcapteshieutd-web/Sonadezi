@@ -25,14 +25,28 @@ def _check_pdf(pdf_path):
     with open(path, "rb") as f:
         if f.read(5) != b"%PDF-":
             raise ValueError(f"Tệp không phải PDF: {pdf_path}")
+    _reader(str(path))
+
+
+def _reader(pdf_path):
+    """Mở PDF; PDF chỉ hạn chế quyền (mật khẩu mở rỗng) vẫn đọc được."""
     from pypdf import PdfReader
-    if PdfReader(str(path)).is_encrypted:
+    reader = PdfReader(pdf_path)
+    if reader.is_encrypted and not reader.decrypt(""):
         raise PdfPasswordError(f"PDF có mật khẩu: {pdf_path}")
+    return reader
 
 
 def _page_count(pdf_path):
-    from pypdf import PdfReader
-    return len(PdfReader(pdf_path).pages)
+    return len(_reader(pdf_path).pages)
+
+
+def scan_pages(pdf_path: str, min_chars_per_page: int = 20) -> list:
+    """Số thứ tự (từ 1) các trang gần như không có lớp chữ, tức trang scan."""
+    import pdfplumber
+    with pdfplumber.open(pdf_path) as pdf:
+        return [i for i, p in enumerate(pdf.pages, 1)
+                if len((p.extract_text() or "").strip()) < min_chars_per_page]
 
 
 def has_text_layer(pdf_path: str, min_chars_per_page: int = 20) -> bool:
@@ -101,6 +115,9 @@ def convert(pdf_path: str, out_path: str, force_fallback: bool = False) -> dict:
             method = "pdf2docx"
         except ImportError:
             tables = None
+        except Exception:  # pdf2docx lỗi với bố cục lạ: bỏ tệp dở dang, chuyển sang cách dự phòng
+            Path(out_path).unlink(missing_ok=True)
+            tables = None
     if tables is None:
         tables = _convert_fallback(pdf_path, out_path)
     return {"method": method, "pages": _page_count(pdf_path), "tables": tables, "out_path": out_path}
@@ -114,13 +131,17 @@ def main(argv=None):
     parser.add_argument("--check", action="store_true", help="chỉ kiểm tra bản scan")
     args = parser.parse_args(argv)
     try:
+        _check_pdf(args.pdf)
+        scans = scan_pages(args.pdf)
+        pages = _page_count(args.pdf)
         if args.check:
-            _check_pdf(args.pdf)
-            result = {"is_scan": not has_text_layer(args.pdf), "pages": _page_count(args.pdf)}
+            result = {"is_scan": len(scans) == pages, "pages": pages, "scan_pages": scans}
         else:
             out = args.out or str(Path(args.pdf).with_name(Path(args.pdf).stem + "_word.docx"))
+            if Path(out).suffix.lower() != ".docx" or Path(out).resolve() == Path(args.pdf).resolve():
+                raise ValueError(f"Tệp đầu ra phải có đuôi .docx và khác tệp PDF gốc: {out}")
             result = convert(args.pdf, out, force_fallback=args.fallback)
-            result["is_scan"] = not has_text_layer(args.pdf)
+            result.update({"is_scan": len(scans) == pages, "scan_pages": scans})
     except PdfPasswordError:
         print("Lỗi: PDF được bảo vệ bằng mật khẩu. Đề nghị gỡ mật khẩu rồi gửi lại tệp.", file=sys.stderr)
         return 2

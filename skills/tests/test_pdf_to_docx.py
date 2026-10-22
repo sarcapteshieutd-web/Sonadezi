@@ -63,7 +63,7 @@ def test_cli_default_output_name(pdf_chu):
 def test_cli_check_scan(pdf_scan):
     p = run_cli(pdf_scan, "--check")
     assert p.returncode == 0, p.stderr
-    assert json.loads(p.stdout) == {"is_scan": True, "pages": 1}
+    assert json.loads(p.stdout) == {"is_scan": True, "pages": 1, "scan_pages": [1]}
 
 
 def test_cli_password_exit_2(pdf_mat_khau):
@@ -81,3 +81,31 @@ def test_cli_missing_file_exit_1(tmp_path):
 def test_cli_not_pdf_exit_1(tep_khong_phai_pdf):
     p = run_cli(tep_khong_phai_pdf)
     assert p.returncode == 1 and "không phải PDF" in p.stderr
+
+
+def test_empty_password_pdf_converts(pdf_khoa_quyen, tmp_path):
+    r = convert(pdf_khoa_quyen, str(tmp_path / "o.docx"), force_fallback=True)
+    assert r["pages"] == 2
+
+
+def test_pdf2docx_crash_falls_back(pdf_chu, tmp_path, monkeypatch):
+    pdf2docx = pytest.importorskip("pdf2docx")
+
+    def hong(self, out, *a, **k):
+        Path(out).write_bytes(b"hong")
+        raise RuntimeError("bo cuc la")
+    monkeypatch.setattr(pdf2docx.Converter, "convert", hong)
+    r = convert(pdf_chu, str(tmp_path / "o.docx"))
+    assert r["method"] == "fallback"
+    assert "Khu công nghiệp Long Thành" in "\n".join(p.text for p in docx.Document(r["out_path"]).paragraphs)
+
+
+def test_cli_refuses_overwrite_input(pdf_chu):
+    p = run_cli(pdf_chu, pdf_chu)
+    assert p.returncode == 1 and "Traceback" not in p.stderr
+    assert Path(pdf_chu).read_bytes()[:5] == b"%PDF-"
+
+
+def test_cli_check_mixed_reports_scan_pages(pdf_hon_hop):
+    p = run_cli(pdf_hon_hop, "--check")
+    assert json.loads(p.stdout) == {"is_scan": False, "pages": 2, "scan_pages": [2]}

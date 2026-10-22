@@ -35,9 +35,11 @@ Yêu cầu gồm nhiều việc (ví dụ "dịch rồi tóm tắt"): làm lần
 
 ## 2. Chuyển sang Word
 
-1. Chạy `python scripts/pdf_to_docx.py <tệp.pdf> --check` để biết là PDF dạng chữ hay bản scan.
-2. PDF dạng chữ → `python scripts/pdf_to_docx.py <tệp.pdf>`, tạo `<tên-gốc>_word.docx`.
-3. Bản scan → đọc chữ từ ảnh từng trang, dựng tệp .docx theo `references/chuyen-word.md`.
+Chạy lệnh từ thư mục gốc của skill.
+
+1. Chạy `python scripts/pdf_to_docx.py <tệp.pdf> --check` để biết là PDF dạng chữ, bản scan hay hỗn hợp (`scan_pages` liệt kê các trang scan).
+2. PDF dạng chữ → `python scripts/pdf_to_docx.py <tệp.pdf> <thư mục ghi được>/<tên-gốc>_word.docx`. Luôn ghi vào thư mục đầu ra của phiên, không ghi cạnh tệp tải lên.
+3. Bản scan, hoặc các trang trong `scan_pages` của PDF hỗn hợp → đọc chữ từ ảnh từng trang, dựng nội dung theo `references/chuyen-word.md`.
 4. Kiểm tra số trang, số bảng; giao tệp kèm 1–2 dòng ghi chú chất lượng.
 
 ## 3. Dịch

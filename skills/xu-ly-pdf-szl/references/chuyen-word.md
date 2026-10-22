@@ -8,8 +8,9 @@ Chạy (thư mục gốc của skill):
 python scripts/pdf_to_docx.py <vao.pdf> --check
 ```
 
-Kết quả `{"is_scan": false, ...}` → PDF dạng chữ, làm Bước 2A.
-Kết quả `{"is_scan": true, ...}` → bản scan, làm Bước 2B.
+Kết quả `{"is_scan": true, ...}` → toàn bộ là bản scan, làm Bước 2B.
+Kết quả `{"is_scan": false, "scan_pages": []}` → PDF dạng chữ, làm Bước 2A.
+Kết quả `{"is_scan": false, "scan_pages": [3, 4, ...]}` → PDF hỗn hợp: làm Bước 2A, sau đó đọc riêng các trang trong `scan_pages` theo Bước 2B và thay nội dung các trang đó trong tệp Word (bản chuyển tự động chỉ giữ ảnh ở các trang này).
 
 Mã thoát và cách xử lý:
 - `2` (PDF có mật khẩu): báo người dùng gỡ mật khẩu hoặc cung cấp mật khẩu. Không cố bẻ khóa.
@@ -18,12 +19,13 @@ Mã thoát và cách xử lý:
 ## Bước 2A. PDF dạng chữ
 
 ```
-python scripts/pdf_to_docx.py <vao.pdf>
+python scripts/pdf_to_docx.py <vao.pdf> <thư mục ghi được>/<tên-gốc>_word.docx
 ```
 
-- Tập lệnh ghi `<tên-gốc>_word.docx` cạnh tệp vào và in JSON gồm `method`, `pages`, `tables`.
+- Luôn chỉ rõ tệp đầu ra trong thư mục ghi được (thư mục đầu ra của phiên làm việc). Thư mục chứa tệp người dùng tải lên có thể chỉ cho đọc. Tệp đầu ra phải có đuôi `.docx`, không trùng tệp PDF gốc.
+- Tập lệnh ghi tệp .docx và in JSON gồm `method`, `pages`, `tables`.
 - `method = "pdf2docx"`: giữ bố cục tốt.
-- `method = "fallback"`: môi trường không có pdf2docx; giữ tiêu đề, đoạn văn, bảng nhưng không giữ vị trí hình. Nêu điều này trong ghi chú cho người dùng.
+- `method = "fallback"`: môi trường không có pdf2docx hoặc pdf2docx lỗi với bố cục này; giữ tiêu đề, đoạn văn, bảng nhưng không giữ vị trí hình. Nêu điều này trong ghi chú cho người dùng.
 - Nếu không chạy được mã: đọc nội dung PDF và dựng tệp .docx bằng công cụ tạo Word sẵn có; ghi chú "không giữ bố cục gốc".
 
 ## Bước 2B. Bản scan
