@@ -26,6 +26,13 @@ window.APP_CONFIG = {
   recognition: {
     // Bỏ qua câu đã chốt có độ tin cậy thấp hơn mức này (0 đến 1). Đặt 0 để tắt.
     minConfidence: 0.3,
+    // Tên riêng báo trước cho Google Cloud STT (chỉ tác dụng khi dùng Google Cloud, không ảnh hưởng nhận diện của trình duyệt).
+    // Cộng thêm các "to" trong glossary bên dưới. sttBoost: 0 đến 20 (mặc định 10); quá cao dễ nghe nhầm từ thường thành tên riêng.
+    sttPhrases: [
+      'sân bay Long Thành', 'Long Thành', 'Nhơn Trạch', 'Sonadezi', 'Châu Đức', 'Long Phước', 'Tổng công ty Sonadezi',
+      'Cụm công nghiệp' // TODO người dùng: bổ sung tên cụm công nghiệp cụ thể (ví dụ "Cụm công nghiệp ...")
+    ],
+    sttBoost: 10,
     // Từ điển sửa lỗi: gặp "variants" thì thay bằng "to". Không phân biệt hoa/thường, cần khớp nguyên cụm từ.
     // Các cách nghe sai dưới đây chỉ là ví dụ dự đoán; hãy bổ sung theo kết quả bạn thực sự thấy khi nói.
     glossary: [

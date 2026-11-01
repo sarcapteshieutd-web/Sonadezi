@@ -158,12 +158,44 @@
     return sttError(status, 'Dịch vụ nhận dạng của Google tạm thời lỗi (' + status + ')');
   }
 
+  // Dựng speechContexts (báo trước tên riêng cho Google): lọc kỹ vì cụm không hợp lệ làm cả yêu cầu bị lỗi 400
+  function buildSpeechContexts(phrases, opts) {
+    const seen = new Set(), out = [];
+    let total = 0;
+    for (const p of Array.isArray(phrases) ? phrases : []) {
+      if (typeof p !== 'string') continue;
+      const t = p.trim();
+      if (!t || t.length > 100) continue;
+      const k = t.toLowerCase();
+      if (seen.has(k)) continue;
+      if (out.length >= 500 || total + t.length > 10000) break;
+      seen.add(k); out.push(t); total += t.length;
+    }
+    if (!out.length) return [];
+    const b = opts && typeof opts.boost === 'number' && isFinite(opts.boost) ? opts.boost : 10;
+    return [{ phrases: out, boost: Math.min(20, Math.max(0, b)) }];
+  }
+
+  // Gom cụm cần báo trước theo cặp ngôn ngữ: tiếng Việt (sttPhrases + glossary.to), tiếng Anh (glossary.en) khi cặp có en
+  function phrasesForPair(rcfg, pair) {
+    if (!rcfg || !pair) return [];
+    const gl = Array.isArray(rcfg.glossary) ? rcfg.glossary : [];
+    const out = [];
+    // Mọi cặp của app đều có tiếng Việt (xem pairFromLangs)
+    if (Array.isArray(rcfg.sttPhrases)) out.push(...rcfg.sttPhrases);
+    for (const g of gl) if (g && g.to) out.push(g.to);
+    if (pair.foreign === 'en') for (const g of gl) if (g && g.en) out.push(g.en);
+    return out;
+  }
+
   // Lỗi mạng và 5xx được thử lại đúng một lần; 4xx không thử lại. Thông điệp lỗi không bao giờ chứa khóa API.
   async function recognize(pcm, opts) {
     const fetchImpl = opts.fetchImpl || (typeof fetch !== 'undefined' ? fetch.bind(globalThis) : null);
     if (!fetchImpl) throw sttError(0, 'Trình duyệt không hỗ trợ gọi dịch vụ nhận dạng');
+    const config = { encoding: 'LINEAR16', sampleRateHertz: SAMPLE_RATE, languageCode: opts.primary, alternativeLanguageCodes: [opts.alt], enableAutomaticPunctuation: true };
+    if (Array.isArray(opts.speechContexts) && opts.speechContexts.length) config.speechContexts = opts.speechContexts; // chỉ gửi khi có cụm
     const body = JSON.stringify({
-      config: { encoding: 'LINEAR16', sampleRateHertz: SAMPLE_RATE, languageCode: opts.primary, alternativeLanguageCodes: [opts.alt], enableAutomaticPunctuation: true },
+      config,
       audio: { content: pcm16ToBase64(pcm) }
     });
     const url = ENDPOINT + '?key=' + encodeURIComponent(opts.apiKey);
@@ -233,7 +265,7 @@
   let cap = null, seg = null, cfg = null, paused = false, gen = 0, segOptsCur = {}; // gen: số thế hệ, để bỏ qua lần start() đã bị stop()/start() khác chen ngang
 
   const runner = createOrderedRunner(
-    job => recognize(job.pcm, { apiKey: job.c.apiKey, primary: job.c.pair.primary, alt: job.c.pair.alt }),
+    job => recognize(job.pcm, { apiKey: job.c.apiKey, primary: job.c.pair.primary, alt: job.c.pair.alt, speechContexts: job.c.speechContexts }),
     (job, r) => {
       const c = job.c;
       if (!r.ok) { if (c.onError) c.onError(r.e); return; }
@@ -251,7 +283,7 @@
     runner({ c, pcm: floatToPcm16(samples), secs, quota, endedAt: Date.now() - (samples.tailMs || 0) });
   }
 
-  // opts: { deviceId?, apiKey, pair: {primary, alt, foreign}, onSegment, onLevel?, onError?, gate?(seconds) -> {allow,...}, onBlocked?, paused? }
+  // opts: { deviceId?, apiKey, pair: {primary, alt, foreign}, onSegment, onLevel?, onError?, gate?(seconds) -> {allow,...}, onBlocked?, paused?, speechContexts? }
   async function start(opts) {
     stop();
     const my = ++gen;
@@ -297,11 +329,11 @@
     c.close();
     const total = frames.reduce((n, f) => n + f.length, 0);
     const samples = concat(frames, total);
-    const r = await recognize(floatToPcm16(samples), { apiKey: opts.apiKey, primary: opts.pair.primary, alt: opts.pair.alt });
+    const r = await recognize(floatToPcm16(samples), { apiKey: opts.apiKey, primary: opts.pair.primary, alt: opts.pair.alt, speechContexts: opts.speechContexts });
     return { text: r.text, lang: langFromCode(r.code, opts.pair), seconds: billedSeconds(samples.length) };
   }
 
-  const api = { SAMPLE_RATE, CODES, SPEED_PRESETS, pairFromLangs, langFromCode, downsampleTo16k, floatToPcm16, pcm16ToBase64, billedSeconds, createSegmenter, createOrderedRunner, quotaDecision, recognize };
+  const api = { SAMPLE_RATE, CODES, SPEED_PRESETS, pairFromLangs, langFromCode, downsampleTo16k, floatToPcm16, pcm16ToBase64, billedSeconds, createSegmenter, createOrderedRunner, quotaDecision, recognize, buildSpeechContexts, phrasesForPair };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof window !== 'undefined') window.CloudSTT = Object.assign(window.CloudSTT || {}, api, { start, pause, resume, stop, listDevices, probe });
 })();

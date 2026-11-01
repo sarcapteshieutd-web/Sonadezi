@@ -933,6 +933,11 @@
     (g.variants || []).filter(Boolean).map(v => ({ re: new RegExp('(^|[^\\p{L}\\p{N}])' + escRe(v.trim()).replace(/\s+/g, '\\s+') + '(?![\\p{L}\\p{N}])', 'giu'), to: g.to, alt: g.en }))
   ).sort((a, b) => b.re.source.length - a.re.source.length);
 
+  // Tên riêng báo trước cho Google Cloud STT (config.js: recognition.sttPhrases, sttBoost)
+  function sttContexts(pair) {
+    return window.CloudSTT.buildSpeechContexts(window.CloudSTT.phrasesForPair(RCFG, pair), { boost: RCFG.sttBoost });
+  }
+
   // Thay các cách nghe sai bằng từ đúng (theo config.js)
   function applyGlossary(text) {
     let out = text;
@@ -1503,7 +1508,7 @@
     resetUtt(); el.src.value = ''; updateCounter();
     syncDual(); syncLangUI(); renderSttStatus();
     setListeningUI(true); liveDualUpdate(); // nút micro đỏ, ô "Đang nghe" ở cả hai cột
-    window.CloudSTT.start({ deviceId: state.micId || undefined, apiKey: cloudKey(), pair, paused: state.speaking, ...window.CloudSTT.SPEED_PRESETS[state.sttSpeed], gate: sttGateTracked, onLevel: lvl => { el.sttLevelBar.style.width = Math.min(100, Math.round(lvl * 400)) + '%'; }, onSegment: onCloudSegment, onBlocked: onCloudOver, onError: onCloudError })
+    window.CloudSTT.start({ deviceId: state.micId || undefined, apiKey: cloudKey(), pair, speechContexts: sttContexts(pair), paused: state.speaking, ...window.CloudSTT.SPEED_PRESETS[state.sttSpeed], gate: sttGateTracked, onLevel: lvl => { el.sttLevelBar.style.width = Math.min(100, Math.round(lvl * 400)) + '%'; }, onSegment: onCloudSegment, onBlocked: onCloudOver, onError: onCloudError })
       .then(fillMics)
       .catch(e => onCloudError(Object.assign(new Error('Không mở được micro: ' + (e && e.message ? e.message : e)), { status: -1 })));
   }
@@ -3238,7 +3243,7 @@
       if (!key) { probeOut.textContent = 'Chưa có khóa Google. Hãy nhập khóa ở trên'; return; }
       probeBtn.disabled = true; probeOut.textContent = 'Đang thu 5 giây, hãy nói một câu…';
       try {
-        const r = await window.CloudSTT.probe({ deviceId: state.micId || undefined, apiKey: key, pair: window.CloudSTT.pairFromLangs('vi', selPair.value) });
+        const r = await window.CloudSTT.probe({ deviceId: state.micId || undefined, apiKey: key, pair: window.CloudSTT.pairFromLangs('vi', selPair.value), speechContexts: sttContexts(window.CloudSTT.pairFromLangs('vi', selPair.value)) });
         reportUsage('stt', r.seconds);
         probeOut.textContent = r.text
           ? `Nhận được: "${r.text}" · ngôn ngữ phát hiện: ${r.lang ? LANGS[r.lang].name : 'ngoài cặp đã chọn'} · ${r.seconds} giây tính phí`
