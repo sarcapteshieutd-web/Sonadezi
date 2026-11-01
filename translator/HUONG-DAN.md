@@ -183,6 +183,7 @@ Giới hạn:
 Trong `config.js`, mục `recognition`:
 - `minConfidence` (0–1, mặc định 0,3): bỏ qua câu đã chốt có độ tin cậy thấp hơn mức này, giúp loại câu vô nghĩa do tiếng ồn. Tăng lên (ví dụ 0,5) nếu còn nhiều câu rác; giảm xuống hoặc đặt 0 nếu app bỏ sót câu đúng. Trình duyệt không báo độ tin cậy (giá trị 0) thì câu được giữ lại.
 - `glossary`: từ điển sửa lỗi, gặp cách nghe sai (`variants`) thì thay bằng từ đúng (`to`); không phân biệt hoa/thường, khớp nguyên cụm từ. Các cách nghe sai có sẵn chỉ là dự đoán; hãy ghi lại những câu app nghe sai thực tế rồi bổ sung vào danh sách.
+- `sttPhrases` (và `sttBoost`, 0–20, mặc định 10): danh sách tên riêng báo trước cho Google Cloud STT (cộng thêm các `to` trong `glossary`), giúp nghe đúng hơn như "sân bay Long Thành". Chỉ tác dụng khi dùng Google Cloud STT. Hãy bổ sung tên cụm công nghiệp cụ thể; thử bằng nút kiểm tra giọng nói sau khi cập nhật.
 
 Cách này chỉ sửa kết quả sau khi nhận diện, không cải thiện chất lượng thu âm gốc. Nên kết hợp với micro ngoài và môi trường yên tĩnh.
 
