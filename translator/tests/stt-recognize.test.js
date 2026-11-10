@@ -69,3 +69,15 @@ test('recognize: nối nhiều kết quả, tiếng Nhật không chèn dấu c�
   assert.equal(r.text, 'こんにちは世界');
   assert.equal(r.confidence, 0);
 });
+
+test('recognize gửi speechContexts khi có cụm, không gửi khi rỗng', async () => {
+  const ctx = [{ phrases: ['sân bay Long Thành'], boost: 10 }];
+  const f = fakeFetch(resp(200, okBody));
+  await S.recognize(pcm, { ...base, speechContexts: ctx, fetchImpl: f });
+  assert.deepEqual(JSON.parse(f.calls[0].init.body).config.speechContexts, ctx);
+  for (const empty of [undefined, []]) {
+    const g = fakeFetch(resp(200, okBody));
+    await S.recognize(pcm, { ...base, speechContexts: empty, fetchImpl: g });
+    assert.ok(!('speechContexts' in JSON.parse(g.calls[0].init.body).config));
+  }
+});

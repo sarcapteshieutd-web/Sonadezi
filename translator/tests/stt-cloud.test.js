@@ -134,3 +134,36 @@ test('createOrderedRunner: lỗi của một đoạn không chặn các đoạn 
   await Promise.all([submit({ id: 'a', fail: true }), submit({ id: 'b' })]);
   assert.deepEqual(delivered, [['a', false], ['b', true]]);
 });
+
+// ---- speechContexts ----
+test('buildSpeechContexts: rỗng, trùng, không phải chuỗi', () => {
+  assert.deepEqual(S.buildSpeechContexts(null), []);
+  assert.deepEqual(S.buildSpeechContexts([' ', 5, null]), []);
+  const r = S.buildSpeechContexts(['Long Thành', 'long thành', ' Nhơn Trạch ', 7]);
+  assert.deepEqual(r, [{ phrases: ['Long Thành', 'Nhơn Trạch'], boost: 10 }]);
+});
+test('buildSpeechContexts: giới hạn độ dài, số cụm, tổng ký tự', () => {
+  assert.deepEqual(S.buildSpeechContexts(['a'.repeat(101)]), []);
+  assert.equal(S.buildSpeechContexts(['a'.repeat(100)])[0].phrases.length, 1);
+  const many = Array.from({ length: 600 }, (_, i) => 'c' + i);
+  assert.equal(S.buildSpeechContexts(many)[0].phrases.length, 500);
+  const big = Array.from({ length: 200 }, (_, i) => String(i).padStart(3, '0') + 'x'.repeat(97));
+  const p = S.buildSpeechContexts(big)[0].phrases;
+  assert.equal(p.length, 100);
+});
+test('buildSpeechContexts: boost mặc định, kẹp 0..20, NaN', () => {
+  const b = o => S.buildSpeechContexts(['x'], o)[0].boost;
+  assert.equal(b(), 10);
+  assert.equal(b({ boost: 5 }), 5);
+  assert.equal(b({ boost: 99 }), 20);
+  assert.equal(b({ boost: -3 }), 0);
+  assert.equal(b({ boost: NaN }), 10);
+  assert.equal(b({ boost: '7' }), 10);
+});
+test('phrasesForPair: gom theo cặp ngôn ngữ', () => {
+  const rc = { sttPhrases: ['Long Thành'], glossary: [{ to: 'Sonadezi Long Thành', en: 'Sonadezi Long Thanh' }, { to: 'KCN' }] };
+  assert.deepEqual(S.phrasesForPair(rc, S.pairFromLangs('vi', 'en')), ['Long Thành', 'Sonadezi Long Thành', 'KCN', 'Sonadezi Long Thanh']);
+  assert.deepEqual(S.phrasesForPair(rc, S.pairFromLangs('zh', 'vi')), ['Long Thành', 'Sonadezi Long Thành', 'KCN']);
+  assert.deepEqual(S.phrasesForPair(null, S.pairFromLangs('vi', 'en')), []);
+  assert.deepEqual(S.phrasesForPair({}, S.pairFromLangs('vi', 'en')), []);
+});
