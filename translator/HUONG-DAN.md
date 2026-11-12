@@ -194,7 +194,7 @@ Cách này chỉ sửa kết quả sau khi nhận diện, không cải thiện c
 
 ## 14. Họp luân phiên hai ngôn ngữ
 Trong **Chế độ họp**, thanh đỏ hiển thị rõ **ngôn ngữ đang nghe**. Có hai cách đổi người nói:
-- **Tự đổi sau mỗi lượt** (ô tích trên thanh đỏ, mặc định bật): sau mỗi câu đã chốt, app chuyển sang ngôn ngữ còn lại, giả định hai bên nói xen kẽ.
+- **Tự đổi sau mỗi lượt** (ô tích trong ⚙ Tùy chọn của thanh họp, mặc định **tắt**): khi bật, sau mỗi câu đã chốt app chuyển sang ngôn ngữ còn lại, giả định hai bên nói xen kẽ từng câu. Để tắt thì một người nói nhiều câu liền không bị đổi ngôn ngữ nghe giữa chừng; đổi người nói bằng nút ⇄ hoặc phím Space.
 - **Đổi tay:** bấm ⇄ hoặc nhấn phím **Space** (khi con trỏ không nằm trong ô nhập). Dùng khi một bên nói hai lượt liên tiếp hoặc app đổi sai.
 
 Bong bóng của bên đầu tiên nói nằm bên phải, bên còn lại nằm bên trái. Mỗi câu được dịch theo đúng chiều của lượt nói đó, kể cả khi ngôn ngữ đã đổi trước lúc dịch xong.
@@ -310,7 +310,7 @@ Khi đọc bản dịch, **chữ trong bong bóng bản dịch đang đọc đư
 - Nếu việc đọc bị lỗi giữa chừng, ứng dụng vẫn tự bật lại micro để nghe tiếp (trước đây có thể bị kẹt).
 
 ## 26. Thanh họp gọn và nút ⚙ Tùy chọn
-Thanh họp chỉ còn một hàng: **giờ ghi · Đang nghe: (ngôn ngữ) · thanh tín hiệu · ⚙ Tùy chọn · Dừng**, để khung chat bắt đầu cao hơn và xem được nhiều bản dịch hơn. Bấm **⚙ Tùy chọn** để mở các ô ít đổi khi họp: *Tự đổi sau mỗi lượt, Song ngữ (kèm chọn micro và tốc độ ngắt câu), Đọc bản dịch ra loa, Chế độ hội nghị* và hướng dẫn đổi người nói. Trạng thái mở/đóng được nhớ cho lần sau.
+Thanh họp chỉ còn một hàng: **giờ ghi · Đang nghe: (ngôn ngữ) · thanh tín hiệu · ⚙ Tùy chọn · Dừng**, để khung chat bắt đầu cao hơn và xem được nhiều bản dịch hơn. Bấm **⚙ Tùy chọn** để mở các ô ít đổi khi họp: *Tự đổi sau mỗi lượt, Song ngữ (kèm chọn micro và tốc độ ngắt câu), Đọc bản dịch ra loa, Chế độ hội nghị* và hướng dẫn đổi người nói. Bảng tùy chọn thả xuống nổi phía trên khung chat (không ép khung chat), tự đóng khi bấm ra ngoài hoặc nhấn Esc, và luôn đóng khi mở lại ứng dụng.
 
 ## 27. Micro bị ngắt giữa cuộc họp (lỗi audio-capture)
 Trên một số thiết bị (đặc biệt iPad), trình duyệt đôi khi báo lỗi `audio-capture` (micro bị ngắt thoáng qua). Trước đây lỗi này làm **cả cuộc họp tự dừng** nên câu sau không được dịch. Nay ứng dụng giữ nguyên cuộc họp, thanh tín hiệu chuyển 🔴 **Micro bị ngắt · đang thử mở lại…** và tự mở lại micro với khoảng chờ tăng dần (0,4 → 0,8 → 1,6 → 3 giây). Sau **6 lần liên tiếp** không mở lại được, ứng dụng dừng thử nhưng **vẫn giữ cuộc họp** và hiện nút **Mở lại micro** trên thanh tín hiệu. Bấm nút này để nghe tiếp mà không mất các bản dịch đã có. Nếu lỗi lặp lại thường xuyên, hãy sao chép **Nhật ký nghe/đọc** (mục 24) để chẩn đoán.

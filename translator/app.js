@@ -126,7 +126,7 @@
     showLat: store.get('showLat', '0') === '1',    // hiện độ trễ trên bong bóng
     meetingSpeak: store.get('meetingSpeak', '0') === '1',
     speaking: false,
-    autoTurn: store.get('autoTurn', '1') === '1',
+    autoTurn: store.get('autoTurn', '0') === '1', // mặc định tắt: một người nói nhiều câu liền không bị đổi ngôn ngữ nghe giữa chừng
     conf: acct0Vip && store.get('conf', '0') === '1', // chế độ hội nghị: nghe bản dịch qua tai nghe/loa, micro luôn mở
     minutes: false, // chế độ ghi biên bản: chỉ ghi chữ tiếng Việt, không dịch
     twoMode: false, // chế độ hai máy laptop dùng chung phòng
@@ -1578,7 +1578,7 @@
     el.mbOpts.classList.toggle('flex', open);
     el.btnMbOpts.setAttribute('aria-expanded', String(open));
   }
-  applyMbOpts(store.get('mbOpts', '0') === '1');
+  applyMbOpts(false); // bảng tùy chọn là bảng thả xuống: luôn đóng khi mở ứng dụng
   el.btnReopenMic.onclick = () => {
     if (!state.meeting) return;
     micFail = 0; state.micGaveUp = false; wantListening = true;
@@ -1586,7 +1586,10 @@
     if (state.cloudActive) restartCloud(); else if (!state.speaking) beginSession();
     renderTalkStatus();
   };
-  el.btnMbOpts.onclick = () => { const open = el.mbOpts.classList.contains('hidden'); applyMbOpts(open); store.set('mbOpts', open ? '1' : '0'); };
+  el.btnMbOpts.onclick = () => applyMbOpts(el.mbOpts.classList.contains('hidden'));
+  // Bấm ra ngoài hoặc nhấn Esc thì đóng bảng tùy chọn họp
+  document.addEventListener('click', e => { if (!el.mbOpts.classList.contains('hidden') && !el.mbOpts.contains(e.target) && !el.btnMbOpts.contains(e.target)) applyMbOpts(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !el.mbOpts.classList.contains('hidden')) applyMbOpts(false); });
   el.selSttSpeed.onchange = () => { state.sttSpeed = el.selSttSpeed.value; store.set('sttSpeed', state.sttSpeed); if (state.cloudActive) restartCloud(); };
   el.selMic.onchange = () => { state.micId = el.selMic.value; store.set('micId', state.micId); if (state.cloudActive) restartCloud(); };
   function startMeeting() {
