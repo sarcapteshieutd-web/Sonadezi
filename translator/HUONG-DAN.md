@@ -349,3 +349,7 @@ Chế độ riêng, độc lập với Chế độ họp, Hội nghị và Phòn
 - **Chế độ còn 3 tab:** Hội thoại, Họp, Biên bản. "Hội nghị" không còn là tab riêng: vào **Họp → ⚙ Tùy chọn → Nghe bản dịch bằng tai nghe** (chỉ tài khoản VIP).
 - **Điện thoại:** các nút Tìm, Xem gọn, Giảm/Tăng cỡ chữ nằm trong nút **Aa** trên thanh công cụ. Màn hình rộng vẫn hiện đủ các nút.
 - **Đã gỡ chế độ hai laptop** (xem mục 21).
+
+## Thay đổi bản v81
+- **Tự đổi chiều khi gõ:** nếu gõ văn bản bằng ngôn ngữ đích (ví dụ gõ tiếng Việt có dấu khi đang chọn Anh → Việt), ứng dụng tự đảo chiều dịch và giữ nguyên chữ đang gõ. Chỉ áp dụng ở chế độ Hội thoại, khi không bật micro. Tiếng Việt gõ không dấu và các ngôn ngữ chữ Latin khác (Pháp, Đức…) không tự nhận được; khi đó bấm ⇄ như cũ. Logic nằm ở `lang-guess.js`.
+- **Cảnh báo hạn mức dịch miễn phí:** khi dịch bằng MyMemory, ứng dụng đếm ước tính số ký tự đã gửi trong ngày trên thiết bị này. Từ 80% hạn mức (5.000 ký tự, hoặc 50.000 nếu đã khai báo email trong Cài đặt) sẽ hiện dòng cảnh báo dưới thanh ngôn ngữ; khi MyMemory báo hết hạn mức thì hiện thông báo rõ ràng. MyMemory tính hạn mức theo địa chỉ mạng, nên nhiều máy dùng chung mạng văn phòng có thể hết sớm hơn con số ước tính.

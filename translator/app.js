@@ -535,6 +535,27 @@
     return true;
   }
 
+  // ----- Hạn mức dịch miễn phí MyMemory trong ngày: đếm ước tính trên thiết bị này (MyMemory tính theo địa chỉ mạng, nên con số thật có thể cao hơn) -----
+  const MM_OVER_MSG = 'Đã hết hạn mức dịch miễn phí hôm nay. Khai báo email trong Cài đặt để nâng hạn mức, hoặc dùng tài khoản VIP.';
+  const mmLimit = () => (state.email ? 50000 : 5000);
+  const mmToday = () => new Date().toLocaleDateString('en-CA');
+  function mmUsed() { try { const o = JSON.parse(store.get('mmDay', '{}')); return o.d === mmToday() ? (o.n || 0) : 0; } catch (_) { return 0; } }
+  let mmWarned = '';
+  function renderMmUsage() {
+    const box = $('mmUsage'); if (!box) return;
+    const used = mmUsed(), lim = mmLimit(), lv = window.LangGuess ? window.LangGuess.quotaLevel(used, lim) : 'ok';
+    const usingMm = !(isVip() && state.engine === 'google' && state.gkey);
+    box.classList.toggle('hidden', !usingMm || lv === 'ok');
+    box.classList.toggle('text-red-600', lv === 'over'); box.classList.toggle('text-amber-600', lv === 'warn');
+    box.textContent = lv === 'over' ? `Dịch miễn phí hôm nay: đã hết khoảng ${fmtN(lim)} ký tự (ước tính)` : `Dịch miễn phí hôm nay: khoảng ${fmtN(used)} / ${fmtN(lim)} ký tự (ước tính)`;
+    if (usingMm && lv !== 'ok' && mmWarned !== mmToday() + lv) {
+      mmWarned = mmToday() + lv;
+      toast(lv === 'over' ? MM_OVER_MSG : 'Sắp hết hạn mức dịch miễn phí hôm nay' + (state.email ? '' : '. Khai báo email trong Cài đặt để nâng hạn mức.'));
+    }
+  }
+  function mmAdd(n) { store.set('mmDay', JSON.stringify({ d: mmToday(), n: mmUsed() + n })); renderMmUsage(); }
+  function mmExhausted() { store.set('mmDay', JSON.stringify({ d: mmToday(), n: Math.max(mmUsed(), mmLimit()) })); renderMmUsage(); }
+
   async function requestTranslate(text, signal, from, to) {
     let result;
     if (isVip() && state.engine === 'google' && state.gkey && gCharge(text)) {
@@ -551,10 +572,14 @@
       const p = new URLSearchParams({ q: text, langpair: `${LANGS[from].api}|${LANGS[to].api}` });
       if (state.email) p.set('de', state.email);
       const res = await fetch('https://api.mymemory.translated.net/get?' + p, { signal });
+      if (res.status === 429) { mmExhausted(); throw new Error(MM_OVER_MSG); }
       if (!res.ok) throw new Error('MyMemory lỗi ' + res.status);
       const j = await res.json();
+      const detail = String(j.responseDetails || '') + ' ' + String((j.responseData && j.responseData.translatedText) || '');
+      if (Number(j.responseStatus) === 429 || /MYMEMORY WARNING|USED ALL AVAILABLE FREE TRANSLATIONS/i.test(detail)) { mmExhausted(); throw new Error(MM_OVER_MSG); }
       if (Number(j.responseStatus) !== 200) throw new Error(j.responseDetails || 'MyMemory lỗi');
       result = decodeEntities(j.responseData.translatedText);
+      mmAdd(text.length);
     }
     return result;
   }
@@ -1875,7 +1900,17 @@
   };
   el.btnSwap.onclick = () => { setLangs(state.tgt, state.src, false); if (SR && !state.meeting) startListening(); };
 
-  el.src.addEventListener('input', () => { updateCounter(); translateDebounced(); });
+  // Gõ nhầm chiều (ví dụ gõ tiếng Việt khi đang chọn Anh → Việt): tự đảo chiều dịch, giữ nguyên chữ đang gõ. Không áp dụng khi đang nghe hoặc đang họp.
+  function autoFlipTyped() {
+    if (!window.LangGuess || state.listening || state.meeting || state.minutes) return false;
+    if (!window.LangGuess.shouldSwap(el.src.value, state.src, state.tgt)) return false;
+    const s = state.src; state.src = state.tgt; state.tgt = s;
+    state.translated = ''; el.out.textContent = ''; state.reqId++;
+    syncLangUI(); updateCounter();
+    toast(`Đã tự đổi chiều: ${LANGS[state.src].name} → ${LANGS[state.tgt].name}`);
+    return true;
+  }
+  el.src.addEventListener('input', () => { autoFlipTyped(); updateCounter(); translateDebounced(); });
 
   el.btnMic.onclick = () => (state.meeting ? stopMeeting() : state.listening || wantListening ? stopListening_andTranslate() : startListening());
   function stopListening_andTranslate() {
@@ -1899,6 +1934,7 @@
   };
   const sendTyped = () => {
     if (state.listening || !el.src.value.trim()) return;
+    autoFlipTyped();
     translateNow(true);
   };
   el.btnSend.onclick = sendTyped;
@@ -2759,6 +2795,7 @@
 
 
   // ---------- Khởi tạo ----------
+  renderMmUsage();
   applyScale();
   fillSelect(el.selVoiceLang, state.tgt);
   fillSelect(el.selSrc, state.src);
