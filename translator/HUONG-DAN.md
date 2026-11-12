@@ -250,6 +250,8 @@ Trong Chế độ họp, bản dịch hiện dần cùng lúc với chữ đang 
 - Cần giữ màn hình sáng và trang đang mở; tôi chưa kiểm chứng trên điện thoại thật khi khóa màn hình (nhiều trình duyệt tạm dừng đọc ở nền).
 
 ## 21. Phòng họp hai laptop (mỗi máy một ngôn ngữ cố định)
+
+> **Đã ngừng (bản v80):** chế độ hai laptop đã được gỡ khỏi ứng dụng; liên kết máy thứ hai cũ nay mở như người xem thường. Dùng chế độ **Họp** với ô *Song ngữ* (tự nhận ngôn ngữ từng câu) để thay thế. Nội dung bên dưới chỉ giữ lại để tham khảo.
 Dùng khi mỗi bên bàn có một laptop và một micro riêng (ví dụ bên Việt, bên Anh), thay cho việc dùng chung một micro và bấm đổi lượt.
 1. Trên laptop thứ nhất (chủ phòng): chọn ngôn ngữ (ví dụ Việt → Anh), bấm biểu tượng Phòng họp → Tạo phòng họp.
 2. Trong hộp Phòng họp, kéo xuống mục **Laptop thứ hai**: mở liên kết đó (hoặc quét mã QR) trên laptop thứ hai. Máy thứ hai tự lấy ngôn ngữ ngược lại (Anh → Việt). **Không chia sẻ liên kết này cho người xem**; người xem dùng mã QR phía trên.
@@ -342,3 +344,8 @@ Chế độ riêng, độc lập với Chế độ họp, Hội nghị và Phòn
 - Chi phí: nhận diện giọng nói của trình duyệt không tính phí và chế độ này không gọi dịch vụ dịch. Phần tóm tắt thực hiện trên tài khoản Claude/ChatGPT của bạn, theo gói bạn đang dùng.
 - Giới hạn: bản ghi không phân biệt người nói và có thể sai tên riêng, số liệu; bạn cần rà soát trước khi ban hành. Không lưu file âm thanh. Cần mạng, để ứng dụng ở phía trước và giữ màn hình sáng. Tài khoản Miễn phí không lưu đoạn chat nên cần lấy lời nhắc ngay sau khi dừng.
 - Bản ghi sẽ được gửi sang dịch vụ AI mà bạn dán vào; cân nhắc tính bảo mật của cuộc họp trước khi dùng.
+
+## Thay đổi giao diện bản v80
+- **Chế độ còn 3 tab:** Hội thoại, Họp, Biên bản. "Hội nghị" không còn là tab riêng: vào **Họp → ⚙ Tùy chọn → Nghe bản dịch bằng tai nghe** (chỉ tài khoản VIP).
+- **Điện thoại:** các nút Tìm, Xem gọn, Giảm/Tăng cỡ chữ nằm trong nút **Aa** trên thanh công cụ. Màn hình rộng vẫn hiện đủ các nút.
+- **Đã gỡ chế độ hai laptop** (xem mục 21).
