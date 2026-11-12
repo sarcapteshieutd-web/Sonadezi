@@ -30,7 +30,11 @@ window.APP_CONFIG = {
     // Cộng thêm các "to" trong glossary bên dưới. sttBoost: 0 đến 20 (mặc định 10); quá cao dễ nghe nhầm từ thường thành tên riêng.
     sttPhrases: [
       'sân bay Long Thành', 'Long Thành', 'Nhơn Trạch', 'Sonadezi', 'Châu Đức', 'Long Phước', 'Tổng công ty Sonadezi',
-      'Cụm công nghiệp' // TODO người dùng: bổ sung tên cụm công nghiệp cụ thể (ví dụ "Cụm công nghiệp ...")
+      'Cụm công nghiệp Long Phước 1',
+      'Biên Hòa 1', 'Biên Hòa 2', 'Giang Điền',
+      'Sonadezi Long Bình', 'Sonadezi Giang Điền', 'Sonadezi An Bình',
+      'Amata', 'Long Đức', 'Lộc An Bình Sơn', 'An Phước', 'Tam Phước', 'Dầu Giây',
+      'Quốc lộ 51', 'Cái Mép Thị Vải', 'Phước An'
     ],
     sttBoost: 10,
     // Từ điển sửa lỗi: gặp "variants" thì thay bằng "to". Không phân biệt hoa/thường, cần khớp nguyên cụm từ.

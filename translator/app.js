@@ -59,7 +59,7 @@
     dualHeadL: $('dualHeadL'), dualHeadR: $('dualHeadR'), liveDual: $('liveDual'),
     ldLLbl: $('ldLLbl'), ldLTxt: $('ldLTxt'), ldLRec: $('ldLRec'), ldRLbl: $('ldRLbl'), ldRTxt: $('ldRTxt'), ldRRec: $('ldRRec'), btnRoom: $('btnRoom'), roomDot: $('roomDot'),
     sheetRoom: $('sheetRoom'), roomBody: $('roomBody'),
-    viewerBar: $('viewerBar'), selViewerLang: $('selViewerLang'), viewerStatus: $('viewerStatus'), coBar: $('coBar'), coStatus: $('coStatus'), chkEar: $('chkEar'),
+    viewerBar: $('viewerBar'), selViewerLang: $('selViewerLang'), viewerStatus: $('viewerStatus'), chkEar: $('chkEar'),
     chkIncr: $('chkIncr'), selCut: $('selCut'), chkLat: $('chkLat'),
     btnSettings: $('btnSettings'), sheet: $('sheet'), btnSheetClose: $('btnSheetClose'),
     selEngine: $('selEngine'), rowEngine: $('rowEngine'), rowFallback: $('rowFallback'), rowGKey: $('rowGKey'), noteGKey: $('noteGKey'), rowTtsKey: $('rowTtsKey'), noteTts: $('noteTts'), selVoiceLang: $('selVoiceLang'), selVoice: $('selVoice'),
@@ -129,7 +129,6 @@
     autoTurn: store.get('autoTurn', '0') === '1', // mặc định tắt: một người nói nhiều câu liền không bị đổi ngôn ngữ nghe giữa chừng
     conf: acct0Vip && store.get('conf', '0') === '1', // chế độ hội nghị: nghe bản dịch qua tai nghe/loa, micro luôn mở
     minutes: false, // chế độ ghi biên bản: chỉ ghi chữ tiếng Việt, không dịch
-    twoMode: false, // chế độ hai máy laptop dùng chung phòng
     mine: null, // ngôn ngữ của người dùng: lời của bên này hiện bên phải
     reqId: 0
   };
@@ -284,7 +283,6 @@
       saveLog();
       if (!item.minutes) roomPublish(item);
     }
-    if (state.twoMode) return; // chế độ hai máy: khung chat hiển thị từ phòng chung
     el.emptyHint.classList.add('hidden');
     el.hist.appendChild(renderItem(item));
     scrollChat();
@@ -350,7 +348,6 @@
     state.log.forEach(i => el.hist.appendChild(renderItem(i)));
     if (state.log.length) el.emptyHint.classList.add('hidden');
     scrollChat();
-    if (state.twoMode) renderFeed();
   }
   let lastPanels = '';
   function syncDual() {
@@ -953,8 +950,6 @@
   // ---------- Cải thiện nhận diện: từ điển sửa lỗi và lọc độ tin cậy ----------
   const RCFG = (window.APP_CONFIG && window.APP_CONFIG.recognition) || {};
   const MIN_CONF = typeof RCFG.minConfidence === 'number' ? RCFG.minConfidence : 0;
-  const TWO_MIN_CONF = 0.7;
-  let twoEchoUntil = 0; // sau khi gửi một câu lên phòng, máy kia sẽ đọc to bản dịch: khoảng thời gian này câu độ tin cậy trung bình bị coi là tiếng vọng
   const escRe = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const GLOSSARY = (RCFG.glossary || []).flatMap(g =>
     (g.variants || []).filter(Boolean).map(v => ({ re: new RegExp('(^|[^\\p{L}\\p{N}])' + escRe(v.trim()).replace(/\s+/g, '\\s+') + '(?![\\p{L}\\p{N}])', 'giu'), to: g.to, alt: g.en }))
@@ -976,10 +971,6 @@
     const alt = result[0];
     if (result.isFinal && alt.confidence > 0) {
       if (MIN_CONF > 0 && alt.confidence < MIN_CONF) return '';
-      if (state.twoMode) { // hai máy đặt đối diện: micro máy này cũng thu tiếng người kia và tiếng loa đọc dịch, thường bị chấm điểm thấp
-        if (alt.confidence < TWO_MIN_CONF) { micLog('hai máy: bỏ câu độ tin cậy thấp (' + alt.confidence.toFixed(2) + '): ' + alt.transcript.slice(0, 20)); return ''; }
-        if (alt.confidence < 0.9 && Date.now() < twoEchoUntil) { micLog('hai máy: bỏ câu nghi là tiếng vọng từ loa máy kia: ' + alt.transcript.slice(0, 20)); return ''; }
-      }
     }
     return alt.transcript;
   }
@@ -1159,7 +1150,7 @@
       }
       const histItem = { src: text, out, from, to, meeting: true, lat: Date.now() - t0 };
       addHistory(histItem);
-      if ((state.meetingSpeak || state.conf) && state.meeting && !state.twoMode && !/^\[Chưa dịch được\]$/.test(out)) enqueueSpeech(out, to, histItem);
+      if ((state.meetingSpeak || state.conf) && state.meeting && !/^\[Chưa dịch được\]$/.test(out)) enqueueSpeech(out, to, histItem);
     } finally { state.pendingTr--; renderTalkStatus(); } });
   }
 
@@ -1212,7 +1203,6 @@
   let utt = newUtt();
   function resetUtt() { clearTimeout(utt.timer); clearTimeout(utt.tail.timer); utt = newUtt(); }
 
-  const TWO_CUT_MS = 1500; // thời gian im lặng để chốt câu khi chạy chế độ hai máy mà chưa chọn "Tự chốt câu"
   const MIN_WORDS = 4, TAIL_WORDS = 3, MIN_CJK = 8, TAIL_CJK = 4;
   // Tìm vị trí cắt "ổn định": giữ lại vài từ cuối vì trình duyệt còn có thể sửa
   function stableCut(rest, lang) {
@@ -1439,7 +1429,7 @@
       if (interim !== utt.lastText) { utt.lastText = interim; utt.tLast = Date.now(); }
       if (state.incr && !state.minutes) incrementalStep(interim);
       clearTimeout(utt.timer);
-      const cut = state.cutMs || (state.twoMode ? TWO_CUT_MS : 0); // hai máy: luôn tự chốt câu, không phụ thuộc trình duyệt báo kết thúc
+      const cut = state.cutMs;
       if (cut > 0) utt.timer = setTimeout(forceCommit, cut);
     }
     // Hai bên nói luân phiên: sau mỗi câu chốt, chuyển sang ngôn ngữ còn lại
@@ -1785,7 +1775,6 @@
   }
   function startMinutes() {
     if (state.meeting) { toast('Đang họp. Hãy dừng họp rồi bấm Ghi biên bản'); return; }
-    if (state.twoMode) { toast('Hãy thoát chế độ hai máy trước khi ghi biên bản'); return; }
     const last = readLastInfo();
     mi.title.value = '';
     mi.customer.value = last.customer || '';
@@ -2299,7 +2288,7 @@
   const newUttId = () => Math.random().toString(36).slice(2, 10);
   const room = { kit: null, id: null, expiresAtMs: 0, active: false, unsubViewers: null, viewers: [], allowed: [], recent: [], chain: Promise.resolve(),
     utt: newUttId(), noUtt: false, liveOff: false, liveKey: '', liveAt: 0, liveTimer: 0, writeMs: 0,
-    role: 'host', code: '', cohosts: [], unsubCo: null, lastReport: null, liveRep: null, sumDraft: '' };
+    lastReport: null, liveRep: null, sumDraft: '' };
 
   function loadScript(src) {
     return new Promise((resolve, reject) => {
@@ -2349,8 +2338,7 @@
   }
   // Đẩy bản "đang nói" lên phòng (giới hạn tần suất; chỉ khi có người xem và nội dung thay đổi)
   function roomLive() {
-    const co = room.role === 'co';
-    if (!room.active || room.liveOff || (!co && !room.viewers.length && !state.twoMode)) return;
+    if (!room.active || room.liveOff || !room.viewers.length) return;
     const src = el.src.value.trim();
     if (!src) return;
     const out = (el.out.textContent || '').trim();
@@ -2359,7 +2347,7 @@
     const wait = room.liveAt + LIVE_MS - Date.now();
     if (wait > 0) { if (!room.liveTimer) room.liveTimer = setTimeout(() => { room.liveTimer = 0; roomLive(); }, wait); return; }
     room.liveKey = key; room.liveAt = Date.now();
-    room.kit.setLive(room.id, room.expiresAtMs, { utt: room.utt, src, out, from: state.src, to: state.tgt }, co ? 'co' : 'now')
+    room.kit.setLive(room.id, room.expiresAtMs, { utt: room.utt, src, out, from: state.src, to: state.tgt })
       .catch(e => { if (e && e.code === 'permission-denied') room.liveOff = true; });
   }
   function onViewers(list) {
@@ -2375,7 +2363,6 @@
     if (!room.active) return;
     const utt = room.utt;
     room.utt = newUttId(); room.liveKey = '';
-    if (room.role === 'co') item = Object.assign({}, item, { by: 'co' });
     try {
       const t0 = Date.now();
       let id;
@@ -2389,92 +2376,18 @@
         } else throw e;
       }
       room.writeMs = Date.now() - t0;
-      if (state.twoMode) twoEchoUntil = Date.now() + 1500 + (item.out || '').length * 90;
       const rec = { id, src: item.src, out: item.out, from: item.from, to: item.to, tr: {} };
       room.recent.push(rec);
       if (room.recent.length > 40) room.recent.shift();
-      if (room.role !== 'co') translateForViewers(rec); // chỉ máy chủ phòng dịch thêm cho ngôn ngữ phụ của người xem
+      translateForViewers(rec); // dịch thêm cho ngôn ngữ phụ của người xem
     } catch (e) { toast('Không gửi được tin lên phòng: ' + (e.code || e.message)); }
   }
 
-  // ---------- Hai máy laptop: mỗi máy một ngôn ngữ cố định, dùng chung một phòng ----------
-  const feed = { msgs: [], lives: {}, seen: null, unsub: [] };
-  const mySlot = () => (room.role === 'co' ? 'co' : 'now');
-  function feedBubble(m, live) {
-    const mine = m.from === state.src;
-    const big = mine ? m.src : m.out;
-    const small = mine ? m.out : m.src;
-    const row = node('div', 'flex ' + (mine ? 'justify-end' : 'justify-start'));
-    const cls = live ? 'border border-dashed border-brand-300 bg-brand-50 text-brand-900' : (mine ? 'rounded-br-md bg-brand-600 text-white' : 'rounded-bl-md border border-slate-200 bg-white text-slate-900');
-    const bub = node('div', 'max-w-[88%] rounded-2xl px-3.5 py-2.5 shadow-sm ' + cls);
-    const time = live ? 'Đang nói…' : new Date(m.ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-    bub.appendChild(node('div', 'text-[0.6875rem] font-medium ' + (mine && !live ? 'text-brand-100' : 'text-slate-500'), `${LANGS[m.from] ? LANGS[m.from].name : ''} · ${time}`));
-    bub.appendChild(node('div', 'mt-0.5 whitespace-pre-wrap break-words text-lg font-semibold leading-snug', big || '…'));
-    if (small && small !== big) bub.appendChild(node('div', 'mt-1 border-t pt-1 text-xs ' + (mine && !live ? 'border-white/20 text-brand-100' : 'border-slate-100 text-slate-500'), small));
-    row.appendChild(bub);
-    return row;
-  }
-  function renderFeed() {
-    if (!state.twoMode) return;
-    const wrap = el.histWrap;
-    const near = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 80;
-    el.hist.innerHTML = '';
-    if (feed.msgs.length) el.emptyHint.classList.add('hidden');
-    for (const m of feed.msgs) el.hist.appendChild(feedBubble(m, false));
-    const recent = feed.msgs.slice(-6);
-    for (const slot of ['now', 'co']) {
-      const l = feed.lives[slot];
-      if (slot === mySlot() || !l || !l.src || Date.now() - l.ts > 20000) continue;
-      if (recent.some(m => m.utt && m.utt === l.utt)) continue;
-      el.hist.appendChild(feedBubble(l, true));
-    }
-    if (near) scrollChat();
-  }
-  function onFeed(list) {
-    feed.msgs = list;
-    if (feed.seen === null) feed.seen = new Set(list.map(m => m.id)); // tin cũ lúc mới vào: không dịch bù, không đọc
-    else for (const m of list) {
-      if (feed.seen.has(m.id)) continue;
-      feed.seen.add(m.id);
-      const fromOther = room.role === 'co' ? m.by !== 'co' : m.by === 'co';
-      if (!fromOther) continue;
-      if (room.role === 'host') { // máy chủ phòng dịch thêm các ngôn ngữ phụ cho tin của máy thứ hai
-        const rec = { id: m.id, src: m.src, out: m.out, from: m.from, to: m.to, tr: m.tr || {} };
-        room.recent.push(rec); if (room.recent.length > 40) room.recent.shift();
-        translateForViewers(rec);
-      }
-      // Đọc bản dịch của người bên kia bằng ngôn ngữ của máy này
-      if (state.meetingSpeak && state.meeting && m.to === state.src && m.out) enqueueSpeech(m.out, m.to);
-    }
-    renderFeed();
-  }
-  function enterTwoMode() {
-    if (state.twoMode) return;
-    state.twoMode = true;
-    state.autoTurn = false; el.chkAutoTurn.checked = false; // ngôn ngữ cố định, không đảo lượt
-    state.dual = false; syncDual();
-    for (const b of [el.btnSwap, el.btnDual, el.chkAutoTurn.parentElement]) b.classList.add('hidden');
-    feed.msgs = []; feed.lives = {}; feed.seen = null;
-    feed.unsub.push(room.kit.subscribeMessages(room.id, onFeed, () => {}));
-    const other = mySlot() === 'co' ? 'now' : 'co';
-    feed.unsub.push(room.kit.subscribeLive(room.id, other, l => { feed.lives[other] = l; renderFeed(); }));
-    renderFeed();
-    toast('Chế độ hai máy: mỗi máy giữ một ngôn ngữ cố định');
-  }
-  function leaveTwoMode() {
-    feed.unsub.forEach(u => { try { u(); } catch (_) {} });
-    feed.unsub = [];
-    if (!state.twoMode) return;
-    state.twoMode = false;
-    for (const b of [el.btnSwap, el.btnDual, el.chkAutoTurn.parentElement]) b.classList.remove('hidden');
-    renderAll();
-  }
   async function activateRoom(info) {
     room.id = info.id; room.expiresAtMs = info.expiresAtMs; room.active = true; room.liveRep = null; room.sumDraft = '';
     room.recent = []; room.allowed = []; room.viewers = []; room.utt = newUttId(); room.noUtt = false; room.liveOff = false; room.liveKey = '';
     if (room.unsubViewers) room.unsubViewers();
     room.unsubViewers = room.kit.subscribeViewers(room.id, onViewers, () => {});
-    room.role = 'host'; room.code = info.code || ''; room.cohosts = [];
     saveRoom(); setRoomDot();
   }
   async function createRoomNow() {
@@ -2491,8 +2404,6 @@
     const id = room.id;
     try { room.lastReport = { rep: await collectReport(room.kit, id), id, expiresAtMs: room.expiresAtMs, wiped: !!wipe, ts: Date.now() }; } catch (_) { room.lastReport = null; }
     if (room.unsubViewers) room.unsubViewers();
-    if (room.unsubCo) { room.unsubCo(); room.unsubCo = null; }
-    leaveTwoMode();
     room.active = false; room.id = null; room.chain = Promise.resolve();
     saveRoom(); setRoomDot();
     let failed = false;
@@ -2692,13 +2603,12 @@
     }
     let ended = false;
     // Bản "đang nói" của chủ phòng: hiện ngay khi họ còn đang nói; ẩn khi câu đã được chốt thành tin nhắn
-    const lives = { now: null, co: null };
+    let liveNow = null;
     function renderLive() {
       document.querySelectorAll('.viewerLive').forEach(n => n.remove());
       if (ended) return;
       const recent = msgs.slice(-6);
-      for (const slot of ['now', 'co']) {
-        const live = lives[slot];
+      for (const live of [liveNow]) {
         if (!live || !live.src || Date.now() - live.ts > 20000 || recent.some(m => m.utt && m.utt === live.utt)) continue;
         const text = lang === live.from ? live.src : live.out;
         const note = lang !== live.from && lang !== live.to ? `(bản dịch sang ${LANGS[live.to] ? LANGS[live.to].name : ''})` : '';
@@ -2719,14 +2629,13 @@
     capSource = () => {
       const recent = msgs.slice(-6);
       let live = null;
-      for (const slot of ['now', 'co']) {
-        const l = lives[slot];
+      for (const l of [liveNow]) {
         if (ended || !l || !l.src || Date.now() - l.ts > 20000 || recent.some(m => m.utt && m.utt === l.utt)) continue;
         live = lang === l.from ? { text: l.src, lang: l.from } : { text: l.out || l.src, lang: l.out ? l.to : l.from };
       }
       return { items: msgs.map(m => ({ src: pick(m).text, out: '' })), live };
     };
-    for (const slot of ['now', 'co']) kit.subscribeLive(id, slot, l => { lives[slot] = l; renderLive(); });
+    kit.subscribeLive(id, l => { liveNow = l; renderLive(); });
 
     // Tóm tắt do chủ phòng đăng: hiện ở đầu khung chat, tự dịch sang ngôn ngữ của người xem
     let sum = null;

@@ -249,20 +249,8 @@ Trong Chế độ họp, bản dịch hiện dần cùng lúc với chữ đang 
 - Tối đa 3 câu chờ đọc; câu chưa có bản dịch quá khoảng 6 giây sẽ bị bỏ qua.
 - Cần giữ màn hình sáng và trang đang mở; tôi chưa kiểm chứng trên điện thoại thật khi khóa màn hình (nhiều trình duyệt tạm dừng đọc ở nền).
 
-## 21. Phòng họp hai laptop (mỗi máy một ngôn ngữ cố định)
-
-> **Đã ngừng (bản v80):** chế độ hai laptop đã được gỡ khỏi ứng dụng; liên kết máy thứ hai cũ nay mở như người xem thường. Dùng chế độ **Họp** với ô *Song ngữ* (tự nhận ngôn ngữ từng câu) để thay thế. Nội dung bên dưới chỉ giữ lại để tham khảo.
-Dùng khi mỗi bên bàn có một laptop và một micro riêng (ví dụ bên Việt, bên Anh), thay cho việc dùng chung một micro và bấm đổi lượt.
-1. Trên laptop thứ nhất (chủ phòng): chọn ngôn ngữ (ví dụ Việt → Anh), bấm biểu tượng Phòng họp → Tạo phòng họp.
-2. Trong hộp Phòng họp, kéo xuống mục **Laptop thứ hai**: mở liên kết đó (hoặc quét mã QR) trên laptop thứ hai. Máy thứ hai tự lấy ngôn ngữ ngược lại (Anh → Việt). **Không chia sẻ liên kết này cho người xem**; người xem dùng mã QR phía trên.
-3. Trên cả hai máy bấm **Chế độ họp** để bắt đầu ghi.
-- Mỗi máy chỉ nghe một ngôn ngữ cố định nên không cần đoán ngôn ngữ hay bấm đổi lượt; nút đảo chiều và "Tự đổi sau mỗi lượt" bị ẩn.
-- Hai màn hình hiện chung một cuộc hội thoại; chữ lớn là ngôn ngữ của máy đó, chữ nhỏ là bản gốc hoặc bản dịch. Có cả dòng "Đang nói…" của bên kia.
-- Nếu bật "Đọc bản dịch ra loa", mỗi máy đọc **bản dịch lời của người bên kia** bằng ngôn ngữ của máy mình, không đọc lại lời bên mình.
-- Người xem qua QR vẫn xem được cả hai bên; máy chủ phòng dịch thêm các ngôn ngữ phụ cho cả hai máy.
-- Lưu ý: tiếng loa của máy này có thể lọt vào micro của máy kia. Đặt hai máy xa nhau, hạ âm lượng loa và theo dõi kết quả khi thử thực tế (tôi chưa kiểm chứng ở phòng họp thật).
-- Bắt buộc dán lại `firebase/firestore.rules` vào Firebase Console và bấm Publish (có thêm quy tắc cho máy thứ hai).
-- Xuất file chỉ chứa phần ghi trên máy đó, không gồm tin của máy kia.
+## 21. Phòng họp hai laptop (đã gỡ)
+Chế độ hai laptop đã được gỡ hẳn khỏi ứng dụng và khỏi quy tắc Firestore (bản v83). Dùng chế độ **Họp** với ô *Song ngữ* (tự nhận ngôn ngữ từng câu), và nếu cần màn hình thứ hai thì mở liên kết phòng họp trên máy đó rồi bấm **CC** (màn hình chiếu phụ đề).
 
 ## 22. Chế độ hội nghị (nghe bản dịch bằng tai nghe hoặc loa)
 Dùng khi bạn đi dự hội nghị, người trình bày nói ngoại ngữ và bạn muốn nghe bản dịch liên tục bằng tai nghe.
@@ -317,12 +305,8 @@ Thanh họp chỉ còn một hàng: **giờ ghi · Đang nghe: (ngôn ngữ) · 
 ## 27. Micro bị ngắt giữa cuộc họp (lỗi audio-capture)
 Trên một số thiết bị (đặc biệt iPad), trình duyệt đôi khi báo lỗi `audio-capture` (micro bị ngắt thoáng qua). Trước đây lỗi này làm **cả cuộc họp tự dừng** nên câu sau không được dịch. Nay ứng dụng giữ nguyên cuộc họp, thanh tín hiệu chuyển 🔴 **Micro bị ngắt · đang thử mở lại…** và tự mở lại micro với khoảng chờ tăng dần (0,4 → 0,8 → 1,6 → 3 giây). Sau **6 lần liên tiếp** không mở lại được, ứng dụng dừng thử nhưng **vẫn giữ cuộc họp** và hiện nút **Mở lại micro** trên thanh tín hiệu. Bấm nút này để nghe tiếp mà không mất các bản dịch đã có. Nếu lỗi lặp lại thường xuyên, hãy sao chép **Nhật ký nghe/đọc** (mục 24) để chẩn đoán.
 
-## 28. Hai laptop đặt đối diện (phòng họp lớn)
-Dùng khi một micro không đủ phủ cả phòng: máy chủ phòng nói một ngôn ngữ (ví dụ Anh), mở **Phòng họp** rồi quét mã/mở liên kết "máy thứ hai" trên laptop còn lại (ngôn ngữ tự đảo, ví dụ Việt). Bấm **Chế độ họp** trên **cả hai máy**.
-- Mỗi máy đặt **gần người nói ngôn ngữ của mình**, hai máy quay micro về hai phía; **chỉ có 1 người nói tại một thời điểm**.
-- Vì micro máy này vẫn thu được tiếng bên kia và tiếng loa đọc dịch, ứng dụng **bỏ qua các câu độ tin cậy thấp (< 0,7)** và, ngay sau khi máy này gửi một câu, bỏ các câu độ tin cậy dưới 0,9 trong khoảng thời gian máy kia đang đọc bản dịch (nghi là tiếng vọng). Các lần bỏ câu được ghi trong **Nhật ký nghe/đọc** (dòng "hai máy: bỏ câu…"). Câu nói thật, rõ, gần micro không bị ảnh hưởng.
-- **Khuyến nghị:** nếu bật "Đọc bản dịch ra loa" thì để âm lượng vừa phải hoặc dùng **tai nghe/loa gần người nghe**, tránh loa hướng thẳng vào micro máy kia, nếu không bản dịch đọc to sẽ bị thu lại và dịch ngược (vòng lặp). Trình duyệt iPad/iPhone thường không báo độ tin cậy nên bộ lọc này không có tác dụng ở đó.
-- Chưa thể kiểm chứng bằng thử nghiệm âm thanh thật: nếu vẫn còn câu rác, hãy gửi lại ảnh Nhật ký ở cả hai máy để chỉnh ngưỡng.
+## 28. Hai laptop đặt đối diện (đã gỡ)
+Xem mục 21.
 
 ## 29. Báo cáo phòng họp, xem lại toàn văn và tóm tắt sau họp
 **Báo cáo (chủ phòng):** mở **Phòng họp xem chung** → bấm **Xem báo cáo phòng họp** để thấy lượt người xem, thời lượng, số câu, số ngôn ngữ người xem chọn (kèm tỷ lệ). Bấm **Tải báo cáo (CSV)** để lưu và mở bằng Excel. Khi bấm kết thúc phòng, báo cáo được chốt trước khi đóng/xóa và vẫn hiện ở cùng cửa sổ (mục "Phòng vừa kết thúc") để tải về.
@@ -361,3 +345,7 @@ Chế độ riêng, độc lập với Chế độ họp, Hội nghị và Phòn
 - Chế độ Biên bản (không dịch) hiện chữ gốc. Câu chưa dịch được cũng hiện chữ gốc.
 - iPhone không có toàn màn hình thật: phụ đề vẫn phủ kín trang trong trình duyệt.
 - Logic dựng dòng nằm ở `captions.js` (có kiểm thử `tests/captions.test.js`).
+
+## Thay đổi bản v83: gỡ hẳn chế độ hai laptop
+- Đã xóa toàn bộ mã của chế độ hai laptop trong `app.js`, `src/room.js` (đã build lại `room.bundle.js`) và các quy tắc `cohosts`, `secret`, `live/co` trong `firebase/firestore.rules`.
+- **Cần làm một lần:** dán lại nội dung `firebase/firestore.rules` vào Firebase Console → Firestore → Rules rồi bấm **Publish**. Chưa Publish thì ứng dụng vẫn chạy bình thường; Publish để đóng hẳn các đường ghi của máy thứ hai.
