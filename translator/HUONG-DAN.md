@@ -353,3 +353,11 @@ Chế độ riêng, độc lập với Chế độ họp, Hội nghị và Phòn
 ## Thay đổi bản v81
 - **Tự đổi chiều khi gõ:** nếu gõ văn bản bằng ngôn ngữ đích (ví dụ gõ tiếng Việt có dấu khi đang chọn Anh → Việt), ứng dụng tự đảo chiều dịch và giữ nguyên chữ đang gõ. Chỉ áp dụng ở chế độ Hội thoại, khi không bật micro. Tiếng Việt gõ không dấu và các ngôn ngữ chữ Latin khác (Pháp, Đức…) không tự nhận được; khi đó bấm ⇄ như cũ. Logic nằm ở `lang-guess.js`.
 - **Cảnh báo hạn mức dịch miễn phí:** khi dịch bằng MyMemory, ứng dụng đếm ước tính số ký tự đã gửi trong ngày trên thiết bị này. Từ 80% hạn mức (5.000 ký tự, hoặc 50.000 nếu đã khai báo email trong Cài đặt) sẽ hiện dòng cảnh báo dưới thanh ngôn ngữ; khi MyMemory báo hết hạn mức thì hiện thông báo rõ ràng. MyMemory tính hạn mức theo địa chỉ mạng, nên nhiều máy dùng chung mạng văn phòng có thể hết sớm hơn con số ước tính.
+
+## Thay đổi bản v82: Màn hình chiếu phụ đề
+- Nút **CC** trên thanh công cụ mở màn hình chiếu: nền đen, chữ trắng to căn giữa. Mỗi câu đã chốt hiện bản dịch thành một đoạn, câu cũ cuộn dần lên; dòng cuối màu xám có nhãn ngôn ngữ, ví dụ `(vi)`, là câu đang nói.
+- Cách dùng khi hội nghị: nối laptop với máy chiếu hoặc TV, vào **Họp**, bấm **CC**. Góc trên phải có nút **A−/A+** (cỡ chữ phụ đề, được nhớ cho lần sau) và **Thoát**; phím Esc cũng thoát. Thoát màn hình chiếu không dừng cuộc họp.
+- **Máy thứ hai làm màn chiếu:** tạo phòng họp (nút mã QR), mở liên kết phòng trên máy nối máy chiếu, chọn *Ngôn ngữ hiển thị*, rồi bấm **CC**. Máy đó hiện phụ đề theo ngôn ngữ đã chọn.
+- Chế độ Biên bản (không dịch) hiện chữ gốc. Câu chưa dịch được cũng hiện chữ gốc.
+- iPhone không có toàn màn hình thật: phụ đề vẫn phủ kín trang trong trình duyệt.
+- Logic dựng dòng nằm ở `captions.js` (có kiểm thử `tests/captions.test.js`).

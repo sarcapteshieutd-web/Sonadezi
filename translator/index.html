@@ -325,6 +325,7 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/></svg>
           <span id="roomDot" class="absolute right-0 top-0 hidden h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-white"></span>
         </button>
+        <button id="btnCap" type="button" aria-label="Màn hình chiếu phụ đề" title="Màn hình chiếu phụ đề (nền đen, chữ to)" aria-pressed="false" class="rounded-full bg-white text-xs font-bold text-slate-500 shadow ring-1 ring-slate-200">CC</button>
         <button id="btnBig" aria-label="Màn hình lớn" title="Màn hình lớn" aria-pressed="false" class="rounded-full bg-white p-1.5 text-slate-500 shadow ring-1 ring-slate-200">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
         </button>
@@ -663,12 +664,27 @@
     </div>
   </div>
 
+  <!-- Màn hình chiếu phụ đề -->
+  <div id="capStage" hidden role="region" aria-label="Màn hình chiếu phụ đề">
+    <div id="capTools">
+      <button id="btnCapMinus" type="button" aria-label="Giảm cỡ chữ phụ đề">A−</button>
+      <button id="btnCapPlus" type="button" aria-label="Tăng cỡ chữ phụ đề">A+</button>
+      <button id="btnCapExit" type="button" aria-label="Thoát màn hình chiếu">✕ Thoát</button>
+    </div>
+    <div id="capBody" aria-live="polite">
+      <p id="capHint">Đang chờ lời nói…</p>
+      <div id="capLines"></div>
+      <p id="capLive" hidden></p>
+    </div>
+  </div>
+
   <div id="toast" role="status" aria-live="polite" class="pointer-events-none fixed bottom-6 left-1/2 z-30 hidden -translate-x-1/2 rounded-full bg-slate-900 px-4 py-2 text-sm text-white shadow-lg"></div>
 
   <script src="config.js"></script>
   <script src="stt-cloud.js"></script>
   <script src="report.js"></script>
   <script src="lang-guess.js"></script>
+  <script src="captions.js"></script>
   <script src="app.js"></script>
   <script src="dialogs.js"></script>
   <script src="find.js"></script>

@@ -288,6 +288,7 @@
     el.emptyHint.classList.add('hidden');
     el.hist.appendChild(renderItem(item));
     scrollChat();
+    renderCaption();
   }
 
   // ----- Chế độ hai ô trái/phải: mỗi bên đọc bằng ngôn ngữ của mình, các hàng thẳng nhau -----
@@ -673,6 +674,7 @@
     el.src.style.height = Math.min(el.src.scrollHeight, 112) + 'px';
     scrollChat();
     roomLive();
+    renderCaption();
   }
 
   // ---------- Đọc văn bản (TTS) ----------
@@ -1887,6 +1889,48 @@
     if (!document.fullscreenElement && el.app.classList.contains('big')) setBig(false);
   });
 
+  // ---------- Màn hình chiếu phụ đề (nền đen, chữ to; dùng khi nối máy chiếu hoặc TV) ----------
+  // Câu đã chốt cuộn dần lên; dòng cuối màu xám có nhãn ngôn ngữ là câu đang nói. Mọi nội dung hiển thị bằng textContent.
+  var cap = { stage: $('capStage'), lines: $('capLines'), live: $('capLive'), hint: $('capHint'), on: false,
+    scale: window.Captions ? window.Captions.clampScale(parseFloat(store.get('capScale', '1'))) : 1 };
+  // Nguồn dữ liệu: mặc định là máy đang thu âm; người xem qua mã QR thay bằng nội dung phòng họp (xem startViewer)
+  let capSource = () => ({ items: state.log, live: { text: el.src.value.trim() || (state.listening ? '…' : ''), lang: state.src } });
+  function renderCaption() {
+    if (!cap || !cap.on || !window.Captions) return; // cap dùng var: hàm này có thể được gọi trong lúc khởi tạo, trước khi cap được gán
+    const s = capSource();
+    const c = window.Captions.buildCaption(s.items, s.live, { maxLines: 12 });
+    cap.lines.replaceChildren(...c.lines.map(t => node('p', 'cap-line', t)));
+    cap.live.replaceChildren();
+    if (c.live) {
+      if (c.live.label) cap.live.appendChild(node('span', 'cap-label', c.live.label + ' '));
+      cap.live.appendChild(document.createTextNode(c.live.text));
+    }
+    cap.live.hidden = !c.live;
+    cap.hint.hidden = !!(c.lines.length || c.live);
+  }
+  function setCapScale(v) {
+    cap.scale = window.Captions.clampScale(v);
+    store.set('capScale', String(cap.scale));
+    cap.stage.style.setProperty('--cap-scale', String(cap.scale));
+  }
+  function setCaption(on) {
+    if (!window.Captions) { toast('Chưa tải được thành phần màn hình chiếu'); return; }
+    cap.on = on;
+    cap.stage.hidden = !on;
+    $('btnCap').setAttribute('aria-pressed', String(on));
+    if (on) { setCapScale(cap.scale); renderCaption(); }
+    try {
+      if (on && cap.stage.requestFullscreen) { const r = cap.stage.requestFullscreen(); if (r && r.catch) r.catch(() => {}); } // iPhone không có toàn màn hình: vẫn dùng lớp phủ
+      else if (!on && document.fullscreenElement === cap.stage) document.exitFullscreen();
+    } catch (_) {}
+  }
+  $('btnCap').onclick = () => setCaption(!cap.on);
+  $('btnCapExit').onclick = () => setCaption(false);
+  $('btnCapMinus').onclick = () => setCapScale(cap.scale - 0.1);
+  $('btnCapPlus').onclick = () => setCapScale(cap.scale + 0.1);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && cap.on) setCaption(false); });
+  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && cap.on) setCaption(false); }); // thoát toàn màn hình bằng phím Esc của trình duyệt
+
   // ---------- Sự kiện ----------
   el.selSrc.onchange = () => {
     const s = el.selSrc.value;
@@ -2644,6 +2688,7 @@
         el.hist.appendChild(row);
       }
       if (nearBottom) scrollChat();
+      renderCaption();
     }
     let ended = false;
     // Bản "đang nói" của chủ phòng: hiện ngay khi họ còn đang nói; ẩn khi câu đã được chốt thành tin nhắn
@@ -2666,9 +2711,21 @@
         el.hist.appendChild(row);
       }
       scrollChat();
+      renderCaption();
     }
     const baseRender = render;
     render = () => { baseRender(); renderLive(); };
+    // Màn hình chiếu trên máy người xem (ví dụ laptop thứ hai nối máy chiếu): lấy nội dung phòng họp theo ngôn ngữ người xem đã chọn
+    capSource = () => {
+      const recent = msgs.slice(-6);
+      let live = null;
+      for (const slot of ['now', 'co']) {
+        const l = lives[slot];
+        if (ended || !l || !l.src || Date.now() - l.ts > 20000 || recent.some(m => m.utt && m.utt === l.utt)) continue;
+        live = lang === l.from ? { text: l.src, lang: l.from } : { text: l.out || l.src, lang: l.out ? l.to : l.from };
+      }
+      return { items: msgs.map(m => ({ src: pick(m).text, out: '' })), live };
+    };
     for (const slot of ['now', 'co']) kit.subscribeLive(id, slot, l => { lives[slot] = l; renderLive(); });
 
     // Tóm tắt do chủ phòng đăng: hiện ở đầu khung chat, tự dịch sang ngôn ngữ của người xem
