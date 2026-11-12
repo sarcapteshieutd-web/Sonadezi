@@ -51,7 +51,7 @@
     btnExport: $('btnExport'), btnDonate: $('btnDonate'), sheetExport: $('sheetExport'), sheetDonate: $('sheetDonate'),
     expInfo: $('expInfo'), expTxt: $('expTxt'), expCsv: $('expCsv'), expShare: $('expShare'), expAi: $('expAi'),
     donateBody: $('donateBody'), donateTitle: $('donateTitle'),
-    btnMeeting: $('btnMeeting'), btnConf: $('btnConf'), btnModeChat: $('btnModeChat'), modeDesc: $('modeDesc'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
+    btnMeeting: $('btnMeeting'), btnModeChat: $('btnModeChat'), modeDesc: $('modeDesc'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
     chkMeetingSpeak: $('chkMeetingSpeak'), chkConf: $('chkConf'), meetingSpeaking: $('meetingSpeaking'),
     chkAutoTurn: $('chkAutoTurn'), meetingLang: $('meetingLang'),
     btnReopenMic: $('btnReopenMic'), micWarn: $('micWarn'), btnMbOpts: $('btnMbOpts'), mbOpts: $('mbOpts'), micLogView: $('micLogView'), btnMicLogCopy: $('btnMicLogCopy'), talkStatus: $('talkStatus'), talkText: $('talkText'), chkBilingual: $('chkBilingual'), selMic: $('selMic'), selSttSpeed: $('selSttSpeed'), sttStatus: $('sttStatus'), sttLevel: $('sttLevel'), sttLevelBar: $('sttLevelBar'),
@@ -126,7 +126,7 @@
     showLat: store.get('showLat', '0') === '1',    // hiện độ trễ trên bong bóng
     meetingSpeak: store.get('meetingSpeak', '0') === '1',
     speaking: false,
-    autoTurn: store.get('autoTurn', '1') === '1',
+    autoTurn: store.get('autoTurn', '0') === '1', // mặc định tắt: một người nói nhiều câu liền không bị đổi ngôn ngữ nghe giữa chừng
     conf: acct0Vip && store.get('conf', '0') === '1', // chế độ hội nghị: nghe bản dịch qua tai nghe/loa, micro luôn mở
     minutes: false, // chế độ ghi biên bản: chỉ ghi chữ tiếng Việt, không dịch
     twoMode: false, // chế độ hai máy laptop dùng chung phòng
@@ -535,6 +535,27 @@
     return true;
   }
 
+  // ----- Hạn mức dịch miễn phí MyMemory trong ngày: đếm ước tính trên thiết bị này (MyMemory tính theo địa chỉ mạng, nên con số thật có thể cao hơn) -----
+  const MM_OVER_MSG = 'Đã hết hạn mức dịch miễn phí hôm nay. Khai báo email trong Cài đặt để nâng hạn mức, hoặc dùng tài khoản VIP.';
+  const mmLimit = () => (state.email ? 50000 : 5000);
+  const mmToday = () => new Date().toLocaleDateString('en-CA');
+  function mmUsed() { try { const o = JSON.parse(store.get('mmDay', '{}')); return o.d === mmToday() ? (o.n || 0) : 0; } catch (_) { return 0; } }
+  let mmWarned = '';
+  function renderMmUsage() {
+    const box = $('mmUsage'); if (!box) return;
+    const used = mmUsed(), lim = mmLimit(), lv = window.LangGuess ? window.LangGuess.quotaLevel(used, lim) : 'ok';
+    const usingMm = !(isVip() && state.engine === 'google' && state.gkey);
+    box.classList.toggle('hidden', !usingMm || lv === 'ok');
+    box.classList.toggle('text-red-600', lv === 'over'); box.classList.toggle('text-amber-600', lv === 'warn');
+    box.textContent = lv === 'over' ? `Dịch miễn phí hôm nay: đã hết khoảng ${fmtN(lim)} ký tự (ước tính)` : `Dịch miễn phí hôm nay: khoảng ${fmtN(used)} / ${fmtN(lim)} ký tự (ước tính)`;
+    if (usingMm && lv !== 'ok' && mmWarned !== mmToday() + lv) {
+      mmWarned = mmToday() + lv;
+      toast(lv === 'over' ? MM_OVER_MSG : 'Sắp hết hạn mức dịch miễn phí hôm nay' + (state.email ? '' : '. Khai báo email trong Cài đặt để nâng hạn mức.'));
+    }
+  }
+  function mmAdd(n) { store.set('mmDay', JSON.stringify({ d: mmToday(), n: mmUsed() + n })); renderMmUsage(); }
+  function mmExhausted() { store.set('mmDay', JSON.stringify({ d: mmToday(), n: Math.max(mmUsed(), mmLimit()) })); renderMmUsage(); }
+
   async function requestTranslate(text, signal, from, to) {
     let result;
     if (isVip() && state.engine === 'google' && state.gkey && gCharge(text)) {
@@ -551,10 +572,14 @@
       const p = new URLSearchParams({ q: text, langpair: `${LANGS[from].api}|${LANGS[to].api}` });
       if (state.email) p.set('de', state.email);
       const res = await fetch('https://api.mymemory.translated.net/get?' + p, { signal });
+      if (res.status === 429) { mmExhausted(); throw new Error(MM_OVER_MSG); }
       if (!res.ok) throw new Error('MyMemory lỗi ' + res.status);
       const j = await res.json();
+      const detail = String(j.responseDetails || '') + ' ' + String((j.responseData && j.responseData.translatedText) || '');
+      if (Number(j.responseStatus) === 429 || /MYMEMORY WARNING|USED ALL AVAILABLE FREE TRANSLATIONS/i.test(detail)) { mmExhausted(); throw new Error(MM_OVER_MSG); }
       if (Number(j.responseStatus) !== 200) throw new Error(j.responseDetails || 'MyMemory lỗi');
       result = decodeEntities(j.responseData.translatedText);
+      mmAdd(text.length);
     }
     return result;
   }
@@ -1443,8 +1468,9 @@
       minutes: 'Chỉ ghi chữ tiếng Việt, không dịch. Bấm Dừng để lấy lời nhắc tóm tắt.'
     };
     const mode = state.minutes ? 'minutes' : !state.meeting ? 'chat' : state.conf ? 'conf' : 'meeting';
-    for (const [k, b] of [['chat', el.btnModeChat], ['meeting', el.btnMeeting], ['conf', el.btnConf], ['minutes', $('btnMinutes')]]) {
-      if (b) b.setAttribute('aria-pressed', String(k === mode));
+    const tab = mode === 'conf' ? 'meeting' : mode; // nghe bằng tai nghe là một tùy chọn của chế độ Họp
+    for (const [k, b] of [['chat', el.btnModeChat], ['meeting', el.btnMeeting], ['minutes', $('btnMinutes')]]) {
+      if (b) b.setAttribute('aria-pressed', String(k === tab));
     }
     if (el.modeDesc) { el.modeDesc.textContent = MODE_DESC[mode]; el.modeDesc.hidden = mode === 'chat'; }
   }
@@ -1578,7 +1604,7 @@
     el.mbOpts.classList.toggle('flex', open);
     el.btnMbOpts.setAttribute('aria-expanded', String(open));
   }
-  applyMbOpts(store.get('mbOpts', '0') === '1');
+  applyMbOpts(false); // bảng tùy chọn là bảng thả xuống: luôn đóng khi mở ứng dụng
   el.btnReopenMic.onclick = () => {
     if (!state.meeting) return;
     micFail = 0; state.micGaveUp = false; wantListening = true;
@@ -1586,7 +1612,10 @@
     if (state.cloudActive) restartCloud(); else if (!state.speaking) beginSession();
     renderTalkStatus();
   };
-  el.btnMbOpts.onclick = () => { const open = el.mbOpts.classList.contains('hidden'); applyMbOpts(open); store.set('mbOpts', open ? '1' : '0'); };
+  el.btnMbOpts.onclick = () => applyMbOpts(el.mbOpts.classList.contains('hidden'));
+  // Bấm ra ngoài hoặc nhấn Esc thì đóng bảng tùy chọn họp
+  document.addEventListener('click', e => { if (!el.mbOpts.classList.contains('hidden') && !el.mbOpts.contains(e.target) && !el.btnMbOpts.contains(e.target)) applyMbOpts(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !el.mbOpts.classList.contains('hidden')) applyMbOpts(false); });
   el.selSttSpeed.onchange = () => { state.sttSpeed = el.selSttSpeed.value; store.set('sttSpeed', state.sttSpeed); if (state.cloudActive) restartCloud(); };
   el.selMic.onchange = () => { state.micId = el.selMic.value; store.set('micId', state.micId); if (state.cloudActive) restartCloud(); };
   function startMeeting() {
@@ -1611,7 +1640,6 @@
     renderTalkStatus();
     return true;
   }
-  let confViaBtn = false; // chế độ hội nghị được bật tạm bằng nút 🎧 (không lưu lâu dài)
   function stopMeeting() {
     if (!state.meeting) return;
     const rest = el.src.value.trim();
@@ -1630,7 +1658,6 @@
     setListeningUI(false);
     setMeetingUI(false);
     if (wakeLock) { try { wakeLock.release(); } catch (_) {} wakeLock = null; }
-    if (confViaBtn) { confViaBtn = false; state.conf = false; store.set('conf', '0'); syncConf(); }
     if (state.minutes) { endMinutes(); return; }
     toast('Đã dừng chế độ họp');
   }
@@ -1650,11 +1677,7 @@
     store.set('meetingSpeak', state.meetingSpeak ? '1' : '0');
     if (!state.meetingSpeak) { speechQueue.length = 0; cancelSpeech(); }
   };
-  function syncConfBtn() {
-    const on = state.meeting && state.conf;
-    el.btnConf.setAttribute('aria-label', on ? 'Dừng chế độ hội nghị' : 'Chế độ hội nghị: nghe bản dịch bằng tai nghe');
-    syncModeUI();
-  }
+  const syncConfBtn = () => syncModeUI();
   function syncConf() {
     if (state.conf) { state.autoTurn = false; el.chkAutoTurn.checked = false; }
     el.chkAutoTurn.disabled = state.conf; // hội nghị: ngôn ngữ cố định, không đảo lượt
@@ -1663,21 +1686,10 @@
     if (state.conf && state.cloudActive) fallbackToBrowser('Chế độ hội nghị dùng nhận dạng của trình duyệt (một ngôn ngữ cố định)');
     syncBilingualUI();
   }
-  el.chkConf.onchange = () => { if (!isVip()) { el.chkConf.checked = false; vipOnly(); return; } state.conf = el.chkConf.checked; store.set('conf', state.conf ? '1' : '0'); syncConf(); };
+  el.chkConf.onchange = () => { if (!isVip()) { el.chkConf.checked = false; vipOnly(); return; } state.conf = el.chkConf.checked; store.set('conf', state.conf ? '1' : '0'); syncConf(); if (state.conf) toast('Hãy cắm tai nghe và chọn làm thiết bị phát của máy'); };
   el.chkAutoTurn.checked = state.autoTurn;
   syncConf();
   el.chkAutoTurn.onchange = () => { state.autoTurn = el.chkAutoTurn.checked; store.set('autoTurn', state.autoTurn ? '1' : '0'); };
-  // Nút ngoài: bật nhanh chế độ hội nghị (ngôn ngữ cố định, nghe bằng tai nghe, micro không tắt)
-  el.btnConf.onclick = () => {
-    if (!isVip()) { vipOnly(); return; }
-    if (state.meeting && state.conf) { stopMeeting(); return; }
-    if (state.meeting) { toast('Đang họp ở chế độ thường. Hãy dừng họp rồi bấm Hội nghị để chuyển chế độ.'); return; }
-    const prev = state.conf;
-    state.conf = true; syncConf();
-    if (!startMeeting()) { state.conf = prev; syncConf(); return; }
-    confViaBtn = !prev; store.set('conf', '1');
-    toast('Chế độ hội nghị: hãy cắm tai nghe và chọn làm thiết bị phát của máy');
-  };
   el.btnMeeting.onclick = () => (state.meeting ? stopMeeting() : startMeeting());
   el.btnModeChat.onclick = () => { if (state.meeting) stopMeeting(); };
   el.btnMeetingStop.onclick = stopMeeting;
@@ -1830,6 +1842,15 @@
   }
   el.btnFontMinus.onclick = () => setScale(state.uiScale - 0.1);
   el.btnFontPlus.onclick = () => setScale(state.uiScale + 0.1);
+  // Điện thoại: các nút ít dùng (tìm, xem gọn, cỡ chữ) nằm trong bảng "Hiển thị"; màn rộng hiện thẳng trên thanh công cụ (xem ui.css)
+  const viewMenu = $('viewMenu'), btnView = $('btnView');
+  const setViewMenu = open => { viewMenu.classList.toggle('open', open); btnView.setAttribute('aria-expanded', String(open)); };
+  btnView.onclick = () => setViewMenu(!viewMenu.classList.contains('open'));
+  document.addEventListener('click', e => {
+    if (!viewMenu.classList.contains('open') || btnView.contains(e.target)) return;
+    if (!viewMenu.contains(e.target) || e.target.closest('#btnFind')) setViewMenu(false); // bấm ra ngoài hoặc mở Tìm thì đóng; chỉnh cỡ chữ thì giữ mở
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') setViewMenu(false); });
   window.addEventListener('resize', applyScale);
   // Mật độ khung chat: Gọn (nhiều tin hơn) / Thoải mái. Mặc định: gọn trên điện thoại, thoải mái trên màn hình lớn.
   let density = store.get('density', '') || (window.innerWidth < 640 ? 'compact' : 'comfy');
@@ -1879,7 +1900,17 @@
   };
   el.btnSwap.onclick = () => { setLangs(state.tgt, state.src, false); if (SR && !state.meeting) startListening(); };
 
-  el.src.addEventListener('input', () => { updateCounter(); translateDebounced(); });
+  // Gõ nhầm chiều (ví dụ gõ tiếng Việt khi đang chọn Anh → Việt): tự đảo chiều dịch, giữ nguyên chữ đang gõ. Không áp dụng khi đang nghe hoặc đang họp.
+  function autoFlipTyped() {
+    if (!window.LangGuess || state.listening || state.meeting || state.minutes) return false;
+    if (!window.LangGuess.shouldSwap(el.src.value, state.src, state.tgt)) return false;
+    const s = state.src; state.src = state.tgt; state.tgt = s;
+    state.translated = ''; el.out.textContent = ''; state.reqId++;
+    syncLangUI(); updateCounter();
+    toast(`Đã tự đổi chiều: ${LANGS[state.src].name} → ${LANGS[state.tgt].name}`);
+    return true;
+  }
+  el.src.addEventListener('input', () => { autoFlipTyped(); updateCounter(); translateDebounced(); });
 
   el.btnMic.onclick = () => (state.meeting ? stopMeeting() : state.listening || wantListening ? stopListening_andTranslate() : startListening());
   function stopListening_andTranslate() {
@@ -1903,6 +1934,7 @@
   };
   const sendTyped = () => {
     if (state.listening || !el.src.value.trim()) return;
+    autoFlipTyped();
     translateNow(true);
   };
   el.btnSend.onclick = sendTyped;
@@ -2399,13 +2431,6 @@
     if (room.unsubViewers) room.unsubViewers();
     room.unsubViewers = room.kit.subscribeViewers(room.id, onViewers, () => {});
     room.role = 'host'; room.code = info.code || ''; room.cohosts = [];
-    if (!info.code) room.kit.ensureCoCode(room.id).then(c => { room.code = c; if (el.sheetRoom.classList.contains('flex')) renderRoom(); }).catch(() => {});
-    if (room.unsubCo) room.unsubCo();
-    room.unsubCo = room.kit.subscribeCohosts(room.id, list => {
-      room.cohosts = list;
-      if (list.length) enterTwoMode();
-      if (el.sheetRoom.classList.contains('flex')) renderRoom();
-    });
     saveRoom(); setRoomDot();
   }
   async function createRoomNow() {
@@ -2557,20 +2582,6 @@
     const cp = node('button', 'mt-2 w-full rounded-lg border border-brand-600 py-1.5 text-sm font-medium text-brand-600', 'Sao chép liên kết');
     cp.onclick = async () => { try { await navigator.clipboard.writeText(url); toast('Đã sao chép liên kết'); } catch (_) { toast('Không thể sao chép'); } };
     b.appendChild(cp);
-    b.appendChild(node('h3', 'mt-5 border-t border-slate-200 pt-3 text-sm font-semibold text-brand-700', 'Laptop thứ hai (mỗi máy một ngôn ngữ cố định)'));
-    if (!room.code) {
-      b.appendChild(node('p', 'mt-1 text-xs text-amber-700', 'Chưa tạo được mã mời máy thứ hai (cần xuất bản lại quy tắc Firestore).'));
-    } else {
-      const coUrl = joinUrl(room.id) + '&co=' + room.code;
-      b.appendChild(node('p', 'mt-1 text-xs text-slate-500', 'Mở liên kết này trên laptop bên kia. Máy đó tự lấy ngôn ngữ ngược với máy này. Không chia sẻ liên kết cho người xem.'));
-      const qr2 = node('div', 'mx-auto mt-2 w-40 rounded-xl border border-slate-200 bg-white p-2');
-      qr2.innerHTML = room.kit.qrSvg(coUrl);
-      b.appendChild(qr2);
-      const cp2 = node('button', 'mt-2 w-full rounded-lg border border-brand-600 py-1.5 text-sm font-medium text-brand-600', 'Sao chép liên kết máy thứ hai');
-      cp2.onclick = async () => { try { await navigator.clipboard.writeText(coUrl); toast('Đã sao chép liên kết máy thứ hai'); } catch (_) { toast('Không thể sao chép'); } };
-      b.appendChild(cp2);
-      b.appendChild(node('p', 'mt-1 text-sm', room.cohosts.length ? 'Máy thứ hai: đã kết nối' : 'Máy thứ hai: chưa kết nối'));
-    }
     const exp = new Date(room.expiresAtMs);
     const names = [...new Set(room.viewers.map(v => LANGS[v.lang] ? LANGS[v.lang].name : v.lang))];
     b.appendChild(node('p', 'mt-3 text-sm', `Đang xem: ${room.viewers.length} người${names.length ? ' (' + names.join(', ') + ')' : ''}`));
@@ -2782,27 +2793,9 @@
   }
 
 
-  // Phía máy laptop thứ hai (liên kết có ?room=...&co=...): ghi âm và dịch bằng ngôn ngữ cố định của máy này
-  async function startCohost(id, code) {
-    el.coBar.classList.remove('hidden');
-    const say = t => { el.coStatus.textContent = t; };
-    say('Đang kết nối…');
-    if (!roomEnabled) { say('Chưa cấu hình phòng họp'); return; }
-    let kit, info;
-    try { kit = await getKit(); info = await kit.getRoom(id); } catch (e) { say('Không kết nối được: ' + (e.code || e.message)); return; }
-    if (!info || info.expiresAtMs < Date.now() || info.status !== 'open') { say('Phòng không tồn tại, đã đóng hoặc hết hạn'); return; }
-    try { await kit.joinAsCohost(id, info.expiresAtMs, code); }
-    catch (e) { say('Không vào được với tư cách máy thứ hai: mã mời sai hoặc quy tắc Firestore chưa cập nhật (' + (e.code || e.message) + ')'); return; }
-    room.kit = kit; room.id = id; room.expiresAtMs = info.expiresAtMs; room.role = 'co'; room.active = true;
-    if (LANGS[info.hostTgt] && LANGS[info.hostSrc]) setLangs(info.hostTgt, info.hostSrc, false); // máy này nói ngôn ngữ đích của máy chủ phòng
-    enterTwoMode();
-    say(`Đã kết nối phòng họp. Máy này nói ${LANGS[state.src].name}, dịch sang ${LANGS[state.tgt].name}. Bấm "Chế độ họp" để bắt đầu ghi.`);
-    kit.subscribeRoom(id, r => {
-      if (!r || r.status === 'closed') { room.active = false; say('Chủ phòng đã kết thúc phòng họp'); }
-    }, () => {});
-  }
 
   // ---------- Khởi tạo ----------
+  renderMmUsage();
   applyScale();
   fillSelect(el.selVoiceLang, state.tgt);
   fillSelect(el.selSrc, state.src);
@@ -2817,7 +2810,7 @@
   const daysLeft = ms => Math.max(0, Math.ceil((ms - Date.now()) / 86400000));
   const setHint = v => store.set('acct', v);
   const planName = () => { const p = (CFG.plans || []).find(x => x && x.name); return p ? p.name : 'VIP'; };
-  const noViewerGate = () => !!(viewerRoomId && !new URLSearchParams(location.search).get('co')); // người xem qua QR không cần chọn tài khoản
+  const noViewerGate = () => !!viewerRoomId; // người xem qua QR không cần chọn tài khoản
 
   function fbErr(e) {
     const c = String((e && e.code) || '');
@@ -2868,7 +2861,6 @@
     const vip = isVip(), info = state.acctInfo;
     if (!vip) { state.engine = 'mymemory'; state.ttsMode = 'device'; state.conf = false; }
     el.btnExport.classList.toggle('hidden', !vip);
-    el.btnConf.classList.toggle('hidden', !vip);
     el.chkConf.closest('label').classList.toggle('hidden', !vip);
     el.chkConf.checked = state.conf;
     const admin = isAdminAcct();
@@ -3414,8 +3406,6 @@
   if (store.get('acct', '') === 'vip' && !noViewerGate()) watchAccount().catch(() => {}); // khôi phục phiên VIP và theo dõi hồ sơ
   if (!state.acct && !noViewerGate()) openGate('login');
 
-  const coCode = new URLSearchParams(location.search).get('co');
-  if (viewerRoomId && coCode) startCohost(viewerRoomId, coCode);
   else if (viewerRoomId) startViewer(viewerRoomId);
   else resumeRoom();
 })();

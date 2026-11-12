@@ -1,3 +1,5 @@
+> **Đã ngừng (bản v80):** chế độ hai laptop đã được gỡ khỏi ứng dụng. Tài liệu này chỉ giữ lại để tham khảo.
+
 # Thiết lập phòng họp song ngữ: 2 laptop đối diện + điện thoại thành viên
 
 Sơ đồ: [`so-do-phong-hop-2-laptop.svg`](so-do-phong-hop-2-laptop.svg) (mở bằng trình duyệt).

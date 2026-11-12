@@ -222,10 +222,6 @@
       <button id="iosHintClose" class="float-right -mt-1 px-1 text-lg leading-none" aria-label="Đóng">×</button>
     </div>
 
-    <!-- Thanh máy laptop thứ hai -->
-    <div id="coBar" class="mb-2 hidden shrink-0 lg:w-full lg:max-w-3xl lg:self-center rounded-2xl bg-brand-50 p-3 text-sm text-brand-900 ring-1 ring-brand-100">
-      <p id="coStatus"></p>
-    </div>
 
     <!-- Thanh người xem phòng họp -->
     <div id="viewerBar" class="mb-2 hidden shrink-0 lg:w-full lg:max-w-3xl lg:self-center rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200/80">
@@ -267,6 +263,7 @@
         <select id="selTgt" aria-label="Ngôn ngữ đích" class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-2 py-3 text-center text-[0.9375rem] font-semibold text-brand-700"></select>
       </div>
       <p id="gUsage" class="mt-1.5 hidden text-center text-[0.6875rem] text-slate-500" aria-live="polite"></p>
+      <p id="mmUsage" class="mt-1.5 hidden text-center text-[0.6875rem] text-amber-600" aria-live="polite"></p>
     </section>
 
     <!-- Chọn chế độ -->
@@ -274,7 +271,6 @@
       <div role="group" class="mode-grp">
         <button id="btnModeChat" type="button" class="mode-seg" aria-pressed="true">Hội thoại</button>
         <button id="btnMeeting" type="button" class="mode-seg" aria-pressed="false">Họp</button>
-        <button id="btnConf" type="button" class="mode-seg" aria-pressed="false" aria-label="Chế độ hội nghị: nghe bản dịch bằng tai nghe"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M21 15a2 2 0 0 1-2 2h-1v-5h3zM3 15a2 2 0 0 0 2 2h1v-5H3z"/></svg>Hội nghị</button>
         <button id="btnMinutes" type="button" class="mode-seg" aria-pressed="false">Biên bản</button>
       </div>
       <p id="modeDesc" class="mode-desc"></p>
@@ -306,7 +302,7 @@
       </div>
       <div class="flex items-center justify-between gap-2">
         <label class="flex items-center gap-1.5 text-xs"><input id="chkMeetingSpeak" type="checkbox" class="h-4 w-4 accent-red-600" />Đọc bản dịch ra loa</label>
-        <label class="flex items-center gap-1.5 text-xs"><input id="chkConf" type="checkbox" class="h-4 w-4 accent-red-600" />Chế độ hội nghị (nghe bằng tai nghe, micro không tắt)</label>
+        <label class="flex items-center gap-1.5 text-xs"><input id="chkConf" type="checkbox" class="h-4 w-4 accent-red-600" />Nghe bản dịch bằng tai nghe (micro không tắt khi đọc)</label>
         <span id="meetingSpeaking" class="hidden rounded bg-red-100 px-1.5 py-0.5 text-[0.6875rem] font-medium">Đang đọc · micro tạm nghỉ</span>
       </div>
       <div class="text-[0.6875rem] text-red-600/80">Đổi người nói: bấm ⇄ hoặc phím Space.</div>
@@ -317,11 +313,14 @@
 
     <!-- Thanh công cụ khung chat -->
     <div id="chatBar" class="mt-2 flex shrink-0 items-center justify-end gap-1.5 lg:ml-auto lg:mt-0">
+        <div id="viewMenu" role="group" aria-label="Hiển thị">
         <button id="btnFind" type="button" aria-label="Tìm trong hội thoại" aria-pressed="false" aria-controls="findBar" title="Tìm trong hội thoại" class="rounded-full bg-white p-1.5 text-slate-500 shadow ring-1 ring-slate-200"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
         <button id="btnDensity" type="button" aria-label="Xem gọn" aria-pressed="false" title="Xem gọn / thoải mái" class="rounded-full bg-white p-1.5 text-slate-500 shadow ring-1 ring-slate-200"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg></button>
-        <button id="btnDual" aria-label="Chia hai ô trái phải" title="Chia hai ô trái phải" class="rounded-full bg-white p-1.5 text-slate-500 shadow ring-1 ring-slate-200"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg></button>
         <button id="btnFontMinus" aria-label="Giảm cỡ chữ" title="Giảm cỡ chữ" class="rounded-full bg-white px-2 py-1 text-xs font-semibold text-slate-500 shadow ring-1 ring-slate-200">A−</button>
         <button id="btnFontPlus" aria-label="Tăng cỡ chữ" title="Tăng cỡ chữ" class="rounded-full bg-white px-2 py-1 text-sm font-semibold text-slate-500 shadow ring-1 ring-slate-200">A+</button>
+        </div>
+        <button id="btnView" type="button" aria-label="Hiển thị: tìm, xem gọn, cỡ chữ" aria-expanded="false" aria-controls="viewMenu" title="Hiển thị" class="rounded-full bg-white text-sm font-semibold text-slate-500 shadow ring-1 ring-slate-200">Aa</button>
+        <button id="btnDual" aria-label="Chia hai ô trái phải" title="Chia hai ô trái phải" class="rounded-full bg-white p-1.5 text-slate-500 shadow ring-1 ring-slate-200"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg></button>
         <button id="btnRoom" aria-label="Phòng họp xem chung (mã QR)" title="Phòng họp xem chung (mã QR)" class="relative rounded-full bg-white p-1.5 text-slate-500 shadow ring-1 ring-slate-200">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/></svg>
           <span id="roomDot" class="absolute right-0 top-0 hidden h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-white"></span>
@@ -669,6 +668,7 @@
   <script src="config.js"></script>
   <script src="stt-cloud.js"></script>
   <script src="report.js"></script>
+  <script src="lang-guess.js"></script>
   <script src="app.js"></script>
   <script src="dialogs.js"></script>
   <script src="find.js"></script>

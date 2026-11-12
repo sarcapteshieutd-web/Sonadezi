@@ -194,7 +194,7 @@ Cách này chỉ sửa kết quả sau khi nhận diện, không cải thiện c
 
 ## 14. Họp luân phiên hai ngôn ngữ
 Trong **Chế độ họp**, thanh đỏ hiển thị rõ **ngôn ngữ đang nghe**. Có hai cách đổi người nói:
-- **Tự đổi sau mỗi lượt** (ô tích trên thanh đỏ, mặc định bật): sau mỗi câu đã chốt, app chuyển sang ngôn ngữ còn lại, giả định hai bên nói xen kẽ.
+- **Tự đổi sau mỗi lượt** (ô tích trong ⚙ Tùy chọn của thanh họp, mặc định **tắt**): khi bật, sau mỗi câu đã chốt app chuyển sang ngôn ngữ còn lại, giả định hai bên nói xen kẽ từng câu. Để tắt thì một người nói nhiều câu liền không bị đổi ngôn ngữ nghe giữa chừng; đổi người nói bằng nút ⇄ hoặc phím Space.
 - **Đổi tay:** bấm ⇄ hoặc nhấn phím **Space** (khi con trỏ không nằm trong ô nhập). Dùng khi một bên nói hai lượt liên tiếp hoặc app đổi sai.
 
 Bong bóng của bên đầu tiên nói nằm bên phải, bên còn lại nằm bên trái. Mỗi câu được dịch theo đúng chiều của lượt nói đó, kể cả khi ngôn ngữ đã đổi trước lúc dịch xong.
@@ -250,6 +250,8 @@ Trong Chế độ họp, bản dịch hiện dần cùng lúc với chữ đang 
 - Cần giữ màn hình sáng và trang đang mở; tôi chưa kiểm chứng trên điện thoại thật khi khóa màn hình (nhiều trình duyệt tạm dừng đọc ở nền).
 
 ## 21. Phòng họp hai laptop (mỗi máy một ngôn ngữ cố định)
+
+> **Đã ngừng (bản v80):** chế độ hai laptop đã được gỡ khỏi ứng dụng; liên kết máy thứ hai cũ nay mở như người xem thường. Dùng chế độ **Họp** với ô *Song ngữ* (tự nhận ngôn ngữ từng câu) để thay thế. Nội dung bên dưới chỉ giữ lại để tham khảo.
 Dùng khi mỗi bên bàn có một laptop và một micro riêng (ví dụ bên Việt, bên Anh), thay cho việc dùng chung một micro và bấm đổi lượt.
 1. Trên laptop thứ nhất (chủ phòng): chọn ngôn ngữ (ví dụ Việt → Anh), bấm biểu tượng Phòng họp → Tạo phòng họp.
 2. Trong hộp Phòng họp, kéo xuống mục **Laptop thứ hai**: mở liên kết đó (hoặc quét mã QR) trên laptop thứ hai. Máy thứ hai tự lấy ngôn ngữ ngược lại (Anh → Việt). **Không chia sẻ liên kết này cho người xem**; người xem dùng mã QR phía trên.
@@ -310,7 +312,7 @@ Khi đọc bản dịch, **chữ trong bong bóng bản dịch đang đọc đư
 - Nếu việc đọc bị lỗi giữa chừng, ứng dụng vẫn tự bật lại micro để nghe tiếp (trước đây có thể bị kẹt).
 
 ## 26. Thanh họp gọn và nút ⚙ Tùy chọn
-Thanh họp chỉ còn một hàng: **giờ ghi · Đang nghe: (ngôn ngữ) · thanh tín hiệu · ⚙ Tùy chọn · Dừng**, để khung chat bắt đầu cao hơn và xem được nhiều bản dịch hơn. Bấm **⚙ Tùy chọn** để mở các ô ít đổi khi họp: *Tự đổi sau mỗi lượt, Song ngữ (kèm chọn micro và tốc độ ngắt câu), Đọc bản dịch ra loa, Chế độ hội nghị* và hướng dẫn đổi người nói. Trạng thái mở/đóng được nhớ cho lần sau.
+Thanh họp chỉ còn một hàng: **giờ ghi · Đang nghe: (ngôn ngữ) · thanh tín hiệu · ⚙ Tùy chọn · Dừng**, để khung chat bắt đầu cao hơn và xem được nhiều bản dịch hơn. Bấm **⚙ Tùy chọn** để mở các ô ít đổi khi họp: *Tự đổi sau mỗi lượt, Song ngữ (kèm chọn micro và tốc độ ngắt câu), Đọc bản dịch ra loa, Chế độ hội nghị* và hướng dẫn đổi người nói. Bảng tùy chọn thả xuống nổi phía trên khung chat (không ép khung chat), tự đóng khi bấm ra ngoài hoặc nhấn Esc, và luôn đóng khi mở lại ứng dụng.
 
 ## 27. Micro bị ngắt giữa cuộc họp (lỗi audio-capture)
 Trên một số thiết bị (đặc biệt iPad), trình duyệt đôi khi báo lỗi `audio-capture` (micro bị ngắt thoáng qua). Trước đây lỗi này làm **cả cuộc họp tự dừng** nên câu sau không được dịch. Nay ứng dụng giữ nguyên cuộc họp, thanh tín hiệu chuyển 🔴 **Micro bị ngắt · đang thử mở lại…** và tự mở lại micro với khoảng chờ tăng dần (0,4 → 0,8 → 1,6 → 3 giây). Sau **6 lần liên tiếp** không mở lại được, ứng dụng dừng thử nhưng **vẫn giữ cuộc họp** và hiện nút **Mở lại micro** trên thanh tín hiệu. Bấm nút này để nghe tiếp mà không mất các bản dịch đã có. Nếu lỗi lặp lại thường xuyên, hãy sao chép **Nhật ký nghe/đọc** (mục 24) để chẩn đoán.
@@ -342,3 +344,12 @@ Chế độ riêng, độc lập với Chế độ họp, Hội nghị và Phòn
 - Chi phí: nhận diện giọng nói của trình duyệt không tính phí và chế độ này không gọi dịch vụ dịch. Phần tóm tắt thực hiện trên tài khoản Claude/ChatGPT của bạn, theo gói bạn đang dùng.
 - Giới hạn: bản ghi không phân biệt người nói và có thể sai tên riêng, số liệu; bạn cần rà soát trước khi ban hành. Không lưu file âm thanh. Cần mạng, để ứng dụng ở phía trước và giữ màn hình sáng. Tài khoản Miễn phí không lưu đoạn chat nên cần lấy lời nhắc ngay sau khi dừng.
 - Bản ghi sẽ được gửi sang dịch vụ AI mà bạn dán vào; cân nhắc tính bảo mật của cuộc họp trước khi dùng.
+
+## Thay đổi giao diện bản v80
+- **Chế độ còn 3 tab:** Hội thoại, Họp, Biên bản. "Hội nghị" không còn là tab riêng: vào **Họp → ⚙ Tùy chọn → Nghe bản dịch bằng tai nghe** (chỉ tài khoản VIP).
+- **Điện thoại:** các nút Tìm, Xem gọn, Giảm/Tăng cỡ chữ nằm trong nút **Aa** trên thanh công cụ. Màn hình rộng vẫn hiện đủ các nút.
+- **Đã gỡ chế độ hai laptop** (xem mục 21).
+
+## Thay đổi bản v81
+- **Tự đổi chiều khi gõ:** nếu gõ văn bản bằng ngôn ngữ đích (ví dụ gõ tiếng Việt có dấu khi đang chọn Anh → Việt), ứng dụng tự đảo chiều dịch và giữ nguyên chữ đang gõ. Chỉ áp dụng ở chế độ Hội thoại, khi không bật micro. Tiếng Việt gõ không dấu và các ngôn ngữ chữ Latin khác (Pháp, Đức…) không tự nhận được; khi đó bấm ⇄ như cũ. Logic nằm ở `lang-guess.js`.
+- **Cảnh báo hạn mức dịch miễn phí:** khi dịch bằng MyMemory, ứng dụng đếm ước tính số ký tự đã gửi trong ngày trên thiết bị này. Từ 80% hạn mức (5.000 ký tự, hoặc 50.000 nếu đã khai báo email trong Cài đặt) sẽ hiện dòng cảnh báo dưới thanh ngôn ngữ; khi MyMemory báo hết hạn mức thì hiện thông báo rõ ràng. MyMemory tính hạn mức theo địa chỉ mạng, nên nhiều máy dùng chung mạng văn phòng có thể hết sớm hơn con số ước tính.

@@ -5,7 +5,7 @@
 /* Vùng chạm tối thiểu cho mọi nút điều khiển chính */
 #btnInstall:not(.hidden), #btnDonate, #btnExport, #btnClearHist, #btnSettings,
 #btnDual, #btnDensity, #btnFind, #btnFontMinus, #btnFontPlus, #btnRoom, #btnBig,
-#btnMbOpts, #btnMeetingStop, #btnReopenMic, #btnConf, #btnMeeting {
+#btnMbOpts, #btnMeetingStop, #btnReopenMic, #btnView, #btnMeeting {
   min-width: var(--tap); min-height: var(--tap);
   display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
 }
@@ -283,3 +283,46 @@ body.dlg-open #toast { bottom: auto; top: calc(12px + env(safe-area-inset-top));
 ::highlight(chat-find) { background-color: #fde68a; color: #0f172a; }
 ::highlight(chat-find-cur) { background-color: #f59e0b; color: #0f172a; }
 #history .find-cur { outline: 2px solid #f59e0b; outline-offset: 1px; }
+
+/* ===== Bước 11: sửa bố cục chế độ Họp và thông báo nổi ===== */
+/* Laptop (768 đến 1699px): thanh họp nằm riêng một hàng, không còn đẩy nút Tùy chọn và Dừng ra ngoài mép phải */
+@media (min-width: 768px) and (max-width: 1699px) { #meetingBar { flex: 1 1 100%; order: 3; } }
+/* Tùy chọn họp: bảng thả xuống nổi phía trên khung chat, không ép khung chat */
+#meetingBar { position: relative; }
+#mbOpts { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 25; box-shadow: 0 10px 28px rgba(15,23,42,.18); }
+@media (min-width: 768px) { #mbOpts { left: auto; width: min(36rem, 100%); } }
+/* Điện thoại, đang họp hoặc ghi biên bản: ẩn dòng mô tả chế độ, gom ô nhập và micro vào một hàng để nhường chỗ cho khung chat */
+@media (max-width: 767px) {
+  #app:has(#meetingBar:not(.hidden)) .mode-desc { display: none; }
+  #app:has(#meetingBar:not(.hidden)) #dock { display: flex; align-items: center; gap: 8px; }
+  #app:has(#meetingBar:not(.hidden)) #inputRow { flex: 1 1 0; min-width: 0; }
+  #app:has(#meetingBar:not(.hidden)) #dock > div:nth-child(2) { display: block; margin-top: 0; flex: none; }
+  #app:has(#meetingBar:not(.hidden)) #dock > div:nth-child(2) > label,
+  #app:has(#meetingBar:not(.hidden)) #dock > div:nth-child(2) > span { display: none !important; }
+  #app:has(#meetingBar:not(.hidden)) #btnMic { width: 3.25rem; height: 3.25rem; }
+  #app:has(#meetingBar:not(.hidden)) #btnMic svg { width: 26px; height: 26px; }
+  #app:has(#meetingBar:not(.hidden)) #btnClear { display: none; }
+  #app:has(#meetingBar:not(.hidden)) #micHint { display: none; }
+}
+/* Ghi biên bản trên màn rộng: giữ chỗ của ô "Tự đọc bản dịch" để nút micro không lệch sang trái */
+@media (min-width: 768px) { .minutes #dock [data-hide-minutes] { display: flex !important; visibility: hidden; } }
+/* Thông báo nổi: hiện phía trên, không che ô nhập và nút micro */
+#toast { bottom: auto; top: calc(64px + env(safe-area-inset-top)); max-width: min(92vw, 30rem); border-radius: 16px; text-align: center; }
+body.dlg-open #toast { top: calc(12px + env(safe-area-inset-top)); }
+@media (max-width: 380px) { #app > header p { letter-spacing: .04em; } }
+
+/* ===== Bước 12: bảng "Hiển thị" trên điện thoại (tìm, xem gọn, cỡ chữ) ===== */
+#chatBar { position: relative; }
+#viewMenu { display: contents; }          /* màn rộng: các nút hiện thẳng trên thanh công cụ */
+#btnView { display: none; }
+@media (max-width: 767px) {
+  #btnView { display: inline-flex; }
+  #btnView[aria-expanded="true"] { background: var(--brand); color: #fff; }
+  #viewMenu { display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 25; flex-direction: column; gap: 4px; min-width: 13rem; padding: 6px;
+    background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 10px 28px rgba(15,23,42,.18); }
+  #viewMenu.open { display: flex; }
+  #chatBar #viewMenu button { width: 100%; justify-content: flex-start; gap: 10px; padding: 0 12px; box-shadow: none; font-size: .875rem; font-weight: 500; color: #334155; }
+  #chatBar #viewMenu button::after { content: attr(aria-label); }
+  #chatBar #viewMenu button.bg-brand-600 { color: #fff; }
+  #chatBar #viewMenu #btnFontMinus::before, #chatBar #viewMenu #btnFontPlus::before { content: none; }
+}
