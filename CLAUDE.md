@@ -18,11 +18,12 @@ cho người dùng. Nhánh `main` cũ hơn nhánh phát hành, không dùng làm
 
 ## 2. Cấu trúc app dịch (`translator/`)
 
-- `index.html` — giao diện; nạp `config.js`, `stt-cloud.js`, `report.js`, `lang-guess.js`, `app.js`.
+- `index.html` — giao diện; nạp `config.js`, `stt-cloud.js`, `report.js`, `lang-guess.js`, `captions.js`, `app.js`.
 - `app.js` — logic chính (dịch, nhận diện giọng nói, đọc văn bản, phòng họp, VIP, quản trị).
 - `stt-cloud.js` — nhận dạng giọng nói Google Cloud; phần logic thuần xuất qua `module.exports` để kiểm thử.
 - `report.js` — báo cáo phòng họp; logic thuần, xuất qua `module.exports`.
 - `lang-guess.js` — đoán ngôn ngữ văn bản gõ và mức hạn mức dịch miễn phí; logic thuần, xuất qua `module.exports`.
+- `captions.js` — dựng danh sách dòng cho màn hình chiếu phụ đề; logic thuần, xuất qua `module.exports`.
 - `src/room.js` — lớp Firebase (Auth + Firestore) + mã QR, đóng gói thành `room.bundle.js` bằng esbuild.
 - `config.js` — cấu hình gói sử dụng, nút Ủng hộ, thông số Firebase (định danh công khai, không phải mật khẩu).
 - `service-worker.js` — cache PWA, hằng `CACHE = 'translator-vNN'`.
