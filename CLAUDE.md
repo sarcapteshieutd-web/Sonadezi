@@ -30,7 +30,7 @@ cho người dùng. Nhánh `main` cũ hơn nhánh phát hành, không dùng làm
 - `firebase/firestore.rules` — quy tắc bảo mật; `firebase/rules-test*.js` — kiểm thử bằng Emulator.
 - `styles.css` — Tailwind đã build từ `input.css` + `tailwind.config.js`; `ui.css` — CSS viết tay.
 - `tests/*.test.js` — kiểm thử đơn vị bằng `node:test`.
-- Tài liệu: `HUONG-DAN.md`, `docs/FIREBASE-SETUP.md`, `docs/SETUP-PHONG-HOP-2-LAPTOP.md`.
+- Tài liệu: `HUONG-DAN.md`, `docs/FIREBASE-SETUP.md`.
 
 ## 3. Lệnh kiểm tra và build
 

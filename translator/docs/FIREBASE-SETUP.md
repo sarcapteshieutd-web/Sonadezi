@@ -16,7 +16,7 @@ Vào **Firestore Database → Rules**, xóa nội dung cũ, dán toàn bộ nộ
 Quy tắc này bảo đảm:
 - chỉ người đăng nhập ẩn danh mới đọc/ghi; **không ai liệt kê được danh sách phòng**, phải biết mã phòng (20 ký tự ngẫu nhiên) mới đọc được;
 - **Cập nhật mới:** quy tắc nay có thêm trường `utt` và tài liệu `live/now` (bản "đang nói"). Nếu bạn đã dán quy tắc cũ, **phải dán lại và Publish**; chưa dán lại thì app vẫn chạy nhưng không có bản "đang nói";
-- **Laptop thứ hai:** cần xuất bản lại quy tắc (thêm `cohosts`, `secret`, `live/co`). Máy thứ hai chỉ ghi được khi nhập đúng mã mời mà chủ phòng giữ riêng;
+- **Laptop thứ hai (đã gỡ ở bản v83):** các quy tắc `cohosts`, `secret`, `live/co` đã bị xóa khỏi `firestore.rules`; chỉ chủ phòng ghi được tin nhắn và bản đang nói (`live/now`). Sau khi cập nhật mã, hãy dán lại `firestore.rules` vào Firebase Console và bấm **Publish**. Phép thử tương ứng nằm trong `firebase/rules-test.js` (các dòng "đã gỡ").
 - **chỉ chủ phòng** ghi tin nhắn và bản dịch; người xem không gửi được nội dung;
 - phòng tự **hết quyền truy cập sau tối đa 24 giờ** và chủ phòng không thể kéo dài hạn.
 
