@@ -100,3 +100,7 @@ Bản này thêm các trường `sttLimit`, `userStt`, `sttOver` vào `config/go
 
 ### 9.6 Tóm tắt sau cuộc họp (bản cập nhật quy tắc)
 Bản này thêm tài liệu `rooms/{id}/summary/main` (chủ phòng ghi, người trong phòng đọc, tối đa 20.000 ký tự). **Bắt buộc dán lại toàn bộ `translator/firebase/firestore.rules` và bấm Publish**; chưa dán lại thì nút "Đăng tóm tắt cho người xem" báo "Không đủ quyền", các phần khác (báo cáo, xem lại toàn văn) vẫn chạy. `room.bundle.js` đã được xây lại cho bản này. Bộ kiểm thử `rules-test.js` có thêm 9 phép thử cho tài liệu này (cần Emulator sạch).
+
+
+## Cập nhật quy tắc bản v86: giới hạn riêng từng tài khoản
+Hồ sơ `users/{uid}` có thêm trường `limits` (`tr`, `tts`: ký tự; `stt`: phút) là giới hạn riêng mỗi tháng của tài khoản, chỉ quản trị viên được ghi. Cần dán lại `firebase/firestore.rules` vào Firebase Console → Firestore → Rules và bấm **Publish** thì nút "Lưu giới hạn riêng" trong bảng quản trị mới hoạt động.

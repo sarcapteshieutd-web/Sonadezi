@@ -24,7 +24,8 @@ function randomRoomId() {
 const toProfile = (id, d) => ({
   uid: id, email: d.email || '', name: d.name || '', status: d.status || 'pending', plan: d.plan || '', note: d.note || '',
   expiresAtMs: d.expiresAt && d.expiresAt.toMillis ? d.expiresAt.toMillis() : 0,
-  requestedAt: d.requestedAt || 0, approvedAt: d.approvedAt || 0, lastSeen: d.lastSeen || 0, usage: d.usage || {}
+  requestedAt: d.requestedAt || 0, approvedAt: d.approvedAt || 0, lastSeen: d.lastSeen || 0, usage: d.usage || {},
+  limits: d.limits || {} // giới hạn riêng mỗi tháng do quản trị viên đặt: {tr, tts, stt}; 0 hoặc thiếu = theo mức chung
 });
 
 function create(cfg) {
@@ -230,6 +231,10 @@ function create(cfg) {
         if (typeof plan === 'string') data.plan = plan;
         if (typeof note === 'string') data.note = note;
         await updateDoc(profileRef(id), data);
+      },
+      // Quản trị viên: đặt giới hạn riêng mỗi tháng cho một tài khoản (0 = theo mức chung)
+      async setUserLimits(id, { tr, tts, stt }) {
+        await updateDoc(profileRef(id), { limits: { tr: Math.max(0, tr || 0), tts: Math.max(0, tts || 0), stt: Math.max(0, stt || 0) } });
       },
       async deleteUser(id) { await deleteDoc(profileRef(id)); },
       // Báo số ký tự đã dùng trong tháng (thiết bị tự báo, chỉ để quản trị viên tham khảo)

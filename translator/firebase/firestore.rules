@@ -119,8 +119,14 @@ service cloud.firestore {
           && request.resource.data.name is string && request.resource.data.name.size() <= 100)
         // quản trị viên: duyệt, gia hạn, khóa
         || (isAdmin()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'expiresAt', 'plan', 'note', 'approvedAt', 'approvedBy'])
-          && request.resource.data.status in ['pending', 'active', 'blocked']);
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'expiresAt', 'plan', 'note', 'approvedAt', 'approvedBy', 'limits'])
+          && request.resource.data.status in ['pending', 'active', 'blocked']
+          // limits: giới hạn riêng mỗi tháng của tài khoản (tr, tts: ký tự; stt: phút); chỉ quản trị viên đặt
+          && request.resource.data.get('limits', {}) is map
+          && request.resource.data.get('limits', {}).keys().hasOnly(['tr', 'tts', 'stt'])
+          && request.resource.data.get('limits', {}).get('tr', 0) is number
+          && request.resource.data.get('limits', {}).get('tts', 0) is number
+          && request.resource.data.get('limits', {}).get('stt', 0) is number);
 
       allow delete: if isAdmin();
     }
