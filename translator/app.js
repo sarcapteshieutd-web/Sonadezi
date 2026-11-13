@@ -1516,7 +1516,8 @@
   }
   let sttWarned = false, sttOverToast = '', sttErrToast = 0, sttLastLang = null;
   // Cổng gửi: đếm số đoạn đang chờ Google trả về để hiện "đang gửi…"
-  const sttGateTracked = s => { const g = sttGate(s); if (g.allow) { state.sttSending++; renderSttStatus(); } return g; };
+  let sttPending = 0; // số đoạn đã gửi Google chưa có kết quả; KHÔNG về 0 khi dừng đám mây, để biên bản chờ được các câu cuối
+  const sttGateTracked = s => { const g = sttGate(s); if (g.allow) { state.sttSending++; sttPending++; renderSttStatus(); } return g; };
   function startCloud() {
     const pair = bilingualPair();
     state.cloudActive = true; state.cloudForeign = pair.foreign; sttLastLang = null;
@@ -1526,7 +1527,7 @@
     resetUtt(); el.src.value = ''; updateCounter();
     syncDual(); syncLangUI(); renderSttStatus();
     setListeningUI(true); liveDualUpdate(); // nút micro đỏ, ô "Đang nghe" ở cả hai cột
-    window.CloudSTT.start({ deviceId: state.micId || undefined, apiKey: cloudKey(), pair, speechContexts: sttContexts(pair), paused: state.speaking, ...window.CloudSTT.SPEED_PRESETS[state.sttSpeed], gate: sttGateTracked, onLevel: lvl => { el.sttLevelBar.style.width = Math.min(100, Math.round(lvl * 400)) + '%'; }, onSegment: onCloudSegment, onBlocked: onCloudOver, onError: onCloudError })
+    window.CloudSTT.start({ deviceId: state.micId || undefined, apiKey: cloudKey(), pair, speechContexts: sttContexts(pair), paused: state.speaking, ...window.CloudSTT.SPEED_PRESETS[state.minutes ? 'accurate' : state.sttSpeed], gate: sttGateTracked, onLevel: lvl => { el.sttLevelBar.style.width = Math.min(100, Math.round(lvl * 400)) + '%'; }, onSegment: onCloudSegment, onBlocked: onCloudOver, onError: onCloudError })
       .then(fillMics)
       .catch(e => onCloudError(Object.assign(new Error('Không mở được micro: ' + (e && e.message ? e.message : e)), { status: -1 })));
   }
@@ -1556,6 +1557,7 @@
   }
   function onCloudSegment(seg) {
     if (state.sttSending > 0) state.sttSending--;
+    if (sttPending > 0) sttPending--;
     micLog(`đám mây nhận: ${seg.lang || '-'} "${(seg.text || '').slice(0, 20)}" (${seg.seconds} giây)`);
     const q = seg.quota;
     if (q && q.warn && !sttWarned) { sttWarned = true; toast('Đã dùng 80% hạn mức nhận dạng đám mây trong tháng'); }
@@ -1578,6 +1580,7 @@
   }
   function onCloudError(e) {
     if (state.sttSending > 0) state.sttSending--;
+    if (sttPending > 0) sttPending--;
     const transient = e && (e.status === 0 || e.status === 429 || e.status >= 500);
     if (transient) { if (Date.now() - sttErrToast > 10000) { sttErrToast = Date.now(); toast(e.message); } return; }
     fallbackToBrowser((e && e.message) || 'Lỗi nhận dạng đám mây, chuyển sang nhận dạng của trình duyệt');
@@ -1650,7 +1653,16 @@
     setListeningUI(false);
     setMeetingUI(false);
     if (wakeLock) { try { wakeLock.release(); } catch (_) {} wakeLock = null; }
-    if (state.minutes) { endMinutes(); return; }
+    if (state.minutes) {
+      // Biên bản có phiên dịch: các câu cuối còn đang chờ Google trả kết quả, chờ tối đa 10 giây rồi mới lập lời nhắc để không mất câu
+      if (sttPending > 0) {
+        toast('Đang chờ nhận dạng các câu cuối…');
+        const t0 = Date.now();
+        const wait = () => { if (sttPending > 0 && Date.now() - t0 < 10000) setTimeout(wait, 200); else endMinutes(); };
+        wait();
+      } else endMinutes();
+      return;
+    }
     toast('Đã dừng chế độ họp');
   }
   document.addEventListener('keydown', e => {
