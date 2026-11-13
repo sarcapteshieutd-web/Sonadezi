@@ -342,3 +342,6 @@ body.dlg-open #toast { top: calc(12px + env(safe-area-inset-top)); }
 #capLive { flex: none; margin: 0; color: #9ca3af; font-weight: 500; font-size: .85em; overflow-wrap: anywhere; }
 #capLive[hidden], #capHint[hidden] { display: none; }
 #capHint { margin: 0; color: #6b7280; font-weight: 500; font-size: .7em; }
+
+/* Cảnh báo mức âm micro thấp trên thanh họp: chỉ hiển thị, không phát tiếng */
+.lvl-warn{background:#fef3c7;color:#78350f}

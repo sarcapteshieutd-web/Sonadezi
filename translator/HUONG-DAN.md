@@ -319,6 +319,11 @@ Xem mục 21.
 - Ứng dụng **không gọi AI tự động** nên không phát sinh chi phí và không gửi nội dung họp cho bên thứ ba.
 - Cần dán lại quy tắc Firestore mới (xem `docs/FIREBASE-SETUP.md` mục 9.6).
 
+### Tùy chọn họp: tiếng Việt chỉ ghi lại, cảnh báo mức âm và hạn mức
+- **Tiếng Việt chỉ ghi lại, không dịch** (bảng tùy chọn trên thanh họp): câu tiếng Việt chỉ được ghi chữ, không dịch và không đọc ra loa; câu ngoại ngữ vẫn được dịch sang tiếng Việt. Nên dùng cùng "Song ngữ: tự nhận ngôn ngữ từng câu" để ứng dụng nghe được cả hai tiếng liên tục. Khi bật, bản dịch không được đọc ra loa.
+- **Cảnh báo mức âm thấp** (chỉ khi dùng nhận dạng đám mây): micro thu tiếng rất nhỏ liên tục 30 giây thì thanh họp hiện một dòng màu vàng, không phát tiếng; dòng này tự ẩn khi có tiếng trở lại.
+- **Cảnh báo hạn mức**: khi bắt đầu nghe bằng nhận dạng đám mây mà hạn mức còn dưới 60 phút, và một lần khi còn dưới 10 phút, ứng dụng hiện thông báo ngắn (không phát tiếng).
+
 ## 30. Ghi biên bản (chỉ ghi chữ tiếng Việt, không dịch)
 Chế độ riêng, độc lập với Chế độ họp, Hội nghị và Phòng họp chia sẻ. Dùng khi họp với khách hàng Việt Nam và cần biên bản chuyên nghiệp sau cuộc họp.
 1. Bấm **📝 Ghi biên bản** (góc dưới bên phải). Nhập **tiêu đề**, **khách hàng/đơn vị** và **thành phần tham dự** (mỗi người một dòng, nên ghi họ tên - chức vụ - đơn vị) rồi bấm **Bắt đầu ghi**. Các trường đều không bắt buộc; khách hàng và thành phần tham dự được nhớ cho lần sau.
