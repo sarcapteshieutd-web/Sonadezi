@@ -167,3 +167,24 @@ test('phrasesForPair: gom theo cặp ngôn ngữ', () => {
   assert.deepEqual(S.phrasesForPair(null, S.pairFromLangs('vi', 'en')), []);
   assert.deepEqual(S.phrasesForPair({}, S.pairFromLangs('vi', 'en')), []);
 });
+
+test('createLevelWatch: báo low sau khi mức âm thấp liên tục đủ lâu, báo ok khi có tiếng lại', () => {
+  const { createLevelWatch } = require('../stt-cloud.js');
+  const w = createLevelWatch({ threshold: 0.01, lowMs: 30000 });
+  assert.strictEqual(w.push(0.001, 0), null);
+  assert.strictEqual(w.push(0.001, 29000), null);
+  assert.strictEqual(w.push(0.001, 30000), 'low');
+  assert.strictEqual(w.push(0.001, 40000), null);      // không báo lặp
+  assert.strictEqual(w.push(0.05, 41000), 'ok');
+  assert.strictEqual(w.push(0.001, 42000), null);      // tính lại từ đầu
+  assert.strictEqual(w.push(0.05, 60000), null);       // có tiếng trước khi đủ 30 giây: không báo
+  assert.strictEqual(w.push(0.001, 61000), null);
+  w.reset();
+  assert.strictEqual(w.push(0.001, 100000), null);
+});
+test('quotaRemainMin: số phút còn lại, không giới hạn thì Infinity', () => {
+  const { quotaRemainMin } = require('../stt-cloud.js');
+  assert.strictEqual(quotaRemainMin(600, 60), 50);
+  assert.strictEqual(quotaRemainMin(9999, 60), 0);
+  assert.strictEqual(quotaRemainMin(600, 0), Infinity);
+});

@@ -287,8 +287,10 @@
       </div>
       <div id="minutesHint" class="hidden w-full text-[0.6875rem] text-red-600/80">Chỉ ghi chữ tiếng Việt, không dịch. Bấm Dừng khi kết thúc để lấy lời nhắc tóm tắt.</div>
       <div id="micWarn" class="hidden w-full rounded-lg bg-red-100 px-2 py-1 text-xs font-medium" role="alert"></div>
+      <div id="lvlWarn" class="lvl-warn hidden w-full rounded-lg px-2 py-1 text-xs font-medium" role="status">Micro thu tiếng rất nhỏ trong 30 giây qua. Nếu đang có người nói, hãy đưa micro lại gần hoặc kiểm tra micro đã chọn.</div>
       <div id="mbOpts" class="hidden w-full flex-col gap-1.5 rounded-lg bg-white/60 p-2">
         <label class="flex items-center gap-1.5 text-xs"><input id="chkAutoTurn" type="checkbox" class="h-4 w-4 accent-red-600" />Tự đổi sau mỗi lượt</label>
+        <label class="flex items-center gap-1.5 text-xs"><input id="chkViMain" type="checkbox" class="h-4 w-4 accent-red-600" />Tiếng Việt chỉ ghi lại, không dịch (chỉ dịch ngoại ngữ sang tiếng Việt, không đọc ra loa)</label>
       <div id="bilingualRow" class="flex flex-wrap items-center justify-between gap-2">
         <label class="flex items-center gap-1.5 text-xs"><input id="chkBilingual" type="checkbox" class="h-4 w-4 accent-red-600" />Song ngữ: tự nhận ngôn ngữ từng câu (nhận dạng đám mây)</label>
         <select id="selSttSpeed" aria-label="Tốc độ ngắt câu" title="Tốc độ ngắt câu: nhanh hiện chữ sớm hơn nhưng dễ cắt giữa câu" class="hidden rounded border border-red-300 bg-transparent px-1 py-0.5 text-xs">

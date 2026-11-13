@@ -129,6 +129,23 @@
     };
   }
 
+  // Theo dõi mức âm micro: trả 'low' khi mức âm dưới ngưỡng liên tục lowMs, 'ok' khi có tiếng trở lại, còn lại trả null
+  function createLevelWatch(opts) {
+    const o = Object.assign({ threshold: MIN_THRESHOLD, lowMs: 30000 }, opts);
+    let since = null, low = false;
+    return {
+      push(level, now) {
+        if (level >= o.threshold) { since = null; if (low) { low = false; return 'ok'; } return null; }
+        if (since === null) since = now;
+        if (!low && now - since >= o.lowMs) { low = true; return 'low'; }
+        return null;
+      },
+      reset() { since = null; low = false; }
+    };
+  }
+  // Số phút nhận dạng còn lại trong tháng (Infinity = không giới hạn)
+  function quotaRemainMin(usedSec, limitMin) { return limitMin > 0 ? Math.max(0, limitMin - usedSec / 60) : Infinity; }
+
   // Quyết định theo hạn mức (phút/tháng; 0 = không giới hạn). mode: 'fallback' chặn khi vượt, 'continue' vẫn cho dùng
   function quotaDecision({ usedSec, addSec, limitMin, mode }) {
     if (!(limitMin > 0)) return { allow: true, warn: false, over: false };
@@ -333,7 +350,7 @@
     return { text: r.text, lang: langFromCode(r.code, opts.pair), seconds: billedSeconds(samples.length) };
   }
 
-  const api = { SAMPLE_RATE, CODES, SPEED_PRESETS, pairFromLangs, langFromCode, downsampleTo16k, floatToPcm16, pcm16ToBase64, billedSeconds, createSegmenter, createOrderedRunner, quotaDecision, recognize, buildSpeechContexts, phrasesForPair };
+  const api = { SAMPLE_RATE, CODES, SPEED_PRESETS, pairFromLangs, langFromCode, downsampleTo16k, floatToPcm16, pcm16ToBase64, billedSeconds, createSegmenter, createOrderedRunner, createLevelWatch, quotaRemainMin, quotaDecision, recognize, buildSpeechContexts, phrasesForPair };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (typeof window !== 'undefined') window.CloudSTT = Object.assign(window.CloudSTT || {}, api, { start, pause, resume, stop, listDevices, probe });
 })();

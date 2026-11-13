@@ -53,7 +53,7 @@
     donateBody: $('donateBody'), donateTitle: $('donateTitle'),
     btnMeeting: $('btnMeeting'), btnModeChat: $('btnModeChat'), modeDesc: $('modeDesc'), btnMeetingStop: $('btnMeetingStop'), meetingBar: $('meetingBar'), meetingTime: $('meetingTime'),
     chkMeetingSpeak: $('chkMeetingSpeak'), chkConf: $('chkConf'), meetingSpeaking: $('meetingSpeaking'),
-    chkAutoTurn: $('chkAutoTurn'), meetingLang: $('meetingLang'),
+    chkAutoTurn: $('chkAutoTurn'), chkViMain: $('chkViMain'), lvlWarn: $('lvlWarn'), meetingLang: $('meetingLang'),
     btnReopenMic: $('btnReopenMic'), micWarn: $('micWarn'), btnMbOpts: $('btnMbOpts'), mbOpts: $('mbOpts'), micLogView: $('micLogView'), btnMicLogCopy: $('btnMicLogCopy'), talkStatus: $('talkStatus'), talkText: $('talkText'), chkBilingual: $('chkBilingual'), selMic: $('selMic'), selSttSpeed: $('selSttSpeed'), sttStatus: $('sttStatus'), sttLevel: $('sttLevel'), sttLevelBar: $('sttLevelBar'),
     app: $('app'), btnBig: $('btnBig'), btnBigExit: $('btnBigExit'), btnDual: $('btnDual'), btnDensity: $('btnDensity'), btnFontMinus: $('btnFontMinus'), btnFontPlus: $('btnFontPlus'),
     dualHeadL: $('dualHeadL'), dualHeadR: $('dualHeadR'), liveDual: $('liveDual'),
@@ -128,6 +128,7 @@
     speaking: false,
     autoTurn: store.get('autoTurn', '0') === '1', // mặc định tắt: một người nói nhiều câu liền không bị đổi ngôn ngữ nghe giữa chừng
     conf: acct0Vip && store.get('conf', '0') === '1', // chế độ hội nghị: nghe bản dịch qua tai nghe/loa, micro luôn mở
+    viMain: store.get('viMain', '0') === '1', // họp: câu tiếng Việt chỉ ghi lại, không dịch, không đọc ra loa
     minutes: false, // chế độ ghi biên bản: chỉ ghi chữ tiếng Việt, không dịch
     mine: null, // ngôn ngữ của người dùng: lời của bên này hiện bên phải
     reqId: 0
@@ -301,14 +302,14 @@
     const time = new Date(item.ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     for (const lang of panelLangs()) {
       const spoken = lang === item.from;
-      const text = lang === item.from ? item.src : lang === item.to ? item.out : null;
+      const text = lang === item.from ? item.src : lang === item.to && !item.noTr ? item.out : null;
       const cell = document.createElement('div');
       cell.className = 'rounded-2xl px-3.5 py-2.5 shadow-sm ' + (spoken ? 'border-l-4 border-brand-600 bg-white' : 'bg-brand-50 ring-1 ring-brand-100');
       const meta = document.createElement('div');
       meta.className = 'bl-meta mb-0.5 flex items-center gap-2 text-[0.6875rem] font-medium ' + (spoken ? 'text-brand-700' : 'text-slate-500');
       const metaTxt = document.createElement('span');
       metaTxt.className = 'min-w-0 flex-1';
-      metaTxt.textContent = (spoken ? '🎤 Nói' : 'Bản dịch') + ' · ' + time + (state.showLat && item.lat != null && !spoken ? ` · ⏱ ${(item.lat / 1000).toFixed(1)} s` : '');
+      metaTxt.textContent = (spoken ? '🎤 Nói' : item.noTr ? 'Không dịch' : 'Bản dịch') + ' · ' + time + (state.showLat && item.lat != null && !spoken ? ` · ⏱ ${(item.lat / 1000).toFixed(1)} s` : '');
       meta.appendChild(metaTxt);
       const t = document.createElement('div');
       t.className = 'whitespace-pre-wrap break-words text-lg font-medium leading-snug text-slate-900';
@@ -393,7 +394,7 @@
     const time = new Date(item.ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     const metaTxt = document.createElement('span');
     metaTxt.className = 'min-w-0 flex-1';
-    metaTxt.textContent = `${LANGS[item.from].name} → ${LANGS[item.to].name} · ${time}` + (state.showLat && item.lat != null ? ` · ⏱ ${(item.lat / 1000).toFixed(1)} s` : '');
+    metaTxt.textContent = (item.noTr ? `${LANGS[item.from].name} · ${time}` : `${LANGS[item.from].name} → ${LANGS[item.to].name} · ${time}`) + (state.showLat && item.lat != null ? ` · ⏱ ${(item.lat / 1000).toFixed(1)} s` : '');
 
     const orig = document.createElement('div');
     orig.className = 'whitespace-pre-wrap break-words text-[0.9375rem] leading-snug';
@@ -416,6 +417,7 @@
         try { await navigator.clipboard.writeText(item.out); toast('Đã sao chép'); } catch (_) { toast('Không thể sao chép'); }
       }, mine ? 'hover:bg-white/15' : 'hover:bg-slate-100')
     );
+    if (item.noTr) { meta.append(metaTxt); bub.append(meta, orig); row.appendChild(bub); return row; } // chỉ ghi lại, không có bản dịch
     meta.append(metaTxt, tools);
     tr.append(lbl, out);
     bub.append(meta, orig, tr);
@@ -1132,6 +1134,7 @@
     const t0 = (pre && pre.tLast) || now; // mốc ngừng nói để đo độ trễ
     meetingChain = meetingChain.then(async () => { try {
       if (isMin) { addHistory(Object.assign({ src: text, out: '', from, to, meeting: true, minutes: true }, minutesInfo && minutesInfo.interp ? { interp: true } : {})); return; } // ghi biên bản: lưu nguyên văn, không dịch
+      if (state.viMain && from === 'vi') { addHistory({ src: text, out: '', from, to, meeting: true, noTr: true }); return; } // tiếng Việt là chủ đạo: chỉ ghi lại
       let out;
       try {
         const prefixOk = pre && text.startsWith(pre.consumed || '');
@@ -1150,7 +1153,7 @@
       }
       const histItem = { src: text, out, from, to, meeting: true, lat: Date.now() - t0 };
       addHistory(histItem);
-      if ((state.meetingSpeak || state.conf) && state.meeting && !/^\[Chưa dịch được\]$/.test(out)) enqueueSpeech(out, to, histItem);
+      if ((state.meetingSpeak || state.conf) && !state.viMain && state.meeting && !/^\[Chưa dịch được\]$/.test(out)) enqueueSpeech(out, to, histItem);
     } finally { state.pendingTr--; renderTalkStatus(); } });
   }
 
@@ -1427,7 +1430,7 @@
     updateCounter();
     if (interim && !gotFinal) {
       if (interim !== utt.lastText) { utt.lastText = interim; utt.tLast = Date.now(); }
-      if (state.incr && !state.minutes) incrementalStep(interim);
+      if (state.incr && !state.minutes && !(state.viMain && state.src === 'vi')) incrementalStep(interim);
       clearTimeout(utt.timer);
       const cut = state.cutMs;
       if (cut > 0) utt.timer = setTimeout(forceCommit, cut);
@@ -1518,8 +1521,27 @@
   // Cổng gửi: đếm số đoạn đang chờ Google trả về để hiện "đang gửi…"
   let sttPending = 0; // số đoạn đã gửi Google chưa có kết quả; KHÔNG về 0 khi dừng đám mây, để biên bản chờ được các câu cuối
   const sttGateTracked = s => { const g = sttGate(s); if (g.allow) { state.sttSending++; sttPending++; renderSttStatus(); } return g; };
+  // Cảnh báo mức âm thấp: chỉ hiện một dòng trên thanh họp, không phát tiếng
+  const lvlWatch = window.CloudSTT ? window.CloudSTT.createLevelWatch() : null;
+  function onCloudLevel(lvl) {
+    el.sttLevelBar.style.width = Math.min(100, Math.round(lvl * 400)) + '%';
+    const ev = lvlWatch && lvlWatch.push(lvl, Date.now());
+    if (ev === 'low') { el.lvlWarn.classList.remove('hidden'); micLog('mức âm micro thấp kéo dài'); }
+    else if (ev === 'ok') el.lvlWarn.classList.add('hidden');
+  }
+  function clearLevelWarn() { if (lvlWatch) lvlWatch.reset(); el.lvlWarn.classList.add('hidden'); }
+  // Cảnh báo hạn mức nhận dạng còn ít: khi bắt đầu nghe (dưới 60 phút) và một lần khi còn dưới 10 phút
+  const sttRemainMin = () => window.CloudSTT.quotaRemainMin(userUsed('stt'), sttLimitMin());
+  let sttLow10 = false;
+  function warnLowQuota(atStart) {
+    const r = sttRemainMin();
+    if (!isFinite(r)) return;
+    if (atStart) { sttLow10 = r < 10; if (r < 60) toast(`Hạn mức nhận dạng đám mây còn khoảng ${Math.floor(r)} phút. Hết hạn mức, ứng dụng chỉ còn nghe một ngôn ngữ`); }
+    else if (r < 10 && !sttLow10) { sttLow10 = true; toast(`Hạn mức nhận dạng đám mây còn dưới 10 phút`); }
+  }
   function startCloud() {
     const pair = bilingualPair();
+    clearLevelWarn(); warnLowQuota(true);
     state.cloudActive = true; state.cloudForeign = pair.foreign; sttLastLang = null;
     state.mine = pair.foreign; // ngoại ngữ nằm cột trái, tiếng Việt cột phải
     wantListening = false;
@@ -1527,13 +1549,14 @@
     resetUtt(); el.src.value = ''; updateCounter();
     syncDual(); syncLangUI(); renderSttStatus();
     setListeningUI(true); liveDualUpdate(); // nút micro đỏ, ô "Đang nghe" ở cả hai cột
-    window.CloudSTT.start({ deviceId: state.micId || undefined, apiKey: cloudKey(), pair, speechContexts: sttContexts(pair), paused: state.speaking, ...window.CloudSTT.SPEED_PRESETS[state.minutes ? 'accurate' : state.sttSpeed], gate: sttGateTracked, onLevel: lvl => { el.sttLevelBar.style.width = Math.min(100, Math.round(lvl * 400)) + '%'; }, onSegment: onCloudSegment, onBlocked: onCloudOver, onError: onCloudError })
+    window.CloudSTT.start({ deviceId: state.micId || undefined, apiKey: cloudKey(), pair, speechContexts: sttContexts(pair), paused: state.speaking, ...window.CloudSTT.SPEED_PRESETS[state.minutes ? 'accurate' : state.sttSpeed], gate: sttGateTracked, onLevel: onCloudLevel, onSegment: onCloudSegment, onBlocked: onCloudOver, onError: onCloudError })
       .then(fillMics)
       .catch(e => onCloudError(Object.assign(new Error('Không mở được micro: ' + (e && e.message ? e.message : e)), { status: -1 })));
   }
   function stopCloud() {
     state.cloudActive = false; state.sttSending = 0;
     window.CloudSTT.stop();
+    clearLevelWarn();
     el.sttLevelBar.style.width = '0%';
     syncLangUI(); renderSttStatus();
     if (!state.meeting) setListeningUI(false);
@@ -1567,6 +1590,7 @@
       queueMeeting(seg.text, { tLast: seg.endedAt, consumed: '', parts: [] }, seg.lang, seg.lang === 'vi' ? state.cloudForeign : 'vi');
     }
     renderSttStatus();
+    warnLowQuota(false);
     if (q && q.over) onCloudOver();
   }
   function onCloudOver(q) {
@@ -1692,6 +1716,8 @@
   }
   el.chkConf.onchange = () => { if (!isVip()) { el.chkConf.checked = false; vipOnly(); return; } state.conf = el.chkConf.checked; store.set('conf', state.conf ? '1' : '0'); syncConf(); if (state.conf) toast('Hãy cắm tai nghe và chọn làm thiết bị phát của máy'); };
   el.chkAutoTurn.checked = state.autoTurn;
+  el.chkViMain.checked = state.viMain;
+  el.chkViMain.onchange = () => { state.viMain = el.chkViMain.checked; store.set('viMain', state.viMain ? '1' : '0'); if (state.viMain) { speechQueue.length = 0; cancelSpeech(); } };
   syncConf();
   el.chkAutoTurn.onchange = () => { state.autoTurn = el.chkAutoTurn.checked; store.set('autoTurn', state.autoTurn ? '1' : '0'); };
   el.btnMeeting.onclick = () => (state.meeting ? stopMeeting() : startMeeting());
@@ -1804,7 +1830,7 @@
     mi.interpLabel.textContent = `Cuộc họp có phiên dịch: ghi cả tiếng Việt và ${LANGS[foreign] ? LANGS[foreign].name : 'ngoại ngữ'}`;
     mi.interp.disabled = !!why;
     mi.interp.checked = !why && store.get('minutesInterp', '0') === '1';
-    mi.interpWhy.textContent = why ? 'Chưa dùng được: ' + why + '.' : 'Dùng nhận dạng Google Cloud (tính vào hạn mức nhận dạng). Ngoại ngữ lấy theo cặp ngôn ngữ đang chọn.';
+    mi.interpWhy.textContent = why ? 'Chưa dùng được: ' + why + '.' : 'Dùng nhận dạng Google Cloud (tính vào hạn mức nhận dạng). Ngoại ngữ lấy theo cặp ngôn ngữ đang chọn.' + (isFinite(sttRemainMin()) ? ` Hạn mức còn khoảng ${Math.floor(sttRemainMin())} phút.` : '');
     openModal(mi.setup);
     mi.title.focus();
   }
