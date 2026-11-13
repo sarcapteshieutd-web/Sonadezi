@@ -78,3 +78,20 @@ test('toTranscript: mỗi câu một dòng kèm giờ, theo ngôn ngữ người
   assert.ok(lines.includes('[08:00] How much is the rent?'));
   assert.ok(lines.includes('[08:00] Twenty dollars.'));
 });
+
+test('minutesTranscript: biên bản thường không có nhãn, có phiên dịch thì gắn nhãn ngôn ngữ', () => {
+  const { minutesTranscript } = require('../report.js');
+  const items = [{ ts: 0, src: 'Xin chào', from: 'vi' }, { ts: 0, src: 'Hello', from: 'en' }];
+  const fmtTime = () => '09:05';
+  assert.strictEqual(minutesTranscript(items, { fmtTime }), '[09:05] Xin chào\n[09:05] Hello');
+  assert.strictEqual(minutesTranscript(items, { interp: true, fmtTime }), '[09:05] [VI] Xin chào\n[09:05] [EN] Hello');
+  assert.strictEqual(minutesTranscript([], { interp: true }), '');
+});
+test('interpNotes: nêu nhãn ngoại ngữ, quy tắc đối chiếu và mục điểm lệch', () => {
+  const { interpNotes } = require('../report.js');
+  const n = interpNotes('Tiếng Anh', 'en');
+  assert.ok(n.data.some(l => l.includes('[EN] là Tiếng Anh')));
+  assert.strictEqual(n.rules.length, 3);
+  assert.ok(n.rules[0].startsWith('6. ') && n.rules[1].includes('mục VIII'));
+  assert.ok(n.section.startsWith('VIII. '));
+});
