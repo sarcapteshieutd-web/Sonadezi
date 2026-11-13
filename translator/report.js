@@ -75,7 +75,29 @@
     return lines.join('\n') + '\n';
   }
 
-  const api = { buildReport, fmtDuration, toCsv, pickText, toTranscript };
+  // Bản ghi cho lời nhắc biên bản. interp (họp có phiên dịch): gắn nhãn ngôn ngữ từng câu, ví dụ "[09:05] [VI] ..."
+  function minutesTranscript(items, { interp = false, fmtTime = ts => { const d = new Date(ts); return pad(d.getHours()) + ':' + pad(d.getMinutes()); } } = {}) {
+    return (items || []).map(i => '[' + fmtTime(i.ts) + '] ' + (interp ? '[' + String(i.from || 'vi').toUpperCase() + '] ' : '') + i.src).join('\n');
+  }
+  // Phần lời nhắc bổ sung khi cuộc họp có phiên dịch: tiếng Việt là nội dung chính, ngoại ngữ dùng để đối chiếu
+  function interpNotes(foreignName, code) {
+    const tag = '[' + String(code || '').toUpperCase() + ']';
+    return {
+      data: [
+        `- Cuộc họp có phiên dịch. Mỗi câu trong bản ghi mang nhãn ngôn ngữ: [VI] là tiếng Việt, ${tag} là ${foreignName}.`,
+        `- Câu [VI] gồm lời của bên nói tiếng Việt và lời phiên dịch sang tiếng Việt. Câu ${tag} gồm lời gốc của bên nói ${foreignName} và lời phiên dịch sang ${foreignName}.`,
+        '- Cùng một nội dung thường xuất hiện hai lần liên tiếp (lời gốc rồi lời phiên dịch). Nhãn ngôn ngữ do phần mềm tự nhận, câu ngắn có thể bị gắn nhầm.'
+      ],
+      rules: [
+        `6. Lấy các câu [VI] làm nội dung chính của biên bản. Dùng các câu ${tag} để đối chiếu, không ghi lặp một nội dung hai lần.`,
+        `7. Khi lời gốc ${tag} và lời phiên dịch [VI] liền kề khác nhau về số liệu, thời hạn, cam kết, điều kiện hoặc có ý bị bỏ sót, ghi vào mục VIII: trích nguyên văn cả hai câu, nêu điểm khác và đánh dấu "(cần xác nhận lại)". Không tự chọn bên đúng.`,
+        `8. Nội dung chỉ có ở câu ${tag} mà không có lời phiên dịch tương ứng thì dịch sang tiếng Việt, đưa vào biên bản kèm chú thích "(dịch từ lời gốc, chưa có lời phiên dịch)".`
+      ],
+      section: 'VIII. Điểm lệch giữa lời gốc và lời phiên dịch (bảng: Thời điểm | Lời gốc | Lời phiên dịch | Điểm khác; nếu không có thì ghi "Không ghi nhận")'
+    };
+  }
+
+  const api = { buildReport, fmtDuration, toCsv, pickText, toTranscript, minutesTranscript, interpNotes };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.RoomReport = api;
 })(typeof window !== 'undefined' ? window : globalThis);
