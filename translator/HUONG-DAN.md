@@ -321,6 +321,14 @@ Xem mục 21.
 - Ứng dụng **không gọi AI tự động** nên không phát sinh chi phí và không gửi nội dung họp cho bên thứ ba.
 - Cần dán lại quy tắc Firestore mới (xem `docs/FIREBASE-SETUP.md` mục 9.6).
 
+### Kịch bản họp (bản v87)
+Khi đang ở chế độ Họp, thanh họp có dòng **Kịch bản** với ba nút; bấm một nút là đặt sẵn cả bộ tùy chọn:
+- **Tiếp khách:** dịch hai chiều và đọc bản dịch ra loa.
+- **Ghi cuộc họp:** thu liên tục, tiếng Việt chỉ ghi lại, ngoại ngữ được dịch sang tiếng Việt, không đọc ra loa.
+- **Tai nghe** (tài khoản Nội bộ): nghe bản dịch bằng tai nghe, micro không tắt khi đọc.
+
+Hai kịch bản đầu tự bật "Song ngữ: tự nhận ngôn ngữ từng câu" nếu tài khoản dùng được; nếu không, ứng dụng báo lý do và vẫn nghe một ngôn ngữ (đổi người nói bằng ⇄ hoặc phím Space). Vẫn chỉnh từng tùy chọn được ở **⚙ Tùy chọn**; khi các tùy chọn không khớp kịch bản nào, dòng Kịch bản ghi "Tùy chỉnh riêng". Ô chọn tốc độ ngắt câu chỉ còn hiện với quản trị viên. Dòng Kịch bản không hiện khi Ghi biên bản.
+
 ### Tùy chọn họp: tiếng Việt chỉ ghi lại, cảnh báo mức âm và hạn mức
 - **Tiếng Việt chỉ ghi lại, không dịch** (bảng tùy chọn trên thanh họp): câu tiếng Việt chỉ được ghi chữ, không dịch và không đọc ra loa; câu ngoại ngữ vẫn được dịch sang tiếng Việt. Nên dùng cùng "Song ngữ: tự nhận ngôn ngữ từng câu" để ứng dụng nghe được cả hai tiếng liên tục. Khi bật, bản dịch không được đọc ra loa.
 - **Cảnh báo mức âm thấp** (chỉ khi dùng nhận dạng đám mây): micro thu tiếng rất nhỏ liên tục 30 giây thì thanh họp hiện một dòng màu vàng, không phát tiếng; dòng này tự ẩn khi có tiếng trở lại.

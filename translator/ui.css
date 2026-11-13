@@ -345,3 +345,9 @@ body.dlg-open #toast { top: calc(12px + env(safe-area-inset-top)); }
 
 /* Cảnh báo mức âm micro thấp trên thanh họp: chỉ hiển thị, không phát tiếng */
 .lvl-warn{background:#fef3c7;color:#78350f}
+
+/* Kịch bản họp: ba nút cấu hình sẵn trên thanh họp; ẩn khi ghi biên bản */
+.preset-btn{border:1px solid #fca5a5;border-radius:.5rem;padding:.125rem .625rem;font-weight:600;white-space:nowrap;background:transparent}
+.preset-btn[aria-pressed="true"]{background:#b91c1c;border-color:#b91c1c;color:#fff}
+.preset-btn:focus-visible{outline:2px solid #0d4792;outline-offset:2px}
+body.minutes #presetRow{display:none}
