@@ -285,6 +285,13 @@
         <button id="btnMbOpts" type="button" aria-label="Tùy chọn họp" aria-expanded="false" class="whitespace-nowrap rounded-lg border border-red-300 px-2 py-0.5 text-xs font-semibold">⚙<span class="lbl">&nbsp;Tùy chọn</span></button>
         <button id="btnMeetingStop" class="whitespace-nowrap rounded-lg border border-red-300 px-2 py-0.5 text-xs font-medium">Dừng</button>
       </div>
+      <div id="presetRow" class="flex w-full flex-wrap items-center gap-1.5 text-xs" role="group" aria-label="Kịch bản họp">
+        <span class="font-semibold">Kịch bản:</span>
+        <button type="button" class="preset-btn" data-preset="guest" aria-pressed="false">Tiếp khách</button>
+        <button type="button" class="preset-btn" data-preset="record" aria-pressed="false">Ghi cuộc họp</button>
+        <button type="button" class="preset-btn" data-preset="ear" aria-pressed="false">Tai nghe</button>
+        <span id="presetDesc" class="text-[0.6875rem]"></span>
+      </div>
       <div id="minutesHint" class="hidden w-full text-[0.6875rem] text-red-600/80">Chỉ ghi chữ tiếng Việt, không dịch. Bấm Dừng khi kết thúc để lấy lời nhắc tóm tắt.</div>
       <div id="micWarn" class="hidden w-full rounded-lg bg-red-100 px-2 py-1 text-xs font-medium" role="alert"></div>
       <div id="lvlWarn" class="lvl-warn hidden w-full rounded-lg px-2 py-1 text-xs font-medium" role="status">Micro thu tiếng rất nhỏ trong 30 giây qua. Nếu đang có người nói, hãy đưa micro lại gần hoặc kiểm tra micro đã chọn.</div>
@@ -689,6 +696,7 @@
   <script src="report.js"></script>
   <script src="lang-guess.js"></script>
   <script src="captions.js"></script>
+  <script src="presets.js"></script>
   <script src="app.js"></script>
   <script src="dialogs.js"></script>
   <script src="find.js"></script>

@@ -1449,6 +1449,7 @@
     el.meetingTime.textContent = `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
   }
   function setMeetingUI(on) {
+    if (on) syncPresetUI();
     el.meetingBar.classList.toggle('hidden', !on);
     el.meetingBar.classList.toggle('flex', on);
     syncConfBtn();
@@ -1504,7 +1505,7 @@
     el.chkBilingual.disabled = !!why && !state.bilingual; // đang bật thì vẫn cho tắt
     el.chkBilingual.title = why;
     el.selMic.classList.toggle('hidden', !(state.bilingual && !why));
-    el.selSttSpeed.classList.toggle('hidden', !(state.bilingual && !why));
+    el.selSttSpeed.classList.toggle('hidden', !(state.bilingual && !why && isAdminAcct())); // tốc độ ngắt câu là tùy chọn kỹ thuật: chỉ quản trị viên thấy
     el.selSttSpeed.value = state.sttSpeed;
     renderSttStatus();
   }
@@ -1720,6 +1721,33 @@
   el.chkViMain.onchange = () => { state.viMain = el.chkViMain.checked; store.set('viMain', state.viMain ? '1' : '0'); if (state.viMain) { speechQueue.length = 0; cancelSpeech(); } };
   syncConf();
   el.chkAutoTurn.onchange = () => { state.autoTurn = el.chkAutoTurn.checked; store.set('autoTurn', state.autoTurn ? '1' : '0'); };
+  // ----- Kịch bản họp: một lần bấm đặt sẵn cả bộ tùy chọn (xem presets.js) -----
+  const presetBtns = [...document.querySelectorAll('#presetRow .preset-btn')];
+  function syncPresetUI() {
+    const P = window.MeetingPresets; if (!P) return;
+    const cur = P.presetOf(state);
+    for (const b of presetBtns) {
+      b.setAttribute('aria-pressed', String(b.dataset.preset === cur));
+      if (b.dataset.preset === 'ear') b.classList.toggle('hidden', !isVip()); // nghe bằng tai nghe chỉ có ở tài khoản Nội bộ
+    }
+    $('presetDesc').textContent = cur ? P.MEETING_PRESETS[cur].desc : 'Tùy chỉnh riêng (xem ⚙ Tùy chọn).';
+  }
+  function applyPreset(name) {
+    const p = window.MeetingPresets && window.MeetingPresets.MEETING_PRESETS[name]; if (!p) return;
+    const setChk = (c, v) => { if (c.disabled || c.checked === v) return; c.checked = v; c.dispatchEvent(new Event('change')); };
+    setChk(el.chkConf, p.conf); // tắt/bật tai nghe trước vì nó quyết định có dùng được nhận dạng hai ngôn ngữ hay không
+    setChk(el.chkViMain, p.viMain);
+    setChk(el.chkMeetingSpeak, p.speak);
+    syncBilingualUI();
+    if (p.bilingual) {
+      const why = bilingualBlock();
+      if (why) toast(`Chưa tự nhận được hai ngôn ngữ (${why}). Đổi người nói bằng ⇄ hoặc phím Space`);
+      else { setChk(el.chkBilingual, true); if (state.meeting && state.bilingual && !state.cloudActive) startCloud(); } // vừa rời chế độ tai nghe: bật lại nhận dạng đám mây
+    }
+    syncPresetUI();
+  }
+  for (const b of presetBtns) b.onclick = () => applyPreset(b.dataset.preset);
+  [el.chkConf, el.chkViMain, el.chkMeetingSpeak].forEach(c => c.addEventListener('change', syncPresetUI));
   el.btnMeeting.onclick = () => (state.meeting ? stopMeeting() : startMeeting());
   el.btnModeChat.onclick = () => { if (state.meeting) stopMeeting(); };
   el.btnMeetingStop.onclick = stopMeeting;
@@ -2887,6 +2915,7 @@
     const vip = isVip(), info = state.acctInfo;
     if (!vip) { state.engine = 'mymemory'; state.ttsMode = 'device'; state.conf = false; }
     el.btnExport.classList.toggle('hidden', !vip);
+    if (typeof syncPresetUI === 'function') syncPresetUI();
     el.chkConf.closest('label').classList.toggle('hidden', !vip);
     el.chkConf.checked = state.conf;
     const admin = isAdminAcct();
