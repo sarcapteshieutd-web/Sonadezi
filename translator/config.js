@@ -3,23 +3,11 @@
    Lưu ý: ứng dụng chạy hoàn toàn trên trình duyệt (không có máy chủ) nên các nút
    chỉ MỞ trang thanh toán của bạn; ứng dụng không thể tự xác nhận thanh toán hay khóa/mở gói. */
 window.APP_CONFIG = {
-  donate: {
-    title: 'Ủng hộ nhà phát hành',
-    message: 'Cảm ơn bạn đã sử dụng ứng dụng. Mọi đóng góp giúp chúng tôi duy trì và phát triển thêm tính năng.',
-    // Ảnh mã QR chuyển khoản (ví dụ VietQR), đặt tệp trong thư mục translator/ rồi ghi đường dẫn, ví dụ 'donate-qr.png'
-    qrImage: 'donate-qr.jpg',
-    // Thông tin tài khoản nhận (hiển thị dạng chữ, có nút sao chép)
-    bank: { bankName: 'Vietcombank', accountNumber: '0481000844134', accountName: 'NGUYEN NGOC HIEU', note: 'Quét mã QR bằng ứng dụng ngân hàng hoặc ví điện tử (VietQR)' },
-    // Liên kết thanh toán trực tuyến (PayPal.me, Buy Me a Coffee, liên kết thanh toán PayOS/Stripe, v.v.). Chỉ chấp nhận https://
-    links: [
-      // { label: 'Ủng hộ qua PayPal', url: 'https://paypal.me/...' }
-    ]
-  },
-  // Gói sử dụng hiển thị cho người dùng chọn mua; url là trang thanh toán của từng gói
-  plans: [
-    // { name: 'Gói tháng', price: '99.000đ / tháng', description: 'Dịch không giới hạn', url: 'https://...' }
-    { name: 'VIP 1', price: '150.000đ / tháng', description: 'Dịch mượt mà hơn với Google Cloud Translation, nghe giọng đọc WaveNet tự nhiên (nam hoặc nữ) và dùng chế độ hội nghị với tai nghe. Nâng cấp ngay để trải nghiệm trọn vẹn!' }
-  ],
+  // Bản dùng nội bộ Sonadezi Long Thành: không hiện nút Ủng hộ, không bán gói. Muốn bật lại thì khai báo như mẫu dưới đây.
+  // donate: { title, message, qrImage, bank: { bankName, accountNumber, accountName, note }, links: [{ label, url }] }
+  donate: {},
+  // plans: [{ name: 'Gói tháng', price: '...', description: '...', url: 'https://...' }]
+  plans: [],
   // Tài khoản Miễn phí / VIP: không khai báo ở đây. VIP đăng ký trong ứng dụng, quản trị viên duyệt và cấp hạn dùng 1 tháng
   // (xem docs/FIREBASE-SETUP.md, mục "Tài khoản VIP"). Thông tin thanh toán hiển thị cho người chờ duyệt lấy từ phần donate và plans ở trên.
   // Cải thiện nhận diện giọng nói

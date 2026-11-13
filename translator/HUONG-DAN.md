@@ -97,6 +97,8 @@ Bộ đếm ký tự: khi dùng Google, ứng dụng đếm số ký tự đã g
 Cảnh báo bảo mật: khóa nhập trên trình duyệt chỉ lưu tại thiết bị đó, nhưng nếu dùng chung cho nhiều người thì nên đặt qua máy chủ trung gian (Netlify/Vercel Functions) để không lộ khóa.
 
 ## 6b. Tài khoản Miễn phí và VIP
+> **Từ bản v86 (dùng nội bộ Sonadezi Long Thành):** tài khoản "VIP" được gọi là **tài khoản Nội bộ**; mọi chỗ ghi "VIP" trong tài liệu này hiểu là "Nội bộ". Nút Ủng hộ, bảng giá gói và phần thanh toán ở màn hình chờ duyệt đã được ẩn (cấu hình `donate`, `plans` trong `config.js` để trống). Quản trị viên duyệt là dùng được, hạn dùng vẫn theo tháng.
+> Bảng quản trị có thêm: nút **Gia hạn +1 tháng cho tất cả**; số **phút nhận dạng đám mây** đã dùng của từng tài khoản; mục **Giới hạn riêng mỗi tháng** trong thẻ từng tài khoản đang hoạt động (dịch, đọc, nhận dạng; nhập 0 để theo mức chung). Giới hạn riêng lớn hơn 0 thì thay cho mức chung của tài khoản đó.
 Khi mở ứng dụng lần đầu (hoặc sau khi chọn *Cài đặt → Đổi tài khoản*), ứng dụng hiện màn hình chọn loại tài khoản. Lựa chọn được nhớ trên thiết bị.
 
 | | Miễn phí | VIP |

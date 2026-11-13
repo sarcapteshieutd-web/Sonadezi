@@ -94,6 +94,12 @@ const t = (name, got, exp) => {
   t('A hết hạn: không còn đọc được khóa', await call('GET', '/config/google', a.tok), 'deny');
   t('Quản trị viên gia hạn lại cho A', await call('PATCH', '/users/' + a.uid, adm.tok, { expiresAt: T(now + 30 * DAY) }, ['expiresAt']), 'ok');
   t('A được gia hạn: đọc lại được khóa', await call('GET', '/config/google', a.tok), 'ok');
+  // Giới hạn riêng từng tài khoản (limits): chỉ quản trị viên đặt
+  t('Quản trị viên đặt giới hạn riêng cho A', await call('PATCH', '/users/' + a.uid, adm.tok, { limits: M({ tr: N(100000), tts: N(200000), stt: N(120) }) }, ['limits']), 'ok');
+  t('Quản trị viên đặt giới hạn riêng có khóa lạ bị chặn', await call('PATCH', '/users/' + a.uid, adm.tok, { limits: M({ tr: N(1), khac: N(1) }) }, ['limits']), 'deny');
+  t('Quản trị viên đặt giới hạn riêng kiểu chữ bị chặn', await call('PATCH', '/users/' + a.uid, adm.tok, { limits: M({ stt: S('nhieu') }) }, ['limits']), 'deny');
+  t('A tự nâng giới hạn riêng bị chặn', await call('PATCH', '/users/' + a.uid, a.tok, { limits: M({ stt: N(99999) }) }, ['limits']), 'deny');
+  t('A vẫn tự báo được số liệu sử dụng sau khi có giới hạn riêng', await call('PATCH', '/users/' + a.uid, a.tok, { lastSeen: N(now) }, ['lastSeen']), 'ok');
   t('Người thường xóa hồ sơ người khác bị chặn', await call('DELETE', '/users/' + c.uid, b.tok), 'deny');
   t('Quản trị viên xóa hồ sơ C', await call('DELETE', '/users/' + c.uid, adm.tok), 'ok');
 
