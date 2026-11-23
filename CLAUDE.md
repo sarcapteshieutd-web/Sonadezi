@@ -1,3 +1,4 @@
+@AGENTS.md
 # Kho mã Sonadezi — Quy ước cho Claude Code
 
 Claude Code tự đọc tệp này mỗi phiên. Trả lời và giải thích bằng tiếng Việt.
