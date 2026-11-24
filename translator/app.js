@@ -232,8 +232,11 @@
 
   function setLangs(s, t, swapText) {
     const wasMeeting = state.meeting;
-    if (wasMeeting) { resetUtt(); if (rec) { rec.onend = null; try { rec.abort(); } catch (_) {} } }
-    else if (state.listening) stopListening();
+    if (wasMeeting) {
+      if (!state.cloudActive && utt.lastText.trim()) forceCommit();
+      resetUtt();
+      if (rec) { rec.onend = null; rec.onresult = null; try { rec.abort(); } catch (_) {} }
+    } else if (state.listening) stopListening();
     archiveTurn();
     state.src = s;
     state.tgt = t;
@@ -968,11 +971,19 @@
     for (const g of GLOSSARY) out = out.replace(g.re, (_, pre) => pre + (state.src === 'en' && g.alt ? g.alt : g.to)); // nói tiếng Anh: dùng tên không dấu
     return out;
   }
-  // Bỏ câu đã chốt mà trình duyệt chấm độ tin cậy quá thấp (0 = trình duyệt không báo, giữ lại)
-  function heard(result) {
+  // Khi bật lọc, chế độ Họp vẫn giữ câu dài dù điểm thấp.
+  function heard(result, logDrop) {
     const alt = result[0];
-    if (result.isFinal && alt.confidence > 0) {
-      if (MIN_CONF > 0 && alt.confidence < MIN_CONF) return '';
+    if (result.isFinal) {
+      const text = alt.transcript.trim();
+      if (!text) return '';
+      const drop = state.meeting
+        ? window.BrowserSTT.shouldDropFinal(text, alt.confidence, MIN_CONF, LANGS[state.src].sp)
+        : alt.confidence > 0 && alt.confidence < MIN_CONF;
+      if (drop) {
+        if (logDrop) micLog('bỏ câu độ tin cậy thấp: ' + text.slice(0, 24));
+        return '';
+      }
     }
     return alt.transcript;
   }
@@ -1032,7 +1043,8 @@
   let micFail = 0, sessionStartAt = 0;
   const MIC_MAX_FAIL = 6; // số lần micro lỗi liên tiếp trước khi dừng thử (giữ cuộc họp)
   function beginSession() {
-    rec = new SR();
+    const session = new SR();
+    rec = session;
     utt.forced = ''; // phiên nghe mới: văn bản cộng dồn bắt đầu lại từ đầu
     rec.lang = sttLocale(state.src);
     micLog('mở phiên nghe (' + rec.lang + ')');
@@ -1045,7 +1057,7 @@
     rec.onresult = ev => {
       if (state.meeting) { onMeetingResult(ev); return; }
       let text = '';
-      for (let i = 0; i < ev.results.length; i++) text += heard(ev.results[i]);
+      for (let i = 0; i < ev.results.length; i++) text += heard(ev.results[i], i >= ev.resultIndex);
       text = applyGlossary(text);
       const sep = committed && !/[\s]$/.test(committed) && LANGS[state.src].sp ? ' ' : '';
       el.src.value = (committed + sep + text).trimStart();
@@ -1080,9 +1092,13 @@
     };
 
     rec.onend = () => {
+      if (rec !== session) return;
       micLog('phiên nghe kết thúc' + (wantListening ? ', tự mở lại' : ''));
       // Chốt văn bản của phiên vừa kết thúc
-      committed = el.src.value.trim();
+      if (state.meeting && !state.cloudActive) {
+        session.onresult = null;
+        if (utt.lastText.trim()) forceCommit();
+      } else if (!state.meeting) committed = el.src.value.trim();
       if (Date.now() - sessionStartAt > 8000) micFail = 0; // phiên đã chạy ổn định thì xóa đếm lỗi
       if (wantListening && state.meeting && micFail >= MIC_MAX_FAIL) { // lỗi liên tiếp: dừng thử, giữ cuộc họp để người dùng bấm Mở lại micro
         wantListening = false; state.micGaveUp = true; setListeningUI(false);
@@ -1091,7 +1107,11 @@
       } else if (wantListening) {
         // Chrome tự ngắt sau một khoảng im lặng: khởi động lại để nghe liên tục (lỗi liên tiếp thì giãn cách tăng dần)
         const delay = state.meeting && micFail ? Math.min(3000, 400 * 2 ** (micFail - 1)) : 250;
-        setTimeout(() => { if (wantListening) { try { beginSession(); } catch (_) { finish(); } } }, delay);
+        setTimeout(() => {
+          if (rec === session && session.onend && wantListening && !state.speaking && !state.cloudActive) {
+            try { beginSession(); } catch (_) { finish(); }
+          }
+        }, delay);
       } else {
         finish();
       }
@@ -1393,7 +1413,11 @@
     setSpeakingUI(true);
     micLog('đọc bản dịch: tạm nghỉ micro');
     if (state.cloudActive) window.CloudSTT.pause(); // tạm nghỉ micro, không thu lại tiếng đọc
-    else if (rec) { rec.onend = null; try { rec.abort(); } catch (_) {} } // tạm nghỉ micro
+    else {
+      if (rec) { rec.onend = null; rec.onresult = null; }
+      if (utt.lastText.trim()) forceCommit();
+      if (rec) { try { rec.abort(); } catch (_) {} }
+    }
     el.src.value = '';
     updateCounter();
     try {
@@ -1403,7 +1427,7 @@
       state.reading = false;
       setSpeakingUI(false);
       micLog('đọc xong hàng đợi: bật lại micro');
-      if (state.meeting) { if (state.cloudActive) window.CloudSTT.resume(); else beginSession(); } // đọc xong: nghe lại
+      if (state.meeting) { if (state.cloudActive) window.CloudSTT.resume(); else if (wantListening) beginSession(); } // đọc xong: nghe lại
     }
   }
   // Đóng phiên nghe hiện tại (chốt phần đang nói dở) rồi mở phiên mới
@@ -1422,13 +1446,18 @@
     let gotFinal = false;
     for (let i = ev.resultIndex; i < ev.results.length; i++) {
       const r = ev.results[i];
-      const t = applyGlossary(heard(r).trim());
-      if (r.isFinal) { if (t) micLog('nghe được: ' + t.slice(0, 24)); if (t && commitFinal(t)) gotFinal = true; } else interim += t;
+      const t = applyGlossary(heard(r, true).trim());
+      if (r.isFinal) {
+        if (t) {
+          micLog('nghe được: ' + t.slice(0, 24));
+          if (commitFinal(t)) gotFinal = true;
+        } else if (r[0].transcript.trim()) resetUtt(); // bỏ cả phần tạm của câu bị lọc
+      } else interim += t;
     }
     if (utt.forced && interim) { const rest = stripForced(interim, utt.forced); if (rest !== null) interim = rest; }
     el.src.value = interim;
     updateCounter();
-    if (interim && !gotFinal) {
+    if (interim) {
       if (interim !== utt.lastText) { utt.lastText = interim; utt.tLast = Date.now(); }
       if (state.incr && !state.minutes && !(state.viMain && state.src === 'vi')) incrementalStep(interim);
       clearTimeout(utt.timer);

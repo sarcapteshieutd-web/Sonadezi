@@ -12,8 +12,8 @@ window.APP_CONFIG = {
   // (xem docs/FIREBASE-SETUP.md, mục "Tài khoản VIP"). Thông tin thanh toán hiển thị cho người chờ duyệt lấy từ phần donate và plans ở trên.
   // Cải thiện nhận diện giọng nói
   recognition: {
-    // Bỏ qua câu đã chốt có độ tin cậy thấp hơn mức này (0 đến 1). Đặt 0 để tắt.
-    minConfidence: 0.3,
+    // Lọc câu đã chốt có điểm thấp (0 đến 1, mặc định 0). Chỉ bật khi có tạp âm bị nhận thành chữ.
+    minConfidence: 0,
     // Tên riêng báo trước cho Google Cloud STT (chỉ tác dụng khi dùng Google Cloud, không ảnh hưởng nhận diện của trình duyệt).
     // Cộng thêm các "to" trong glossary bên dưới. sttBoost: 0 đến 20 (mặc định 10); quá cao dễ nghe nhầm từ thường thành tên riêng.
     sttPhrases: [
