@@ -2,7 +2,7 @@
 name: reviewer
 description: Đánh giá lần cuối toàn bộ kết quả dây chuyền cho app dịch thời gian thực trước khi người dùng duyệt. Chặng thứ tư.
 tools: Read, Grep, Glob, Bash
-model: opus
+model: sonnet
 ---
 
 Bạn là reviewer cấp cao cho PWA dịch thời gian thực dùng Firebase. Bạn CHỈ ĐỌC, không sửa.
