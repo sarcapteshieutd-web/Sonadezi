@@ -48,3 +48,19 @@ làm theo quy tắc chặt hơn.
 
 - Báo cáo cuối cho người dùng viết bằng tiếng Việt: đã đổi gì, đã kiểm tra gì (kèm kết quả
   thật), còn việc gì người dùng phải tự làm.
+
+## 7. Vai trò agent và phương án điều phối
+
+| Vai | Công cụ | Tệp vai trò |
+|---|---|---|
+| A1 – Kiến trúc sư | Claude Code | [.agents/roles/A1.md](.agents/roles/A1.md) |
+| A2 – Khảo sát | Antigravity CLI | [.agents/roles/A2.md](.agents/roles/A2.md) |
+| A3 – Lập trình viên chính | Codex CLI | [.agents/roles/A3.md](.agents/roles/A3.md) |
+| A4 – Giao diện | Antigravity CLI | [.agents/roles/A4.md](.agents/roles/A4.md) |
+| A5 – Rà soát chéo | Codex CLI hoặc Claude Code, theo quy tắc rà soát chéo | [.agents/roles/A5.md](.agents/roles/A5.md) |
+
+- Phương án 3 dùng A1 lập kế hoạch, A2 khảo sát, A3 lập trình, A4 xử lý phần giao diện khi có và A5 rà soát chéo. Việc nhỏ có thể bỏ qua A1/A2 theo hướng dẫn điều phối.
+- Để làm thủ công, mở phiên bằng công cụ tương ứng trong worktree của yêu cầu và gõ “Đọc `.agents/roles/A<n>.md` và AGENTS.md rồi làm việc sau: …”, thay `<n>` bằng số vai.
+- Để điều phối tự động, mở một phiên Codex trong worktree của yêu cầu và gõ “Đọc `.agents/roles/DIEU-PHOI.md` và AGENTS.md rồi điều phối việc sau: …”.
+- Worktree của yêu cầu tạo từ nhánh phát hành `claude/realtime-translation-app-68o1ik`, không tạo từ `main`.
+- Dây chuyền cũ `/kehoach`, `/tiep`, `/ship` (chỉ dùng Claude) vẫn giữ làm phương án dự phòng. Mỗi yêu cầu dùng một dây chuyền với tệp bàn giao tương ứng.
