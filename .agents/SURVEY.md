@@ -1,190 +1,168 @@
-# SURVEY – Khảo sát quy trình A1–A5 và điều phối tự động cho app dịch Live
+# SURVEY – Khảo sát mã nguồn cho Mức 1 (bắt chữ khi thu một ngôn ngữ trong chế độ Họp)
 
-- Vai thực hiện: A2 – Khảo sát (`Antigravity/Gemini 4 Neon`)
-- Kho & nhánh: `sarcapteshieutd-web/Sonadezi`, nhánh `chore/agents-setup` (worktree Orca `Sonadezi/agents-setup`). Nhánh phát hành / đích PR: `claude/realtime-translation-app-68o1ik` (GitHub Pages).
-- Tài liệu đã đọc: `AGENTS.md`, `CLAUDE.md`, `.agents/PLAN.md`, `translator/service-worker.js`, `cong-cu/kiem-tra-dich.js`, `.claude/settings.json`, `.claude/agents/planner|coder|tester|reviewer.md`, `.claude/commands/kehoach|tiep|ship.md`, `cong-cu/HUONG-DAN-DAY-CHUYEN.md`, `translator/index.html`, `translator/tailwind.config.js`, `translator/input.css`, `translator/firebase/firestore.rules`, `translator/firebase/rules-test*.js`, `translator/docs/FIREBASE-SETUP.md`, `.gitignore`, cùng bộ mẫu chỉ đọc bên `C:\SZL-Apps\SonadeziLongThanh` (`AGENTS.md`, `.claude/settings.json`, `.agents/roles/A1.md`–`A5.md`, `feat/dieu-phoi:.agents/roles/DIEU-PHOI.md` và `feat/dieu-phoi:.agents/SURVEY.md`).
-- Kết quả chạy các lệnh chỉ đọc được phép trong `.agents/PLAN.md`:
-  - `node cong-cu/kiem-tra-dich.js`: mã thoát `0`, **`KIEM TRA TU DONG: DAT`** — kiểm tra 21 tệp JS, 2 tệp HTML trong `translator/`; kiểm thử đơn vị **`67/67 đạt (6 tệp)`**; so sánh với `origin/claude/realtime-translation-app-68o1ik` (5 tệp thay đổi); có 1 cảnh báo: `[PHAM VI] Có tệp ngoài app dịch thay đổi: .agents/PLAN.md, .agents/REVIEW.md, .agents/SURVEY.md, AGENTS.md`.
-  - `node --test translator/tests/`: **thất bại (mã thoát `1`) trên Node.js v24.14.1 (Windows)** với lỗi `MODULE_NOT_FOUND: Cannot find module '...\translator\tests'` (Node 24 trên Windows hiểu tham số đường dẫn thư mục không kèm glob là module CJS). Ngược lại, `cong-cu/kiem-tra-dich.js` (dòng 77–81) đọc danh sách tệp `*.test.js` truyền trực tiếp cho `node --test` nên chạy đạt `67/67`.
-  - `orca orchestration --help` và `--help` của các lệnh con `run-create`, `task-create`, `worker-start`, `check`, `worker-show`, `worker-read`, `deny`: cú pháp và cờ tùy chọn khớp hoàn toàn với bản đã khảo sát trên Orca `1.4.272` tại `SonadeziLongThanh` (`feat/dieu-phoi:.agents/SURVEY.md`). Không tạo Run, Task hay Worker.
+- **Vai thực hiện:** A2 – Khảo sát (`Antigravity/Gemini 4 Neon`)
+- **Đầu vào:** `.agents/PLAN.md` (commit `895321c`) và quyết định của anh Hiếu ngày 24/11/2026: **chỉ làm Mức 1**, đồng ý đổi mặc định `minConfidence` từ `0.3` → `0` (áp dụng cả chế độ Hội thoại); **không** làm Mức 2/Mức 3; **không** chạm Google Cloud STT (`translator/stt-cloud.js`).
+- **Nhánh & worktree:** nhánh `sonadezilongthanh/fix/meeting-transcription-2`, worktree `C:/Users/hieunn/orca/workspaces/Sonadezi/fix-meeting-transcription-2` (tách từ `claude/realtime-translation-app-68o1ik` tại `03851d1`).
+- **Kết quả kiểm tra mốc hiện tại (chỉ đọc):**
+  - `node cong-cu/kiem-tra-dich.js`: mã thoát `0`, **`KIEM TRA TU DONG: DAT`** — kiểm tra 21 tệp JS, 2 tệp HTML trong `translator/`; kiểm thử đơn vị **`67/67 đạt (6 tệp)`**; 1 cảnh báo `[PHAM VI]` cho `.agents/PLAN.md` (do danh sách trắng của công cụ chưa có `.agents/`).
 
 ---
 
-## 1. Quy tắc kỹ thuật app dịch mà các tệp vai trò phải mang theo
+## 1. Hiện trạng mã nguồn theo từng điểm sửa của Mức 1
 
-### 1.1. Hai ứng dụng độc lập và nhánh phát hành
-- **Phạm vi hai ứng dụng** (`CLAUDE.md` dòng 6–11, 73; `AGENTS.md` dòng 9–10):
-  - **App dịch thời gian thực** (PWA Anh/Trung/Nhật/Hàn ↔ Việt, dùng Firebase Auth + Firestore): nằm trong `translator/`.
-  - **App tra cứu nhà xưởng KCN Long Thành**: nằm ở thư mục gốc (`index.html`, `sw.js`, `AppsScript-Code.gs`, `seed.js`, `manifest.webmanifest`, `giong-van-szl.md`) — **KHÔNG sửa** khi làm việc với app dịch, trừ khi người dùng yêu cầu rõ.
-- **Nhánh phát hành GitHub Pages** (`CLAUDE.md` dòng 13–18; `AGENTS.md` dòng 11–18):
-  - Kho đăng tĩnh trên GitHub Pages (`sarcapteshieutd-web.github.io`) từ nhánh **`claude/realtime-translation-app-68o1ik`**. Đẩy hoặc gộp vào nhánh này là phát hành ngay.
-  - Nhánh `main` cũ hơn nhánh phát hành: **không dùng làm gốc**, **không tạo Pull Request vào `main`**.
-  - Mọi tính năng/sửa lỗi làm trên nhánh riêng tách từ `claude/realtime-translation-app-68o1ik`, tạo PR nhắm vào `claude/realtime-translation-app-68o1ik` khi người dùng yêu cầu.
+### 1.1. `minConfidence` và hàm lọc `heard()` (G1)
 
-### 1.2. Kiến trúc mã, lệnh kiểm tra và lệnh build (`CLAUDE.md` dòng 20–65)
-- **JavaScript thuần, không thêm framework hay bước build mới** (`CLAUDE.md` dòng 49–50). Ngoại lệ duy nhất là 2 tệp build sẵn:
-  1. `translator/room.bundle.js` (từ `translator/src/room.js` — `CLAUDE.md` dòng 29, 43, 53; `translator/docs/FIREBASE-SETUP.md` dòng 56–62):
-     ```powershell
-     cd translator && npm i firebase qrcode-generator esbuild && npx esbuild src/room.js --bundle --minify --format=iife --target=es2020 --outfile=room.bundle.js
-     ```
-     Khi sửa `src/room.js`, **PHẢI** build lại `room.bundle.js` và đưa **cả hai tệp vào cùng một commit** (`CLAUDE.md` dòng 53).
-  2. `translator/styles.css` (từ `input.css` + `tailwind.config.js` — `CLAUDE.md` dòng 33, 44):
-     ```powershell
-     cd translator && npx tailwindcss@3 -c tailwind.config.js -i input.css -o styles.css --minify
-     ```
-     Lưu ý từ mã nguồn thực tế: `translator/tailwind.config.js` (dòng 3) chỉ khai báo `content: ['./index.html', './app.js']` (chưa quét `dialogs.js`, `find.js`); CSS viết tay nằm trong `translator/ui.css` (`CLAUDE.md` dòng 33, nạp ở `translator/index.html` dòng 23) và khai báo font nằm ở `translator/fonts.css` (`index.html` dòng 21).
-- **Lệnh kiểm tra tổng hợp bắt buộc trước khi bàn giao** (`CLAUDE.md` dòng 41, 74):
-  `node cong-cu/kiem-tra-dich.js` (chạy tại thư mục gốc kho).
-  *(Lưu ý: `CLAUDE.md` dòng 42 ghi `node --test translator/tests/`, nhưng trên Node v24.14.1 Windows lệnh này báo lỗi `MODULE_NOT_FOUND`; dùng `node cong-cu/kiem-tra-dich.js` để chạy trọn 67/67 phép thử đơn vị.)*
-- **Quy tắc bảo mật Firestore (`translator/firebase/firestore.rules`)** (`CLAUDE.md` dòng 32, 45, 54–56):
-  - Khi sửa `firestore.rules`, **PHẢI**: (a) cập nhật/bổ sung phép thử trong `translator/firebase/rules-test.js` (phòng họp, 51 phép thử) hoặc `translator/firebase/rules-test-vip.js` (tài khoản VIP, 59 phép thử), (b) ghi chú cập nhật trong `translator/docs/FIREBASE-SETUP.md`, và (c) nhắc người dùng dán lại toàn bộ quy tắc rồi bấm **Publish** trên Firebase Console. Quy tắc **không** tự cập nhật khi đẩy mã.
-  - Chạy kiểm thử Emulator: cần Firebase Emulator **sạch** mỗi lần chạy (`rules-test.js` dòng 1–3, `rules-test-vip.js` dòng 1–3, `FIREBASE-SETUP.md` dòng 99): `npx firebase-tools emulators:start --only firestore,auth --project demo-sonadezi` trong `translator/firebase/`.
-- **Chống XSS** (`CLAUDE.md` dòng 57–58): nội dung người dùng nhập hoặc đồng bộ từ Firestore (tin nhắn, tên, tóm tắt) **PHẢI** hiển thị bằng `textContent` hoặc được escape; cấm đưa dữ liệu chưa escape vào `innerHTML`.
-- **Bảo mật khóa & thông tin nhạy cảm** (`CLAUDE.md` dòng 30, 59–60; `AGENTS.md` dòng 25–27): không ghi cứng khóa Google Cloud, mật khẩu, token hay bất kỳ bí mật nào vào mã, tệp cấu hình, commit hay tệp điều phối. Thông số Firebase công khai đã có sẵn trong `translator/config.js`; không thêm thông tin nhạy cảm vào đó. Khóa Google Cloud do người dùng nhập ở Cài đặt hoặc quản trị viên cấp qua `config/google`.
-- **Micro, PWA và Safari iOS** (`CLAUDE.md` dòng 61–62): chỉ chạy trên HTTPS hoặc `localhost`; Safari iOS không tự phát âm thanh khi chưa có thao tác chạm và có thể xóa `localStorage` → luôn cần phương án dự phòng.
-- **Logic thuần & phong cách mã** (`CLAUDE.md` dòng 24–28, 63–65): logic thuần không phụ thuộc DOM đặt trong module có `module.exports` (`stt-cloud.js`, `report.js`, `lang-guess.js`, `captions.js`, `presets.js`) để kiểm thử `node:test`; giữ chú thích tiếng Việt, tên hàm tiếng Anh kiểu `camelCase`.
-- **Quy tắc Git và triển khai cho agent** (`CLAUDE.md` dòng 67–74; `AGENTS.md` dòng 15–19): KHÔNG `git push` lên nhánh phát hành `claude/realtime-translation-app-68o1ik` hoặc `main`; KHÔNG gộp nhánh, KHÔNG gộp Pull Request; KHÔNG chạy `firebase deploy`.
-
-### 1.3. Service Worker (`translator/service-worker.js`, dòng 1–52)
-- **Biến phiên bản cache hiện tại:** `const CACHE = 'translator-v87';` (**dòng 5**).
-- **Cơ chế:** ưu tiên mạng (network-first) cho cùng nguồn gốc, mất mạng dùng bản đã lưu (dòng 31–51); tự xóa mọi cache khác `CACHE` khi `activate` (dòng 23–29).
-- **Danh sách `CORE` (dòng 6–13, gồm 30 mục):**
-  - Gốc & HTML (2): `'./'`, `'./index.html'` (dòng 7).
-  - Tệp JS ứng dụng (9): `'./app.js'`, `'./dialogs.js'`, `'./find.js'`, `'./stt-cloud.js'`, `'./report.js'`, `'./lang-guess.js'`, `'./captions.js'`, `'./presets.js'`, `'./config.js'` (dòng 7). *(Lưu ý: `dialogs.js` và `find.js` đã nạp ở `translator/index.html` dòng 701–702 và có mặt trong `CORE`, dù `CLAUDE.md` dòng 22 chưa liệt kê. `room.bundle.js` không nằm trong `CORE` nhưng vẫn được `kiem-tra-dich.js` dòng 127 tính vào nhóm bắt buộc tăng `CACHE`.)*
-  - CSS & ảnh thanh toán (4): `'./donate-qr.jpg'`, `'./styles.css'`, `'./ui.css'`, `'./fonts.css'` (dòng 7).
-  - Phông chữ (8): `./fonts/be-vietnam-pro-latin-{400,500,600,700}.woff2` (dòng 8) và `./fonts/be-vietnam-pro-vietnamese-{400,500,600,700}.woff2` (dòng 9).
-  - Manifest & biểu tượng (7): `'./manifest.json'` (dòng 9), `'./icons/icon-192.png'`, `'./icons/icon-512.png'` (dòng 10), `'./icons/icon-512-maskable.png'`, `'./icons/apple-touch-icon.png'` (dòng 11), `'./icons/logo-mark.png'`, `'./icons/logo-full.png'` (dòng 12).
-- **Nghĩa vụ bắt buộc** (`CLAUDE.md` dòng 51–52): sửa bất kỳ tệp nào trong `CORE` (hoặc `room.bundle.js`) **PHẢI tăng số `CACHE`** (ví dụ `translator-v87` → `translator-v88`).
-
-### 1.4. Các hạng mục kiểm tra của `cong-cu/kiem-tra-dich.js` (dòng 1–179)
-
-| Mục | Dòng | Nội dung kiểm tra | Mức xử lý |
-|---|---|---|---|
-| 1. Cú pháp | 44–73 | `node --check` trên mọi `.js` trong `translator/` (trừ `node_modules`, mục ẩn) và kiểm tra `<script>` nội tuyến trong `.html` bằng `vm.Script` | **LỖI** `[CU PHAP]` (thoát `1`) |
-| 2. Kiểm thử đơn vị | 75–92 | Chạy `node --test --test-reporter=tap` trên toàn bộ `translator/tests/*.test.js` (hiện 6 tệp, 67 phép thử) | **LỖI** `[KIEM THU]` nếu có phép thử rớt (thoát `1`) |
-| 3. Tồn tại `CORE` | 94–103 | Đọc mảng `CORE` từ `service-worker.js`, xác nhận mọi tệp đều tồn tại trong `translator/` | **LỖI** `[SERVICE WORKER]` nếu thiếu tệp (thoát `1`) |
-| 4. Nhánh so sánh | 105–120 | Chọn nhánh gốc theo thứ tự `origin/claude/realtime-translation-app-68o1ik` → `claude/realtime-translation-app-68o1ik` → `origin/main` → `main` (hoặc `argv[2]`), tìm `merge-base`, gom tệp đã sửa + tệp mới chưa theo dõi | Cảnh báo `[GIT]` nếu không thấy nhánh gốc |
-| 5. Tăng `CACHE` | 122–136 | Nếu có tệp trong `CORE` hoặc `translator/room.bundle.js` thay đổi mà `CACHE` không đổi so với `base` | **LỖI** `[SERVICE WORKER]` (thoát `1`) |
-| 6. `room.bundle.js` | 138–144 | Sửa `translator/src/room.js` mà chưa sửa `translator/room.bundle.js` → **LỖI** `[BUNDLE]`; sửa ngược lại (`room.bundle.js` đổi, `src/room.js` không đổi) → **CẢNH BÁO** | **LỖI** (thoát `1`) / **CẢNH BÁO** |
-| 7. `styles.css` | 146–152 | Sửa `input.css` hoặc `tailwind.config.js` mà chưa sửa `styles.css` → **LỖI** `[TAILWIND]`; sửa `index.html` hoặc `app.js` mà không sửa `styles.css` → **CẢNH BÁO** nhắc build lại nếu có lớp Tailwind mới | **LỖI** (thoát `1`) / **CẢNH BÁO** |
-| 8. Cảnh báo rủi ro & phạm vi | 154–165 | (a) Sửa `firestore.rules` → `[FIRESTORE]` (nhắc chạy Emulator, Publish, kiểm tra đã sửa `rules-test*.js` chưa); (b) sửa `config.js` → `[CONFIG]`; (c) sửa tệp ngoài danh sách trắng (`translator/`, `.bangiao/`, `.claude/`, `cong-cu/`, `CLAUDE.md`, `.gitignore`) → `[PHAM VI]` | **CẢNH BÁO** (vẫn thoát `0` / `DAT`) |
-
-**Phát hiện quan trọng ở dòng 162–163:** Danh sách trắng của `cong-cu/kiem-tra-dich.js` **chưa có** `.agents/` và `AGENTS.md`. Do đó mọi nhánh làm việc theo quy trình A1–A5 đều xuất hiện cảnh báo `[PHAM VI]` liệt kê các tệp `.agents/*` (và `AGENTS.md` nếu có sửa), dù kết quả vẫn là `KIEM TRA TU DONG: DAT`. Vì `PLAN.md` khóa không sửa `cong-cu/*`, A3 và A5 cần biết trước cảnh báo này và chỉ kiểm tra xem trong danh sách cảnh báo có lẫn tệp ứng dụng ở thư mục gốc hay không.
-
----
-
-## 2. Đối chiếu dây chuyền cũ (`.claude/agents/*`, `.claude/commands/*`, `.bangiao/`) với chuỗi A1–A5 (`.agents/`)
-
-### 2.1. Bảng ánh xạ và điểm trùng
-
-| Thành phần dây chuyền cũ | Tương ứng chuỗi mới | Điểm trùng | Điểm khác biệt chính |
-|---|---|---|---|
-| `.claude/agents/planner.md` | `.agents/roles/A1.md` (Claude Code) | Chỉ đọc, không viết code; xác định mục tiêu, danh sách đóng, mục `KHÔNG ĐỔI`, trường hợp biên, câu hỏi còn bỏ ngỏ | Cũ ghi `.bangiao/ke-hoach.md` (bị `.gitignore`); mới ghi `.agents/PLAN.md` (lưu Git), phân vai A2/A3/A4/A5, cho phép bỏ qua A1/A2 cho việc nhỏ |
-| *(gộp trong `planner` / `coder`)* | `.agents/roles/A2.md`, `A4.md` (Antigravity) | — | Tách riêng khâu khảo sát mã (A2 → `.agents/SURVEY.md`) và khâu giao diện HTML/CSS/SVG/biểu tượng (A4) |
-| `.claude/agents/coder.md` | `.agents/roles/A3.md` (Codex CLI) | Sửa có mục tiêu trong danh sách đóng; tuân thủ JS thuần, chống XSS, CACHE, `room.bundle.js`, `styles.css`, `firestore.rules` + `rules-test*.js` + `FIREBASE-SETUP.md`, logic thuần có test `node:test`; kiểm tra phạm vi bằng `git status` | Cũ chạy Claude (`sonnet`), ghi `.bangiao/thay-doi.md`, **không tự commit** (`coder.md` dòng 31); mới chạy Codex CLI, tự chạy `node cong-cu/kiem-tra-dich.js`, **tự commit từng bước** kèm `Agent: Codex/<mô hình>` |
-| `.claude/agents/tester.md` | Phân bổ sang **A3** và **A5** | Chạy `node cong-cu/kiem-tra-dich.js`, viết kiểm thử `node:test`, soạn kịch bản kiểm thử trên thiết bị, hướng dẫn chạy Emulator | Viết test đơn vị + chạy kiểm tra tự động đưa về A3 (trước bàn giao) và A5 xác nhận lại; soạn kịch bản kiểm thử trên thiết bị chuyển vào A5 |
-| `.claude/agents/reviewer.md` | `.agents/roles/A5.md` (Claude Code hoặc Codex CLI) | Chỉ đọc, đối chiếu `git diff` với kế hoạch và danh sách đóng, chạy lại `kiem-tra-dich.js`, kiểm tra các rủi ro riêng của app dịch, xuất phán quyết | Cũ chạy cùng công cụ Claude (`sonnet`), ghi `PHAN QUYET: CHOT / CAN SUA / CHAN` vào `.bangiao/danh-gia.md`; mới **bắt buộc khác công cụ/mô hình với mọi tác giả** (`AGENTS.md` mục 5), kiểm tra dòng `Agent:` từng commit, ghi `PHÁN QUYẾT: ĐẠT / CẦN SỬA` + dòng `Người viết \| Người rà soát \| Commit` vào `.agents/REVIEW.md` |
-| `.claude/commands/kehoach\|tiep\|ship.md` | `.agents/roles/DIEU-PHOI.md` (Codex + Orca) | Chặn chạy trên `main` và `claude/realtime-translation-app-68o1ik` (`tiep.md` dòng 8, `ship.md` dòng 7); dừng khi còn câu hỏi bỏ ngỏ hoặc đụng `firestore.rules`/dịch vụ tốn phí (`ship.md` dòng 13–15); cấm push/gộp PR/`firebase deploy` | Cũ điều phối nội bộ subagent trong một phiên Claude Code; mới điều phối đa công cụ (Claude/Antigravity/Codex) qua `orca orchestration`, hỗ trợ vòng sửa tối đa 2 vòng |
-
-### 2.2. Những điểm của dây chuyền cũ PHẢI giữ lại trong A1–A5 và DIEU-PHOI.md
-1. **Checklist "CÁC LỚP BỊ ẢNH HƯỞNG" (`planner.md` dòng 26–33) → đưa vào `A1.md`:** đánh dấu Có/Không cho (i) tệp trong `CORE` của `service-worker.js` → tăng `CACHE`, (ii) `src/room.js` → build lại `room.bundle.js`, (iii) `firebase/firestore.rules` → thêm phép thử + cập nhật `FIREBASE-SETUP.md` + nhắc dán & Publish, (iv) lớp Tailwind mới → build lại `styles.css`, (v) dịch vụ tốn phí Google Cloud (Translate, TTS, STT) hoặc thay đổi đo mức dùng/hạn mức VIP.
-2. **Các trường hợp biên đặc thù của app dịch (`planner.md` dòng 35–36) → đưa vào `A1.md` / `A5.md`:** mất mạng, từ chối quyền micro, Safari iOS, hai thiết bị cùng phòng, phòng hết hạn, người xem chưa đăng nhập, hết hạn mức, chuỗi rỗng.
-3. **Kịch bản kiểm thử trên thiết bị (`tester.md` dòng 30–37, 27–28) → đưa vào `A5.md`:**
-   - Phủ các nền tảng liên quan: Máy tính (Chrome), Android (Chrome), iPhone (Safari).
-   - Gồm đường chạy thuận lợi, các trường hợp biên, ít nhất một trường hợp báo lỗi đúng cách (mất mạng, từ chối micro, hết hạn mức...), kịch bản hai thiết bị (chủ phòng + người xem quét QR) nếu đụng phòng họp, và bước xác nhận nạp `CACHE` mới.
-   - Đúng mẫu từng bước: `Thao tác → Kết quả mong đợi → [ ] Đạt / [ ] Không đạt`.
-   - Nếu `firestore.rules` thay đổi: kèm hướng dẫn chạy `rules-test*.js` bằng Firebase Emulator (agent không tự khởi động Emulator) và nhắc dán quy tắc + bấm Publish trên Firebase Console.
-4. **Danh sách rủi ro riêng của app dịch (`reviewer.md` dòng 20–29) → đưa vào `A5.md`:**
-   - Dữ liệu người dùng/Firestore đưa vào `innerHTML` chưa escape (XSS lan sang mọi người trong phòng họp).
-   - Quy tắc Firestore bị nới lỏng (người lạ đọc/ghi phòng, VIP tự nâng quyền, đọc `config/google` khi không đủ điều kiện).
-   - Khóa API hoặc thông tin nhạy cảm bị ghi cứng hoặc lộ ra người xem.
-   - Phát sinh chi phí Google Cloud ngoài dự kiến hoặc bỏ qua hạn mức/đo mức dùng.
-   - Quên tăng `CACHE`, quên build lại `room.bundle.js` hoặc `styles.css`.
-   - Rò rỉ tài nguyên: micro, `AudioContext`, listener `onSnapshot` không được dừng.
-   - Hỏng trên Safari iOS (âm thanh cần thao tác chạm, API không hỗ trợ, `localStorage` bị xóa).
-   - Sửa nhầm tệp của ứng dụng tra cứu nhà xưởng ở thư mục gốc.
-5. **Cổng dừng cho `firestore.rules` và dịch vụ tốn phí (`ship.md` dòng 14–15) → đưa vào cổng dừng (b) của `DIEU-PHOI.md`** (bổ sung cùng hạn mức VIP).
-
-### 2.3. Nguy cơ xung đột khi `.agents/` và `.bangiao/` cùng tồn tại
-1. **Lẫn sổ bàn giao và trạng thái Git (`.gitignore` dòng 2):** `.bangiao/` bị `.gitignore` bỏ qua và bị lệnh `/kehoach`, `/tiep`, `/ship` xóa sạch mỗi phiên, còn `.agents/PLAN.md`, `SURVEY.md`, `REVIEW.md` được theo dõi trong Git. Nếu người dùng chuyển đổi giữa hai dây chuyền trên cùng nhánh, agent có thể đọc nhầm kế hoạch cũ. **Cách tránh:** chọn duy nhất một dây chuyền cho mỗi yêu cầu; các tệp vai trò A1–A5 ghi rõ chỉ đọc `.agents/PLAN.md`, `.agents/SURVEY.md`, `.agents/REVIEW.md` (không đọc `.bangiao/`).
-2. **Khác nhau về hành vi commit:** dây chuyền cũ (`coder.md` dòng 31, `tiep.md` dòng 24, `ship.md` dòng 23) không commit; quy trình A1–A5 yêu cầu mỗi vai commit riêng kèm dòng `Agent:`. Nếu nhánh đang có thay đổi chưa commit từ dây chuyền cũ thì Bước 0 của `DIEU-PHOI.md` (yêu cầu `git status` sạch) và bước 0 của `/ship` (`ship.md` dòng 8) đều sẽ dừng.
-3. **Cảnh báo `[PHAM VI]` từ `cong-cu/kiem-tra-dich.js` (dòng 162–164):** do công cụ được viết cho dây chuyền cũ (chỉ whitelist `.bangiao/`, `.claude/`), mọi phiên theo quy trình A1–A5 sẽ sinh cảnh báo `[PHAM VI]` cho `.agents/*` (và `AGENTS.md`). Không được coi đó là lỗi `LOI`, nhưng A5 phải đọc kỹ danh sách tệp trong cảnh báo để chắc chắn không có tệp nào thuộc ứng dụng thư mục gốc.
-4. **Chênh lệch lớp bảo vệ kỹ thuật giữa các công cụ:** `.claude/settings.json` chỉ có tác dụng với Claude Code; Codex CLI và Antigravity không đọc tệp này. Vì vậy quy trình mới buộc phải dựa vào khối **Quy tắc chung bắt buộc** trong mọi tệp vai trò và khâu kiểm chứng `git diff` + dòng `Agent:` của điều phối viên và A5.
-
----
-
-## 3. Đề xuất bổ sung `permissions.deny` trong `.claude/settings.json`
-
-Hiện trạng `.claude/settings.json` (dòng 11–26) đã chặn:
-- `Bash(git push -u origin claude/realtime-translation-app-68o1ik:*)`, `Bash(git push origin HEAD:claude/realtime-translation-app-68o1ik:*)`, `Bash(git push origin claude/realtime-translation-app-68o1ik:*)`, `Bash(git push origin main:*)`
-- `Bash(git push -f:*)`, `Bash(git push --force:*)`, `Bash(git merge:*)`, `Bash(git reset --hard:*)`
-- `Bash(gh pr merge:*)`
-- `Bash(firebase deploy:*)`, `Bash(npx firebase-tools deploy:*)`
-- `Bash(rm -rf:*)`, `Read(./.env)`, `Read(./.env.*)`
-
-Các mục **còn thiếu** so với quy tắc chung trong `AGENTS.md` (dòng 17–18), `CLAUDE.md` (dòng 69–70), `SonadeziLongThanh/.claude/settings.json` (dòng 8) và yêu cầu `PLAN.md` (bước A3-4) — *chỉ đề xuất để A3 bổ sung, không xóa/sửa mục cũ, không đổi `allow`*:
-
-### Nhóm 1 — Bắt buộc tối thiểu theo `PLAN.md` A3-4
-1. `"Bash(git rebase:*)"` — chặn rebase (bảo vệ lịch sử nhánh và tránh rebase vào `main`/nhánh phát hành; đồng bộ với repo Bản đồ KCN).
-2. `"Bash(gh pr create --base main:*)"` — chặn tạo Pull Request nhắm vào `main` (`AGENTS.md` dòng 17).
-
-### Nhóm 2 — Đề xuất bổ sung để bịt các biến thể lệnh dễ lọt qua quy tắc hiện có
-3. `"Bash(gh pr create -B main:*)"` — cờ viết tắt `-B` tương đương `--base` của `gh pr create`.
-4. `"Bash(git push --force-with-lease:*)"` — biến thể force-push không khớp mẫu `-f` hoặc `--force`.
-5. `"Bash(git push -u origin main:*)"` và `"Bash(git push origin HEAD:main:*)"` — đối xứng với 2 biến thể đã có cho `claude/realtime-translation-app-68o1ik` (dòng 12–13).
-6. `"Bash(npx firebase deploy:*)"` — phòng trường hợp gọi ngắn `npx firebase deploy` thay vì `npx firebase-tools deploy`.
-7. `"Bash(orca orchestration approve:*)"` — ngăn chặn gọi lệnh tự duyệt hộp thoại quyền, đồng bộ với mục Cấm của `DIEU-PHOI.md`.
-
-*(Lưu ý: không chặn `git push` tổng quát vì `CLAUDE.md` dòng 71 cho phép đẩy nhánh tính năng riêng khi người dùng yêu cầu.)*
-
----
-
-## 4. Khác biệt điều phối (`DIEU-PHOI.md`) so với repo Bản đồ KCN
-
-Cú pháp lệnh `orca orchestration` đã xác minh qua `--help` trùng khớp hoàn toàn với bản Orca **1.4.272** khảo sát ở repo `SonadeziLongThanh` (`feat/dieu-phoi:.agents/SURVEY.md` và `DIEU-PHOI.md` commit `67b7bba`/`6cad969`). Các khác biệt bắt buộc phải thay đổi khi áp dụng sang repo `Sonadezi`:
-
-| Hạng mục | Repo Bản đồ KCN (`SonadeziLongThanh`) | Repo App dịch Live (`Sonadezi`) |
+| Thành phần | Tệp và dòng | Nội dung hiện tại |
 |---|---|---|
-| **Thư mục chính không được sửa** | `C:\SZL-Apps\SonadeziLongThanh` | `C:\SZL-Apps\Sonadezi` |
-| **Nhánh gốc tạo worktree yêu cầu** | `main` | Nhánh phát hành **`claude/realtime-translation-app-68o1ik`** (KHÔNG tạo từ `main` vì `main` cũ hơn) |
-| **Kiểm tra ở Bước 0** | Nhánh hiện tại là `feat/…` hoặc `fix/…`, `git status` sạch, `orca status --json` sẵn sàng | Thêm yêu cầu: nhánh `feat/…` hoặc `fix/…` **tách từ `claude/realtime-translation-app-68o1ik`**, **không** đứng trên `main` và **không** đứng trên `claude/realtime-translation-app-68o1ik` |
-| **`--base-branch` cho worktree con của Antigravity (A2/A4)** | `--worktree new-child --base-branch <nhánh-hiện-tại> --name <tên-ngắn>` | Giữ nguyên bắt buộc `--base-branch <nhánh-hiện-tại>` (là nhánh yêu cầu đang đứng). **Rủi ro cao hơn nếu bỏ sót:** nhánh mặc định có thể là `main` cũ hoặc nhánh phát hành, khiến worktree con thiếu cả `PLAN.md`, commit A3 và có thể mất phần lớn mã `translator/` mới nhất, gây xung đột khi `git cherry-pick`. Khi dùng `--worktree current` vẫn phải bỏ `--base-branch`, `--name`, `--repo`, `--display-name`, `--comment`, `--setup` (đã xác minh ở `worker-start --help`). |
-| **Đích PR & nhánh cấm push** | Đích PR: `main`; cấm push `main` | Đích PR: **`claude/realtime-translation-app-68o1ik`**; **KHÔNG tạo PR vào `main`**; cấm push cả `main` lẫn `claude/realtime-translation-app-68o1ik` |
-| **Lệnh triển khai bị cấm** | `clasp push`, `clasp deploy/redeploy/...`, `xoaCache()` | `firebase deploy`, `npx firebase-tools deploy` (bỏ toàn bộ quy tắc `clasp` và `xoaCache()`) |
-| **Lệnh kiểm chứng tự động** | `node --check < <tệp>.gs` | `node cong-cu/kiem-tra-dich.js` |
-| **Lệnh đối chiếu diff của A5** | `git diff main...HEAD` | `git diff claude/realtime-translation-app-68o1ik...HEAD` |
-| **Cổng dừng (b)** | Thay đổi phân quyền, xác thực, triển khai | Bổ sung thêm: thay đổi **`translator/firebase/firestore.rules`**, **dịch vụ tốn phí Google Cloud** (Translation, TTS, STT), và **hạn mức VIP** |
-| **Thiếu dòng `Agent:` (ghi nhận A5 bên Bản đồ KCN)** | Ghi nhận mức Thấp cần bổ sung | Bổ sung rõ trong `DIEU-PHOI.md`: **Commit thiếu dòng `Agent:` thì dừng và báo anh Hiếu.** |
-| **Bước 1 – Phân loại & phạm vi A4** | A4 sửa HTML/CSS/SVG nhận diện SZL, kiểm tra 1920×1080 và điện thoại | A4 sửa `translator/index.html`, `styles.css`/`input.css`/`tailwind.config.js`, `ui.css`, biểu tượng (`translator/icons/*`); kiểm tra máy tính (Chrome), Android (Chrome), iPhone (Safari); nhớ build `styles.css` và tăng `CACHE` nếu sửa tệp `CORE` |
+| Giá trị mặc định | `translator/config.js:14–16` | `window.APP_CONFIG.recognition.minConfidence: 0.3` (kèm chú thích dòng 15: "Đặt 0 để tắt"). |
+| Nơi đọc cấu hình | `translator/app.js:953–954` | `const RCFG = (window.APP_CONFIG && window.APP_CONFIG.recognition) || {};`<br>`const MIN_CONF = typeof RCFG.minConfidence === 'number' ? RCFG.minConfidence : 0;` |
+| Nơi lọc độ tin cậy | `translator/app.js:972–978` | `function heard(result)` kiểm tra `if (result.isFinal && alt.confidence > 0)` → `if (MIN_CONF > 0 && alt.confidence < MIN_CONF) return '';`, ngược lại trả `alt.transcript`. Chưa gọi `micLog(...)` khi bỏ câu. |
+| Nơi gọi `heard()` #1 (Hội thoại) | `translator/app.js:1048` | Trong `rec.onresult` (khi `!state.meeting`): `for (let i = 0; i < ev.results.length; i++) text += heard(ev.results[i]);` — duyệt lại **từ chỉ số `0`** trên mỗi sự kiện `onresult`. |
+| Nơi gọi `heard()` #2 (Họp/Hội nghị/Biên bản) | `translator/app.js:1425` | Trong `onMeetingResult(ev)`: `const t = applyGlossary(heard(r).trim());` — duyệt từ `ev.resultIndex` (`app.js:1423`). |
+| Cờ ngôn ngữ có dấu cách (`sp`) | `translator/app.js:7–26` | `LANGS[k].sp`: `false` cho `zh` (dòng 11), `zht` (dòng 12), `ja` (dòng 13), `th` (dòng 15); **`true` cho `ko` (dòng 14)** và các ngôn ngữ còn lại (`en`, `vi`, `fr`, `de`, `es`, `pt`, `it`, `ru`, `ar`, `hi`, `id`, `ms`). |
+| Tài liệu hướng dẫn | `translator/HUONG-DAN.md:184–190` | Mục 12 đang ghi `minConfidence (0–1, mặc định 0,3)` và mô tả `glossary`. |
+
+### 1.2. Luồng Web Speech final / interim và bộ đệm câu `utt` trong `translator/app.js`
+
+- **Biến trạng thái liên quan:**
+  - `state.meeting` (`app.js:121`), `state.incr` (`app.js:124`, mặc định `true`), `state.cutMs` (`app.js:125`, mặc định `0`), `state.meetingSpeak` (`app.js:127`), `state.speaking` (`app.js:128`), `state.autoTurn` (`app.js:129`), `state.conf` (`app.js:130`), `state.viMain` (`app.js:131`), `state.minutes` (`app.js:132`), `state.cloudActive` (`app.js:112`), `state.reading` (`app.js:112`).
+  - `SR`, `rec`, `committed`, `wantListening`, `lastNetError`, `silenceTimer` (`app.js:981–986`); `micFail`, `sessionStartAt`, `MIC_MAX_FAIL = 6` (`app.js:1032–1033`).
+  - `newUtt()` / `utt` / `resetUtt()` (`app.js:1204–1207`): `utt` giữ `{ consumed, parts, results, lastText, tLast, forced, timer, tail: { text, done, result, seq, at, timer } }`. `resetUtt()` hủy cả `utt.timer` và `utt.tail.timer` rồi tạo đối tượng rỗng mới.
+- **Khởi tạo phiên nghe `beginSession()` (`app.js:1034–1101`):**
+  - Tạo `rec = new SR()`, đặt `utt.forced = ''` (`app.js:1036`), `rec.lang = sttLocale(state.src)`, `continuous = true`, `interimResults = true`, `maxAlternatives = 1`.
+  - `rec.onstart` (`app.js:1043`): ghi `sessionStartAt`, đặt `state.micGaveUp = false`, `setListeningUI(true)`.
+  - `rec.onresult` (`app.js:1045–1056`): nếu `state.meeting` thì rẽ vào `onMeetingResult(ev)` (dòng 1046); nếu chế độ Hội thoại thì ghép toàn bộ `ev.results[0..n-1]` qua `heard()`, nối `committed`, cập nhật `el.src.value`, `translateDebounced()` và đặt `silenceTimer` (`SILENCE_MS = 1200`, gọi `stopListening_andTranslate`).
+  - `rec.onerror` (`app.js:1058–1080`): giữ cuộc họp khi `network`/`audio-capture` (tăng `micFail`), dừng `wantListening` khi `not-allowed`/`service-not-allowed`.
+  - `rec.onend` (`app.js:1082–1098`): hiện chỉ ghi `committed = el.src.value.trim()` (dòng 1085, dùng cho Hội thoại), kiểm tra `micFail >= MIC_MAX_FAIL` (dòng 1087–1090), hoặc đặt `setTimeout(..., delay)` để gọi `beginSession()` (dòng 1091–1094), hoặc gọi `finish()` (dòng 1096). **Chưa chốt `utt.lastText` khi `state.meeting`.**
+- **Xử lý kết quả trong chế độ Họp `onMeetingResult(ev)` (`app.js:1418–1440`):**
+  - Nếu `state.speaking` thì bỏ qua (dòng 1420).
+  - Duyệt `i = ev.resultIndex .. ev.results.length - 1` (dòng 1423–1427): gọi `t = applyGlossary(heard(r).trim())`; nếu `r.isFinal` thì gọi `commitFinal(t)` (nếu trả `true` thì đặt `gotFinal = true`), ngược lại cộng dồn vào `interim`.
+  - Nếu có `utt.forced && interim`, cắt bỏ phần đã chốt sớm bằng `stripForced(interim, utt.forced)` (dòng 1428).
+  - Gán `el.src.value = interim; updateCounter();` (dòng 1429–1430).
+  - Khi `interim && !gotFinal` (dòng 1431–1437): cập nhật `utt.lastText = interim; utt.tLast = Date.now();`, chạy dịch tăng dần `incrementalStep(interim)` nếu bật `state.incr` và không phải Biên bản / `viMain`, và hẹn giờ `utt.timer = setTimeout(forceCommit, cut)` nếu `state.cutMs > 0`.
+  - Khi `gotFinal && state.autoTurn && !state.minutes` (dòng 1439): gọi `setLangs(state.tgt, state.src, false)`.
+- **Chốt câu sớm và chốt câu cuối:**
+  - `forceCommit()` (`app.js:1277–1287`): lấy `text = utt.lastText.trim()`; nếu `!text || !state.meeting` thì thoát; gọi `queueMeeting(text, snapshotUtt())`; lưu `prev = utt.forced`; gọi `resetUtt()` (xóa `utt.lastText`, hủy `utt.timer` và `utt.tail.timer`); cập nhật `utt.forced` để khử trùng phần đã chốt sớm; xóa `el.src.value`, `el.out.textContent`, gọi `updateCounter()`.
+  - `commitFinal(f)` (`app.js:1288–1299`): nếu có `utt.forced` thì gọi `stripForced(f, utt.forced)` — nếu rỗng thì `resetUtt(); return false;` (bỏ câu trùng), nếu khác `null` thì chỉ lấy phần đuôi mới; gọi `queueMeeting(...)`, `resetUtt()`, xóa `el.out.textContent`, trả `true`.
+  - `queueMeeting(text, pre, fromArg, toArg)` (`app.js:1128–1158`): khử lặp trong 4 giây khi `!fromArg && text === lastMeetingText && now - lastMeetingAt < 4000` (dòng 1130); đọc `from = fromArg || state.src, to = toArg || state.tgt` **ngay tại lúc gọi** (dòng 1132); đẩy tác vụ dịch/ghi lịch sử vào `meetingChain`; nếu cần đọc bản dịch thì gọi `enqueueSpeech(out, to, histItem)` (dòng 1156).
+- **Tạm nghỉ micro khi đọc `drainSpeech()` (`app.js:1370–1408`) và `refreshSession()` (`app.js:1410–1416`):**
+  - Nhánh Hội nghị (`state.conf`, dòng 1374–1391): micro vẫn mở trong lúc đọc; `finally` gọi `refreshSession()` (dòng 1389) — hàm `refreshSession()` **đã** gỡ `rec.onend = null; rec.onresult = null; rec.abort()` rồi gọi `if (utt.lastText && utt.lastText.trim()) forceCommit()` (dòng 1411–1412) trước khi hẹn `beginSession()` sau 150 ms (dòng 1415).
+  - Nhánh Họp thường (`!state.conf`, dòng 1393–1407): đặt `setSpeakingUI(true)`; nếu `state.cloudActive` gọi `CloudSTT.pause()`, ngược lại `rec.onend = null; rec.abort()` (dòng 1396) rồi xóa `el.src.value = ''` (dòng 1397) mà **chưa gọi `forceCommit()`** và chưa gỡ `rec.onresult = null`. Khi đọc xong (`finally`, dòng 1406) gọi `CloudSTT.resume()` hoặc `beginSession()`.
+- **Đổi ngôn ngữ / đổi người nói `setLangs(s, t, swapText)` (`app.js:233–248`):**
+  - Dòng 234–237: nếu `wasMeeting` thì gọi `resetUtt(); if (rec) { rec.onend = null; try { rec.abort(); } catch (_) {} }` (dòng 235) — **chưa chốt `utt.lastText` trước `resetUtt()`** và chưa gỡ `rec.onresult = null`; nếu không phải họp mà đang nghe thì `stopListening()`. Sau đó gọi `archiveTurn()` (dòng 237), đổi `state.src = s; state.tgt = t;` (dòng 238–239), đồng bộ UI, rồi khởi động lại Cloud hoặc gọi `beginSession()` nếu `!state.speaking` (dòng 242–247).
 
 ---
 
-## 5. Ghi chú cho A3
+## 2. Toàn bộ nơi gọi các hàm liên quan trong `translator/app.js`
 
-1. **Khối `## Quy tắc chung bắt buộc` phải giống hệt nhau từng ký tự ở cả 6 tệp** (`.agents/roles/A1.md`–`A5.md` và `.agents/roles/DIEU-PHOI.md`):
-   - Giữ đủ khung ý của mẫu Bản đồ KCN nhưng thay toàn bộ nội dung đặc thù sang repo `Sonadezi`:
-     - Đọc `AGENTS.md` (và `CLAUDE.md`) trước khi làm; khi khác nhau, làm theo quy tắc chặt hơn.
-     - Chỉ làm việc trong worktree Orca của yêu cầu hiện tại; không sửa thư mục chính `C:\SZL-Apps\Sonadezi`; không sửa ứng dụng ở thư mục gốc kho khi yêu cầu về app dịch.
-     - KHÔNG gộp Pull Request, KHÔNG push lên `main` hoặc nhánh phát hành `claude/realtime-translation-app-68o1ik`, KHÔNG tạo Pull Request vào `main`, KHÔNG `git merge`/`git rebase` vào `main` hoặc nhánh phát hành, KHÔNG `git push --force`.
-     - KHÔNG chạy `firebase deploy` hoặc `npx firebase-tools deploy`.
-     - Không push nhánh, không tạo Pull Request nếu anh Hiếu chưa yêu cầu. Gộp nhánh và triển khai (kể cả dán và Publish quy tắc Firestore) do anh Hiếu thực hiện sau khi tự thử nghiệm.
-     - Mỗi commit có dòng cuối: `Agent: <công cụ>/<mô hình>` (ví dụ `Agent: Codex/GPT-6.2-Sol`). Không thêm dòng `Co-Authored-By`.
-     - Không ghi khóa Google Cloud, khóa bí mật, mật khẩu, token vào bất kỳ tệp nào (không đưa bí mật vào `translator/config.js`).
-     - Báo cáo cuối phiên bằng tiếng Việt, văn phong hành chính: đã làm gì, tệp nào, đã kiểm tra gì (kèm kết quả thật), còn gì chưa làm.
-   - Rà soát sau khi viết: bảo đảm trong cả 6 tệp **không còn sót** các chuỗi `clasp`, `xoaCache`, `Apps Script`, `GAS`, `SonadeziLongThanh`, `Script ID`.
-2. **Chi tiết từng tệp vai trò (`A3-1`, đúng cấu trúc 4 phần: tiêu đề, `## Nhiệm vụ`, `## Đầu ra bàn giao`, `## Quy tắc chung bắt buộc`):**
-   - **`A1.md`:** đọc `AGENTS.md` và `CLAUDE.md`; lập kế hoạch kèm danh sách đóng, mục `KHÔNG ĐỔI` (gồm ứng dụng ở thư mục gốc), bảng đánh dấu Có/Không cho 5 lớp ảnh hưởng (`CORE`/CACHE, `src/room.js`/`room.bundle.js`, `firestore.rules`, lớp Tailwind mới/`styles.css`, dịch vụ tốn phí Google Cloud / hạn mức VIP), trường hợp biên của app dịch, và quy tắc bỏ qua A1/A2 cho việc nhỏ.
-   - **`A2.md`:** đọc `AGENTS.md`, `CLAUDE.md`, `.agents/PLAN.md` và mã nguồn liên quan; ghi tệp, hàm, số dòng, luồng dữ liệu, rủi ro và tài liệu chính thức cần tham khảo; chỉ sửa `.agents/SURVEY.md`.
-   - **`A3.md`:** giữ quy tắc JavaScript thuần, chống XSS (`textContent`/escape), logic thuần có `module.exports` + viết kiểm thử `node:test`; chạy **`node cong-cu/kiem-tra-dich.js`** trước khi bàn giao (lưu ý không thay bằng `node --test translator/tests/` vì lỗi `MODULE_NOT_FOUND` trên Node 24 Windows); tăng `CACHE` trong `translator/service-worker.js` khi sửa tệp trong `CORE` hoặc `room.bundle.js`; build lại `room.bundle.js` và commit cùng `src/room.js`; build lại `styles.css` khi thêm lớp Tailwind mới hoặc sửa `input.css`/`tailwind.config.js`; khi sửa `firestore.rules` thì cập nhật `rules-test*.js` và `translator/docs/FIREBASE-SETUP.md`. Ghi rõ chỉ đọc `.agents/` (không trộn `.bangiao/`).
-   - **`A4.md`:** phạm vi `translator/index.html`, `translator/styles.css`, `translator/input.css`, `translator/tailwind.config.js`, `translator/ui.css`, biểu tượng (`translator/icons/*`); giữ nhận diện màu thương hiệu `#0d4792` và các chế độ hiển thị sẵn có (`big`, `dual`, `viewer`, `minutes`, màn hình chờ); nếu thêm lớp Tailwind mới hoặc sửa `input.css`/`tailwind.config.js` thì build lại `styles.css`; nếu sửa tệp thuộc `CORE` thì tăng `CACHE` trong `translator/service-worker.js` và chạy `node cong-cu/kiem-tra-dich.js`; kiểm tra trên máy tính (Chrome), Android (Chrome), iPhone (Safari).
-   - **`A5.md`:** đối chiếu `git diff claude/realtime-translation-app-68o1ik...HEAD` (không dùng `main...HEAD`); xác nhận dòng `Agent:` của mọi commit không trùng công cụ với mình (thiếu dòng `Agent:` thì dừng báo); chạy lại `node cong-cu/kiem-tra-dich.js`; kiểm tra đủ các rủi ro riêng của app dịch (XSS qua `innerHTML`, quy tắc Firestore bị nới, lộ khóa, chi phí Google Cloud/hạn mức VIP, quên `CACHE`/`room.bundle.js`/`styles.css`, rò rỉ micro/`AudioContext`/`onSnapshot`, Safari iOS, sửa nhầm ứng dụng ở thư mục gốc); giữ đúng 2 dòng mở đầu theo mẫu (`PHÁN QUYẾT: ĐẠT` hoặc `PHÁN QUYẾT: CẦN SỬA` và `Người viết: ... | Người rà soát: ... | Commit: ...`), liệt kê lỗi Cao/Trung bình/Thấp kèm tệp và số dòng; cuối `REVIEW.md` soạn **kịch bản kiểm thử trên thiết bị** (`Thao tác → Kết quả mong đợi → [ ] Đạt / [ ] Không đạt`, có kịch bản 2 thiết bị nếu đụng phòng họp, bước kiểm tra `CACHE` mới, và hướng dẫn chạy Emulator + dán Publish nếu đổi `firestore.rules`).
-3. **Chi tiết cho `DIEU-PHOI.md` (`A3-2`):**
-   - Giữ nguyên toàn bộ khối lệnh `orca orchestration` đã xác minh trên Orca `1.4.272` từ mẫu `SonadeziLongThanh` (`--environment local`, `--spec-file "$env:TEMP\..."`, cấm `<<`/`<<<`, bỏ cờ tạo worktree khi dùng `--worktree current`, `check` không cần `--ack`, `--types "worker_done,question,escalation"` có ngoặc kép trên PowerShell, `worker-show`/`worker-read --source auto`, xử lý `permission prompt` bằng `deny`/mời anh Hiếu bấm Allow/Deny, cấm `approve` và `Nested worker depth`).
-   - Áp dụng trọn bộ các khác biệt ở Mục 4: nhánh gốc `claude/realtime-translation-app-68o1ik`, Bước 0 chặn `main` và `claude/realtime-translation-app-68o1ik`, `--base-branch <nhánh-hiện-tại>` cho `new-child`, cổng dừng (b) thêm `firestore.rules`/dịch vụ tốn phí Google Cloud/hạn mức VIP, quy tắc "Commit thiếu dòng `Agent:` thì dừng và báo anh Hiếu", và khối Quy tắc chung khớp từng ký tự với `A1.md`.
-4. **Chỉnh `AGENTS.md` (`A3-3`) và `.claude/settings.json` (`A3-4`):**
-   - `AGENTS.md`: chỉ thêm mục `## 7. Vai trò agent và phương án điều phối` ở cuối tệp (sau dòng 50), đủ mọi ý trong `PLAN.md` A3-3; không sửa nội dung dòng 1–50.
-   - `.claude/settings.json`: chỉ thêm các mục vào `permissions.deny` (tối thiểu Nhóm 1 ở Mục 3, cân nhắc thêm Nhóm 2), giữ nguyên `allow` và 14 mục `deny` hiện có, xác minh JSON hợp lệ.
-5. **Tự kiểm tra (`A3-5`):**
-   - Khi chạy `node cong-cu/kiem-tra-dich.js`, kết quả kỳ vọng là `KIEM TRA TU DONG: DAT` (mã thoát `0`) kèm cảnh báo `[PHAM VI]` cho `.agents/*` và `AGENTS.md` (do `kiem-tra-dich.js` dòng 162–163 chưa whitelist 2 mục này và `cong-cu/*` nằm ngoài phạm vi sửa). Xác nhận không có tệp ứng dụng ở thư mục gốc trong cảnh báo.
-   - Xác nhận `git diff --stat claude/realtime-translation-app-68o1ik...HEAD` chỉ chứa tệp thuộc danh sách đóng mục 2 `PLAN.md` (cộng các tệp đã có từ `aeb23e6`, `4d4c81f`, `ee6ea37`).
-   - Commit riêng 4 bước `A3-1`, `A3-2`, `A3-3`, `A3-4`, dòng cuối `Agent: Codex/<mô hình>`, không `Co-Authored-By`.
+| Hàm | Định nghĩa | Tất cả nơi gọi (tệp:dòng — ngữ cảnh) |
+|---|---|---|
+| `heard` | `app.js:972–978` | 1. `app.js:1048` (`rec.onresult` — chế độ Hội thoại, lặp `i = 0..n-1`)<br>2. `app.js:1425` (`onMeetingResult` — chế độ Họp/Hội nghị/Biên bản, lặp từ `ev.resultIndex`) |
+| `forceCommit` | `app.js:1277–1287` | 1. `app.js:1412` (`refreshSession`, sau khi đọc ở chế độ Hội nghị)<br>2. `app.js:1436` (`onMeetingResult`, hẹn giờ `utt.timer` khi `state.cutMs > 0`) |
+| `commitFinal` | `app.js:1288–1299` | 1. `app.js:1426` (`onMeetingResult`, khi `r.isFinal && t`) |
+| `drainSpeech` | `app.js:1370–1408` | 1. `app.js:1360` (`enqueueSpeech`, được gọi duy nhất tại `app.js:1156` trong `queueMeeting`) |
+| `refreshSession` | `app.js:1410–1416` | 1. `app.js:1389` (`drainSpeech`, khối `finally` của nhánh `state.conf`) |
+| `setLangs` | `app.js:233–248` | 1. `app.js:1439` (`onMeetingResult`, tự đổi lượt `autoTurn`)<br>2. `app.js:1579` (`fallbackToBrowser`, rời Cloud STT về Web Speech)<br>3. `app.js:1697` (phím `Space` khi đang họp, `!state.minutes`)<br>4. `app.js:1842` (`endMinutes`, sau `stopMeeting`, `state.meeting === false`)<br>5. `app.js:1876` (`mi.start.onclick`, trước `startMeeting`, `state.meeting === false`)<br>6. `app.js:1884` (`mi.start.onclick` hoàn lại khi `!startMeeting()`)<br>7. `app.js:2009` (`el.selSrc.onchange`, chọn ngôn ngữ nguồn)<br>8. `app.js:2014` (`el.selTgt.onchange`, chọn ngôn ngữ đích)<br>9. `app.js:2017` (`el.btnSwap.onclick`, bấm nút ⇄) |
+| `beginSession` | `app.js:1034–1101` | 1. `app.js:247` (`setLangs`, khi `wasMeeting && !state.speaking`)<br>2. `app.js:1014` (`startListening`, Hội thoại)<br>3. `app.js:1094` (`rec.onend`, tự mở lại sau `delay`)<br>4. `app.js:1406` (`drainSpeech`, sau khi đọc xong)<br>5. `app.js:1415` (`refreshSession`, sau 150 ms)<br>6. `app.js:1569` (`restartCloud`, khi không dùng Cloud)<br>7. `app.js:1580` (`fallbackToBrowser`, khi không đổi hướng)<br>8. `app.js:1618` (`el.chkBilingual.onchange`, tắt song ngữ)<br>9. `app.js:1632` (`el.btnReopenMic.onclick`, Mở lại micro)<br>10. `app.js:1658` (`startMeeting`, khi `!useCloud`) |
+| `rec.onend` (kích hoạt gián tiếp qua `rec.abort`/`rec.stop` không gỡ `onend`) | `app.js:1082–1098` | 1. Trình duyệt tự kết thúc phiên (hết ~60 giây, `no-speech`, `network`, `audio-capture`)<br>2. `app.js:2035` (`stopListening_andTranslate`, Hội thoại — gọi `rec.stop()`, `wantListening = false`)<br>3. `app.js:2134` (`el.selSrcAcc.onchange`, đổi vùng giọng nói — gọi `rec.abort()` khi `wantListening` để tự mở lại phiên)<br>*(Các nơi khác: `setLangs:235`, `stopListening:1116`, `drainSpeech:1396`, `refreshSession:1411`, `startCloud:1549`, `stopMeeting:1675` đều gán `rec.onend = null` trước khi dừng.)* |
+
+---
+
+## 3. Service Worker (`translator/service-worker.js`) và cách nạp script (`translator/index.html`)
+
+### 3.1. `translator/service-worker.js`
+- **Hằng phiên bản cache (dòng 5):** `const CACHE = 'translator-v87';` → A3 phải tăng lên `'translator-v88'`.
+- **Danh sách `CORE` (dòng 6–13, hiện 30 mục):**
+  - Dòng 7: `'./'`, `'./index.html'`, `'./app.js'`, `'./dialogs.js'`, `'./find.js'`, `'./stt-cloud.js'`, `'./report.js'`, `'./lang-guess.js'`, `'./captions.js'`, `'./presets.js'`, `'./config.js'`, `'./donate-qr.jpg'`, `'./styles.css'`, `'./ui.css'`, `'./fonts.css'`
+  - Dòng 8–9: 8 tệp phông `.woff2` (`be-vietnam-pro-latin-*`, `be-vietnam-pro-vietnamese-*`) + `'./manifest.json'`
+  - Dòng 10–12: 6 tệp biểu tượng `.png` (`icon-192`, `icon-512`, `icon-512-maskable`, `apple-touch-icon`, `logo-mark`, `logo-full`)
+- **Cần thêm cho Mức 1:** thêm `'./stt-browser.js'` vào mảng `CORE` (ngay cạnh `'./stt-cloud.js'` ở dòng 7).
+
+### 3.2. Cách nạp script trong `translator/index.html`
+- Dòng 694–702 (cuối `<body>`, thẻ `<script>` đồng bộ cổ điển, không `defer`/`module`):
+  ```html
+  694:   <script src="config.js"></script>
+  695:   <script src="stt-cloud.js"></script>
+  696:   <script src="report.js"></script>
+  697:   <script src="lang-guess.js"></script>
+  698:   <script src="captions.js"></script>
+  699:   <script src="presets.js"></script>
+  700:   <script src="app.js"></script>
+  701:   <script src="dialogs.js"></script>
+  702:   <script src="find.js"></script>
+  ```
+- **Cần thêm cho Mức 1:** chèn `<script src="stt-browser.js"></script>` **trước** `<script src="app.js"></script>` (nên đặt ngay sau dòng 695 `stt-cloud.js`).
+- **Quy ước module thuần hiện có** (xem `translator/lang-guess.js:2–56`, `translator/captions.js:2–34`, `translator/presets.js:2–20`): bọc IIFE `(function (root) { 'use strict'; ... if (typeof module !== 'undefined' && module.exports) module.exports = api; root.BrowserSTT = api; })(typeof window !== 'undefined' ? window : globalThis);`. Trong `app.js`, nên kiểm tra phòng thủ `window.BrowserSTT` giống cách dùng `window.LangGuess` (`app.js:546, 2021`) và `window.Captions` (`app.js:1967, 1971`).
+
+---
+
+## 4. Kiểm thử hiện có trong `translator/tests/`
+
+Tổng hiện tại: **6 tệp, 67 phép thử** (`node:test` + `node:assert/strict`), đều đạt qua `node cong-cu/kiem-tra-dich.js`:
+- `captions.test.js` (7 phép thử) — `captions.js`
+- `lang-guess.test.js` (9 phép thử) — `lang-guess.js`
+- `presets.test.js` (2 phép thử) — `presets.js`
+- `report.test.js` (10 phép thử) — `report.js`
+- `stt-cloud.test.js` (29 phép thử) — `stt-cloud.js` (VAD, PCM, hạn mức, `speechContexts`, `levelWatch`)
+- `stt-recognize.test.js` (10 phép thử) — `stt-cloud.js` (`recognize()` với `fetchImpl` giả lập)
+
+**Chưa có tệp kiểm thử nào cho Web Speech / `minConfidence` / `shouldDropFinal`.** A3 tạo mới `translator/tests/stt-browser.test.js` theo đúng quy ước `node:test`.
+*(Lưu ý công cụ trên Windows Node 24: lệnh `node --test translator/tests/` báo `MODULE_NOT_FOUND`; chạy kiểm thử bằng `node cong-cu/kiem-tra-dich.js` hoặc truyền đích danh tệp `node --test translator/tests/stt-browser.test.js`.)*
+
+---
+
+## 5. Rủi ro và trường hợp biên đã phát hiện khi đọc mã (ghi chú cụ thể cho A3)
+
+1. **Rủi ro lớn — `rec.onend` gọi `forceCommit()` kích hoạt `drainSpeech()` trong lúc hẹn giờ `setTimeout(..., delay)` sắp mở lại micro (`app.js:1094`):**
+   - Nếu đang bật "Đọc bản dịch ra loa" (`state.meetingSpeak && !state.conf`), `rec.onend` gọi `forceCommit()` → `queueMeeting()` có thể trả kết quả **ngay lập tức** (ví dụ trúng `cache` dịch ở `app.js:612` hoặc dịch xong trong < 250 ms) → `enqueueSpeech()` → `drainSpeech()` đặt `state.speaking = true` và tạm nghỉ micro để đọc.
+   - 250 ms sau, callback `setTimeout(() => { if (wantListening) { try { beginSession(); } ... } }, delay)` ở **`app.js:1094`** vẫn chạy vì **chưa kiểm tra `!state.speaking` và `!state.cloudActive`** (khác với `refreshSession()` dòng 1415 vốn có đủ `if (state.meeting && wantListening && !state.cloudActive && !state.speaking)`). Hậu quả: micro bị bật lại ngay khi app đang đọc bản dịch, gây thu ngược tiếng loa!
+   - **Khuyến nghị cho A3:** sửa điều kiện trong `setTimeout` ở `app.js:1094` thành `if (wantListening && !state.speaking && !state.cloudActive)` (khi đọc xong, khối `finally` của `drainSpeech()` dòng 1406 sẽ tự gọi `beginSession()`).
+
+2. **Rủi ro ngập nhật ký `micEvents` ở chế độ Hội thoại nếu ghi `micLog` trực tiếp trong `heard()` (`app.js:1048` vs `1423`):**
+   - Ở chế độ Hội thoại (`!state.meeting`), `rec.onresult` lặp từ **`i = 0`** đến cuối `ev.results` ở **mỗi sự kiện `onresult`** (`app.js:1048`), không phải từ `ev.resultIndex` như `onMeetingResult` (`app.js:1423`).
+   - Nếu người dùng sau này đặt lại `minConfidence > 0` và `heard()` ghi `micLog('bỏ câu độ tin cậy thấp: …')` không điều kiện, cùng một câu final bị bỏ ở chỉ số `i` sẽ bị ghi lặp hàng chục lần trong cùng một lượt nói, đẩy mất lịch sử 60 dòng của `micEvents` (`app.js:1023`).
+   - Ngoài ra, nếu `shouldDropFinal` trả `true` cho chuỗi rỗng / toàn khoảng trắng (`PLAN.md` dòng 99), **không** được ghi `micLog('bỏ câu độ tin cậy thấp: …')` khi chuỗi gốc rỗng (chỉ ghi log khi `rawText.trim()` có chữ và bị bỏ do độ tin cậy thấp).
+   - **Khuyến nghị cho A3:** chỉ ghi `micLog` cho câu bị bỏ ở luồng Họp (`onMeetingResult`, hoặc truyền cờ `logDrop` vào `heard(r, true)` ở dòng 1425 và `false` ở dòng 1048), và chỉ log khi `transcript.trim()` khác rỗng.
+
+3. **Sai lệch nhỏ về cờ `spaced` của tiếng Hàn (`ko`) giữa `PLAN.md` và `LANGS` (`app.js:14`):**
+   - `PLAN.md` dòng 57 ghi "dưới 3 từ, hoặc dưới 4 ký tự với zh/ja/ko", nhưng trong `translator/app.js:11–15`, `LANGS` định nghĩa `sp = false` cho `zh`, `zht`, `ja`, `th`, còn **`ko` có `sp = true`** (vì tiếng Hàn có dấu cách giữa các cụm từ).
+   - **Khuyến nghị cho A3:** truyền `LANGS[state.src].sp` vào `shouldDropFinal(text, confidence, minConf, spaced)`. Với `spaced = true` (kể cả `vi`, `en`, `ko`), đếm số từ tách theo khoảng trắng (`< 3` từ); với `spaced = false` (`zh`, `zht`, `ja`, `th`), đếm số ký tự không khoảng trắng (`< 4` ký tự).
+
+4. **Chế độ Hội thoại (`!state.meeting`) khi `minConfidence` đổi từ `0.3` → `0` và khi bật lại lọc:**
+   - Với mặc định mới `minConfidence: 0`: cả Hội thoại và Họp đều giữ mọi câu final có chữ (đúng quyết định câu 2 của anh Hiếu ngày 24/11/2026).
+   - `rec.onend` (`app.js:1085`) gán `committed = el.src.value.trim()` chỉ dùng cho Hội thoại; cần đặt `if (state.meeting && !state.cloudActive && utt.lastText.trim()) forceCommit();` để **không** tác động chế độ Hội thoại và không chạm Cloud STT.
+   - Khi người dùng tự bật lại `minConfidence > 0` trong `config.js`: cần xác định rõ `heard()` dùng `shouldDropFinal` cho cả hai chế độ hay riêng chế độ Họp (theo `PLAN.md` dòng 57: "Khi lọc vẫn bật, chế độ Họp không bỏ câu dài"; áp dụng chung `shouldDropFinal` trong `heard()` cũng an toàn cho Hội thoại vì câu dài ≥ 3 từ hiếm khi là tạp âm, hoặc giữ đúng `state.meeting ? shouldDropFinal(...) : alt.confidence < MIN_CONF` — A3 chọn nhất quán và ghi rõ trong chú thích/test).
+
+5. **Thứ tự thao tác để tránh chốt trùng lặp và gọi `forceCommit()` hai lần:**
+   - **Hàm `forceCommit()` (`app.js:1277–1287`) tự an toàn khi gọi lặp:** nó chạy `resetUtt()` đồng bộ tại dòng 1284 (xóa `utt.lastText = ''`, hủy `utt.timer` và `utt.tail.timer`) nên lần gọi thứ hai thấy `utt.lastText.trim() === ''` sẽ thoát ngay.
+   - **Trong `setLangs()` (`app.js:235`):** **PHẢI** gọi `forceCommit()` **TRƯỚC** `resetUtt()` và **TRƯỚC** `state.src = s; state.tgt = t;` (vì `queueMeeting` đọc `state.src`/`state.tgt` đồng bộ tại dòng 1132). Đồng thời gỡ cả `rec.onend = null; rec.onresult = null;` trước `rec.abort()`, rồi mới `resetUtt()` để xóa sạch `utt.forced` của ngôn ngữ cũ (tránh `utt.forced` còn tồn nếu `state.speaking` đang `true` và `beginSession()` bị hoãn). Guard `!state.cloudActive` trước `forceCommit()`.
+   - **Trong `drainSpeech()` nhánh `!state.conf` (`app.js:1395–1398`):** chỉ chạy cho nhánh `!state.cloudActive`; gỡ `rec.onend = null; rec.onresult = null;` rồi `rec.abort()` trước khi gọi `if (utt.lastText && utt.lastText.trim()) forceCommit();` (khớp mẫu đã kiểm chứng ở `refreshSession()` dòng 1411–1412). Khi `draining === true`, câu chốt mới đẩy vào `meetingChain` → `enqueueSpeech()` sẽ được vòng `while (speechQueue.length && state.meeting)` hiện tại đọc nối tiếp, không gây đệ quy `drainSpeech()`.
+   - **Trong `archiveTurn()` (`app.js:251–255`):** gọi sau bước chốt ở `setLangs()` dòng 237; vì chế độ Họp không gán `state.translated` và `forceCommit()` đã xóa `el.src.value = ''`, nên `archiveTurn()` **không** ghi trùng tin vào lịch sử.
+   - **Trong `stopMeeting()` (`app.js:1663–1677`):** đã gán `rec.onend = null` trước `rec.stop()`, nên không bị trùng với `rec.onend`.
+   - **Biên lưu ý ở `onMeetingResult` (`app.js:1431`):** khi một sự kiện `onresult` chứa đồng thời cả `isFinal` và phần `interim` kế tiếp, dòng 1431 có điều kiện `if (interim && !gotFinal)` nên `utt.lastText` chưa cập nhật cho tới sự kiện `onresult` tiếp theo (chỉ `el.src.value` được gán ở dòng 1429). Đây là hành vi có sẵn, không gây trùng câu (đặc biệt khi `autoTurn` gọi `setLangs` ở dòng 1439).
+
+6. **Cảnh báo dự kiến của `node cong-cu/kiem-tra-dich.js` sau khi A3 sửa xong:**
+   - Công cụ sẽ báo `KIEM TRA TU DONG: DAT` (mã thoát `0`) kèm 3 cảnh báo hợp lệ (không phải lỗi):
+     1. `[TAILWIND] index.html/app.js thay đổi` — Mức 1 không thêm lớp Tailwind mới nên không build lại `styles.css`.
+     2. `[CONFIG] config.js thay đổi` — xác nhận không lộ bí mật, giữ nguyên khối `firebase`.
+     3. `[PHAM VI] Có tệp ngoài app dịch thay đổi: .agents/PLAN.md, .agents/SURVEY.md` — xác nhận không lẫn tệp ứng dụng ở thư mục gốc.
+
+---
+
+## 6. Đối chiếu bảng lớp ảnh hưởng (`PLAN.md` mục 8) với mã thực tế
+
+| Lớp ảnh hưởng | Đánh dấu ở `PLAN.md` | Đối chiếu mã thực tế |
+|---|---|---|
+| Tệp thuộc `CORE` hoặc `room.bundle.js` | **Có** (`app.js`, `config.js`, `index.html`, `stt-browser.js`) | **Khớp.** Cả 3 tệp cũ đều ở `service-worker.js:7`; cần thêm `'./stt-browser.js'` vào `CORE` và tăng `CACHE` từ `'translator-v87'` → `'translator-v88'`. |
+| `translator/src/room.js` | Không | **Khớp.** Không chạm `src/room.js` hay `room.bundle.js`. |
+| `translator/firebase/firestore.rules` | Không | **Khớp.** Không đổi quy tắc hay dữ liệu Firestore. |
+| Lớp Tailwind mới, `input.css`, `tailwind.config.js` | Không | **Khớp.** Mức 1 không đổi giao diện, không cần A4 và không cần build `styles.css`. |
+| Dịch vụ tốn phí Google Cloud, đo mức dùng / hạn mức VIP | Không đổi cho Mức 1 (gián tiếp giữ thêm câu trước đây bị rơi) | **Khớp.** `translator/stt-cloud.js`, `bilingualBlock()`, `startCloud()`, `gCharge()`, `userLimitHit()` giữ nguyên; câu được giữ thêm vẫn đi qua đúng cơ chế đo và chặn hạn mức hiện hành. |
+
+---
+
+## 7. Tài liệu chính thức tham khảo
+
+- W3C Web Speech API Specification (`SpeechRecognition`, `SpeechRecognitionResult.isFinal`, `SpeechRecognitionAlternative.confidence`, `onresult`, `onend`, `abort()`): https://webaudio.github.io/web-speech-api/
+- MDN Web Docs — `SpeechRecognition`: https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition
+- MDN Web Docs — `SpeechRecognitionAlternative.confidence`: https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognitionAlternative/confidence
